@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::{Intensity, compress};
+use super::{Intensity, compress, expand};
 
 type Res = Result<(), Box<dyn Error>>;
 
@@ -156,4 +156,41 @@ fn edge_cases_match_oracle_bytes() {
 #[test]
 fn blank_before_a_mark_leaks_into_kept_code() {
     assert_eq!(compress("`a .b` and x ;", Intensity::Full), "`a.b` and x;");
+}
+
+#[test]
+fn expand_of_compress_matches_oracle_bytes() -> Res {
+    for (name, text) in corpus()? {
+        for (intensity, level) in INTENSITIES {
+            let want = golden(&name, level, "expanded")?;
+            let got = expand(&compress(&text, intensity));
+            assert_eq!(got, want, "{name}.{level}");
+        }
+    }
+    Ok(())
+}
+
+/// Expand inputs outside the corpus, each with cavemem 0.2.1's output.
+const EXPANDS: [(&str, &str); 4] = [
+    (
+        "w/foo w/ w/o b/c B4 CFG Cfg cfg fn() dbs",
+        "w/foo w/ w/o b/c BEFORE CONFIGURATION Configuration configuration \
+         function() databases",
+    ),
+    (
+        "the repo/x REPO Repo rEPO",
+        "the repository/x REPOSITORY Repository rEPO",
+    ),
+    (
+        "`cfg` cfg https://x/cfg cfg_name",
+        "`cfg` configuration https://x/cfg cfg_name",
+    ),
+    ("", ""),
+];
+
+#[test]
+fn expand_edge_cases_match_oracle_bytes() {
+    for (text, want) in EXPANDS {
+        assert_eq!(expand(text), want, "{text:?}");
+    }
 }
