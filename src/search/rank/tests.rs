@@ -1,8 +1,53 @@
 use std::error::Error as StdError;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use super::{Rater, Scored, Stats, order, score, top};
-use crate::search::tests::Test;
+use crate::cache::{Cache, Env, Handle};
+use crate::search::tests::{BASE, DAY, Test, engine, event, fresh, query};
 use crate::store::{Observation, Ref};
+
+/// The cache's clock: its 28d window starts at `BASE + 2d`.
+fn now() -> u64 {
+    BASE + 30 * DAY
+}
+
+fn env() -> Env {
+    Env {
+        now,
+        memory: || None,
+        log: Arc::new(|_: &str| {}),
+    }
+}
+
+fn warm(handle: &Handle) -> Test {
+    for _ in 0..500 {
+        if handle.is_warm()? {
+            return Ok(());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    Err("the cache never warmed".into())
+}
+
+#[test]
+fn a_row_scores_the_same_from_the_cache_and_from_disk() -> Test {
+    let (s, cfg, mut store) = fresh("rank-v1")?;
+    store.append(&event(BASE + 5 * DAY, "s", "cargo build"))?;
+    store.append(&event(BASE + 6 * DAY, "s", "cargo cargo test"))?;
+    store.append(&event(BASE + 12 * DAY, "s", "git push cargo"))?;
+    let handle = Cache::start_with(s.open(&cfg)?, &cfg, env());
+    warm(&handle)?;
+    let mut e = engine(&s, &cfg)?;
+    let mut q = query("cargo test");
+    (q.project, q.since) = (Some(e.project().into()), Some(BASE + 3 * DAY));
+    let disk = e.run(&q, None)?;
+    assert_eq!((disk.len(), e.run(&q, Some(&handle))?), (3, disk.clone()));
+    store.append(&event(BASE + 20 * DAY, "s", "test test"))?;
+    assert_eq!(e.run(&q, Some(&handle))?, e.run(&q, None)?);
+    Ok(())
+}
 
 fn terms(t: &[&str]) -> Vec<String> {
     t.iter().map(|&w| w.to_owned()).collect()
