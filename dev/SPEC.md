@@ -16,7 +16,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 ## §C CONSTRAINTS
 
 - nix flake + direnv per `paradigm/V20`; nixpkgs follows nixpkgs-lock; shell ∀ `paradigm/V28` systems.
-- tools on PATH: rust toolchain, hk, pkl, `mth`, `sherd` (≥ 0.5.4), `itok`, cargo-deny, cargo-nextest, Node (grammar oracle only).
+- tools on PATH: rust toolchain, hk, pkl, `mth`, `sherd` (≥ 0.5.4), `itok`, cargo-deny, cargo-nextest, Node (grammar oracle only). plus ∀ tool `pklith gen` names in `nix/pklith.nix`, listed in the flake too ∴ `pklith lay` finds each before its step exists.
 - human reload checkpoint after shell lands (`.:T6`).
 
 ## §I INTERFACES
