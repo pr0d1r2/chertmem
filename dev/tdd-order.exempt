@@ -1,0 +1,3 @@
+# Commits exempt from tdd-order (dev V8): full id, then the reason. Only a
+# commit that cannot be rewritten belongs here, each with a dev SPEC.md B row.
+3bcfe2df80cb3895f9c978b937329d3769e64d23 workspace stub laid by hand (src T1): lib.rs and main.rs are bodiless stubs, so there was no behaviour for a RED test to pin (dev B1)

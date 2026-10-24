@@ -35,6 +35,10 @@ test|coverage|cargo-nextest|**/*.rs, Cargo.toml, Cargo.lock|cargo nextest run --
 # dev V7: every Rust module with logic has a wired tests.rs mirror, ported
 # from xenolith v0.1.0 to the dev crate.
 rust-mirror|lint|-|**/*.rs|cargo run -q -p chertmem-dev -- rust-mirror|-|-|a Rust file with logic has no sibling tests.rs wired by #[cfg(test)] mod tests;
+# dev V8: a commit adding Rust code has a test commit before it in the
+# push range, unless exempt in dev/tdd-order.exempt. Push only: the order
+# is a property of history, and a RED commit must be committable.
+tdd-order|coverage|-|**/*.rs, dev/tdd-order.exempt|cargo run -q -p chertmem-dev -- tdd-order|-|-|a commit adds Rust code with no test: commit before it in the push range
 ## types
 type|checks|min|exempt
 *|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard, no-core-worktree|-|-
@@ -52,7 +56,8 @@ envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
-rs|rustfmt, clippy, rust-mirror, doctest, rustdoc, test|-|-
+rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test|-|-
 toml|taplo|-|-
 path:Cargo.lock|deny|-|-
+exempt|tdd-order|-|-
 path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)

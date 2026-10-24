@@ -22,6 +22,7 @@ local all = (fast) {
   // `cargo nextest run --workspace` relinks the binaries too, so `test`
   // runs alone as well (lablith and actlith B10).
   ["test"] = (generated.push["test"]) { exclusive = true }
+  ["tdd-order"] = (generated.push["tdd-order"]) { exclusive = true }
 }
 
 hooks {
