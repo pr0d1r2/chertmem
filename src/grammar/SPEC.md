@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-caveman grammar: `compress` & `expand` at intensity `lite|full|ultra` (`off` = identity, ⊥ grammar applied), byte-for-byte equal to cavemem 0.2.1 (D22). code, URLs, paths, identifiers, numbers ⊥ touched.
+caveman grammar: `compress` & `expand` at intensity `lite|full|ultra` (`off` = identity, ⊥ grammar applied), byte-for-byte equal to cavemem 0.2.1 (D22) except code spans, which chert ⊥ alters (V4). code, URLs, paths, identifiers, numbers ⊥ touched.
 
 ## §N NAV
 
@@ -40,9 +40,10 @@ R2|expand dead keys|`w/` `w/o` `b/c`: `/x` tokenized as path ∴ ⊥ expanded; c
 
 ## §V INVARIANTS
 
-V1: ∀ corpus text & intensity: `compress` ≡ oracle bytes; `expand(compress(x))` ≡ oracle expand bytes.
+V1: ∀ corpus text & intensity: `compress` ≡ oracle bytes; `expand(compress(x))` ≡ oracle expand bytes. [superseded by V4]
 V2: fenced code, inline code, URLs, paths, identifiers, version numbers survive `compress` byte for byte.
 V3: deterministic: same input → same bytes (`.:V9`).
+V4: ∀ corpus text & intensity: `compress` ≡ oracle bytes & `expand(compress(x))` ≡ oracle expand bytes, except 1 deliberate deviation (owner 2026-10-24, R1): final pass `[ \t]+([.,;:!?])` → `$1` skips fenced & inline code ∴ V2 holds ∀ span. golden files stay as cavemem wrote them; ∀ case the deviation changes is listed in a test w/ its expected bytes.
 
 ## §T TASKS
 
@@ -51,6 +52,7 @@ T1|x|corpus + oracle runner, cavemem tarball pinned by hash|V1
 T2|x|port `compress` per intensity|V1,V2,V3
 T3|x|port `expand`|V1
 T4|x|MIT notice|-
+T5|.|punctuation pass skips fenced & inline code; tests list each golden case it changes|V2,V4
 
 ## §B BUGS
 
