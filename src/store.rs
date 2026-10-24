@@ -18,6 +18,7 @@ mod prune;
 mod read;
 mod reference;
 mod repartition;
+mod restore;
 mod schema;
 mod spool;
 mod summary;
@@ -126,14 +127,14 @@ impl Store {
     pub fn replay(&mut self) -> Result<(), Error> {
         self.reading()?;
         for path in spool::pending(&self.root)? {
-            self.restore(&path)?;
+            self.replay_file(&path)?;
         }
         Ok(())
     }
 
     /// Replay 1 spool file, then drop it; an unreadable one is set
     /// aside, and one for a sealed partition held (src/store T10).
-    fn restore(&mut self, path: &Path) -> Result<(), Error> {
+    fn replay_file(&mut self, path: &Path) -> Result<(), Error> {
         let items = match spool::read(path)? {
             spool::Found::Items(items) => items,
             spool::Found::Unreadable => {

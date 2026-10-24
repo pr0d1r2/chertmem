@@ -34,6 +34,9 @@ pub enum Error {
     },
     /// A timestamp a ULID cannot hold (48 bits of milliseconds).
     BadTime { ts: u64 },
+    /// A restored row's ref is already issued to another id in its
+    /// project (root V15).
+    RefTaken { reference: String, id: String },
 }
 
 impl fmt::Display for Error {
@@ -75,8 +78,18 @@ impl Error {
                 reference: r,
                 projects: p,
             } => format!("{r} is in {}", p.join(", ")),
+            other => other.clash(),
+        }
+    }
+
+    /// The message of a bad time or a ref clash.
+    fn clash(&self) -> String {
+        match self {
             Self::BadTime { ts } => format!("timestamp {ts} is out of range"),
-            Self::NoDataDir | Self::WriteOnly => String::new(),
+            Self::RefTaken { reference: r, id } => {
+                format!("chert:{r} is issued to another row than {id}")
+            }
+            _ => String::new(),
         }
     }
 
@@ -91,6 +104,7 @@ impl Error {
             Self::BadRef { .. } => "give chert:<ref> as issued",
             Self::Ambiguous { .. } => "give the project",
             Self::BadTime { .. } => "give milliseconds below 2^48",
+            Self::RefTaken { .. } => "restore into a store without that ref",
         }
     }
 }
