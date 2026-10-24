@@ -24,6 +24,7 @@ sib|src/mine|behaviour findings & awareness report
 ## §C CONSTRAINTS
 
 - format TOML via `toml` + `serde`. unknown key → error naming key & file, ⊥ ignored.
+- `partition.by` ⊆ {`project`, `time`, `ide`}, ordered, ∋ `time` ∵ window & tiers need time buckets; other value → error (V3).
 - sizes parse `KiB` `MiB` `GiB`; durations parse `<n>d` `<n>h` `<n>mo`.
 - ⊥ I/O beyond reading the 2 files.
 
