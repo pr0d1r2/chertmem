@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-caveman grammar: `compress` & `expand` at intensity `lite|full|ultra`, byte-for-byte equal to cavemem 0.2.1 (D22). code, URLs, paths, identifiers, numbers ⊥ touched.
+caveman grammar: `compress` & `expand` at intensity `lite|full|ultra` (`off` = identity, ⊥ grammar applied), byte-for-byte equal to cavemem 0.2.1 (D22). code, URLs, paths, identifiers, numbers ⊥ touched.
 
 ## §N NAV
 
