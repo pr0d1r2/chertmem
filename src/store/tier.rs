@@ -11,7 +11,7 @@ use rusqlite::{Connection, Transaction};
 
 use super::partition::{self, Chunks};
 use super::write::immediate;
-use super::{Error, State, Store, catalog, cold, generation};
+use super::{Error, State, Store, catalog, cold, generation, tombstone};
 use crate::config::Zstd;
 
 /// What a tier move reaches, under the catalog's write lock.
@@ -102,15 +102,17 @@ impl Store {
         Ok(w.tx.commit()?)
     }
 
-    /// Drop the partition at `path`: its files go, its catalog row and
-    /// refs stay marked, so each ref answers [`super::Lookup::Dropped`],
-    /// never another row (root V5), and no write lands there again.
+    /// Drop the partition at `path`: a tombstone lands beside it, its
+    /// files go, its catalog row and refs stay marked, so each ref
+    /// answers [`super::Lookup::Dropped`], never another row (root V5),
+    /// even after a lost catalog (V12), and no write lands there again.
     ///
     /// # Errors
     /// [`Error::WriteOnly`] on a write-only store; no such partition.
     pub fn drop(&mut self, path: &str) -> Result<(), Error> {
         let w = self.work()?;
         if w.state(path)?.is_some() {
+            tombstone::write(&w.tx, w.root, path)?;
             w.chunks.close(path);
             cold::remove(w.root, path)?;
             catalog::mark_dropped(&w.tx, path)?;

@@ -23,6 +23,7 @@ mod spool;
 mod summary;
 mod tail;
 mod tier;
+mod tombstone;
 mod write;
 
 use std::path::{Path, PathBuf};

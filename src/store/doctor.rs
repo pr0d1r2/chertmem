@@ -1,21 +1,21 @@
 //! `doctor`: rebuild `catalog.db` from the partition files, each of
 //! which holds its own catalog row, so a deleted or stale catalog comes
 //! back equal to the one before the crash (src/store T7, V6). A dropped
-//! partition has no file: its row and refs live in the catalog only, so
-//! a stale catalog keeps them, and a row whose file is gone is marked
-//! dropped; a deleted catalog loses them.
+//! partition has no file: its tombstone holds its row and refs (V12),
+//! so a stale or deleted catalog gets them back, and a row whose file
+//! is gone is marked dropped.
 
 #[cfg(test)]
 mod tests;
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OptionalExtension, params};
 
 use super::partition::{self, Chunks};
 use super::write::immediate;
-use super::{Error, State, Stats, Store, catalog, generation};
+use super::{Error, State, Stats, Store, catalog, generation, tombstone};
 
 /// A file's own catalog row, its `chunk` table, under its path.
 struct Meta {
@@ -47,10 +47,9 @@ fn meta(path: &str, r: &rusqlite::Row<'_>) -> rusqlite::Result<Meta> {
     })
 }
 
-/// Every partition file under `chunks/` by its catalog path, `true`
-/// when only its `.zst` is there.
-fn walk(root: &Path) -> Result<BTreeMap<String, bool>, Error> {
-    let mut found = BTreeMap::new();
+/// Every file under `chunks/`, sorted.
+fn files(root: &Path) -> Result<Vec<PathBuf>, Error> {
+    let mut found = Vec::new();
     let mut dirs = vec![root.join("chunks")];
     while let Some(dir) = dirs.pop() {
         let entries =
@@ -58,13 +57,24 @@ fn walk(root: &Path) -> Result<BTreeMap<String, bool>, Error> {
         for path in entries.filter_map(Result::ok).map(|e| e.path()) {
             if path.is_dir() {
                 dirs.push(path);
-            } else if let Some((name, cold)) = logical(root, &path) {
-                let hot = found.get(&name).is_some_and(|c: &bool| !c);
-                found.insert(name, cold && !hot);
+            } else {
+                found.push(path);
             }
         }
     }
+    found.sort();
     Ok(found)
+}
+
+/// Every partition file by its catalog path, `true` when only its
+/// `.zst` is there.
+fn walk(root: &Path, files: &[PathBuf]) -> BTreeMap<String, bool> {
+    let mut found = BTreeMap::new();
+    for (name, cold) in files.iter().filter_map(|f| logical(root, f)) {
+        let hot = found.get(&name).is_some_and(|c: &bool| !c);
+        found.insert(name, cold && !hot);
+    }
+    found
 }
 
 /// The catalog path of a `.db` or `.db.zst` file, and whether it is the
@@ -164,8 +174,12 @@ impl Store {
         self.reading()?;
         let catalog = self.catalog.as_ref().ok_or(Error::WriteOnly)?;
         let tx = immediate(catalog)?;
-        let files = walk(&self.root)?;
+        let all = files(&self.root)?;
+        let files = walk(&self.root, &all);
         settle(&tx, &files)?;
+        for stone in all.iter().filter(|f| tombstone::is(f)) {
+            tombstone::restore(&tx, stone)?;
+        }
         for (path, cold) in &files {
             restore(&tx, &mut self.chunks, path, *cold)?;
         }
