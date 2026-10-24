@@ -133,3 +133,14 @@ fn every_kind_round_trips_its_spelling() {
     }
     assert_eq!(Kind::parse("error"), None);
 }
+
+/// The public entry mines rows read any way, as a hot partition is.
+#[test]
+fn findings_mines_rows_given_directly() -> Test {
+    let rows = [bash(1, "s", "ls")?, bash(2, "s", "pwd")?];
+    let found = super::findings(&rows, 1);
+    let kinds: Vec<_> = found.iter().map(|f| (f.kind, f.count)).collect();
+    assert_eq!(kinds, [(Kind::Sequence, 1)]);
+    assert!(super::findings(&rows, 2).is_empty());
+    Ok(())
+}
