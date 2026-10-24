@@ -94,6 +94,10 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v sherd >/dev/null 2>&1 || { echo 'sherd-nav: sherd is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; sherd sync --check || { echo 'sherd-nav: a §N table is stale' >&2; exit 1; }"
     fix = "sherd sync"
   }
+  ["sherd-budget"] {
+    glob = List("**/SPEC.md", ".context-limits")
+    check = "command -v sherd >/dev/null 2>&1 || { echo 'sherd-budget: sherd is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; sherd budget || { echo 'sherd-budget: a spec chain is over its ceiling' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
