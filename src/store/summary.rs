@@ -25,8 +25,7 @@ pub(super) fn insert(conn: &Connection, note: &Note) -> Result<(), Error> {
 }
 
 const LIST: &str = "SELECT ts, session, scope, ide, body, id FROM summaries
-  WHERE 0 -- RED stub: finds nothing
-    AND project = ?1 AND (?2 IS NULL OR session = ?2) AND scope = ?3
+  WHERE project = ?1 AND (?2 IS NULL OR session = ?2) AND scope = ?3
   ORDER BY ts, id";
 
 /// The summaries of 1 partition, with their ids for a stable order.
