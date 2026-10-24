@@ -22,6 +22,7 @@ pub use timeline::Entry;
 
 use crate::cache::Handle;
 use crate::config::{Config, Provider};
+use crate::grammar;
 use crate::store::{self, Filter, Mode, Ref, Store};
 use ollama::Ollama;
 use rank::{Rater, Scored};
@@ -131,13 +132,16 @@ impl Engine {
     }
 
     /// The query's rater under fresh global stats; `None` when the text
-    /// holds no term.
+    /// holds no term. The text is compressed at `compression.grammar`
+    /// first, as hook and import store bodies, so a plain word meets
+    /// its stored form (V5).
     fn rater(
         &mut self,
         q: &Query,
         rerank: bool,
     ) -> Result<Option<Rater>, Error> {
-        let terms = token::terms(&q.text);
+        let grammar = self.cfg.compression.grammar.intensity();
+        let terms = token::terms(&grammar::compress(&q.text, grammar));
         if terms.is_empty() {
             return Ok(None);
         }
