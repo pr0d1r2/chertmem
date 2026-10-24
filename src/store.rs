@@ -116,7 +116,9 @@ impl Store {
             }
             spool::Found::Gone => return Ok(()),
         };
-        let _ = rows.len(); // RED stub: the rows are dropped, not replayed
+        for row in &rows {
+            write::observation(&mut self.ctx()?, row)?;
+        }
         spool::done(path)
     }
 
