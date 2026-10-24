@@ -15,6 +15,7 @@ mod partition;
 mod prune;
 mod read;
 mod reference;
+mod repartition;
 mod schema;
 mod spool;
 mod summary;

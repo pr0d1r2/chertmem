@@ -115,13 +115,4 @@ impl Store {
         }
         Ok(w.tx.commit()?)
     }
-
-    /// Rewrite every partition written under another `partition.*`
-    /// spec to the current one; refs keep resolving (src/store V5).
-    ///
-    /// # Errors
-    /// [`Error::WriteOnly`] on a write-only store; a sealed target.
-    pub fn repartition(&mut self) -> Result<(), Error> {
-        self.reading() // RED stub
-    }
 }
