@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 
 use super::tool::{self, Tool};
 use super::{Finding, Kind};
+use crate::hook::inject::tokens_at_most;
 use crate::store::Observation;
 
 /// The observation kind `src/hook` stores a tool call under.
@@ -24,8 +25,15 @@ const JOIN: char = '\0';
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0100_0000_01b3;
 
+/// A token sink holds at least 1/`SINK_SHARE` of a partition's tool call
+/// tokens (src/mine R5).
+const SINK_SHARE: usize = 10;
+
 /// Every occurrence of every pattern: the row that shows it, each.
 type Tally<'a> = BTreeMap<(Kind, String), Vec<&'a Observation>>;
+
+/// The tokens of each call pattern, and the rows of its calls.
+type Costs<'a> = BTreeMap<String, (usize, Vec<&'a Observation>)>;
 
 /// 1 tool call and the row it came from.
 struct Call<'a> {
@@ -102,9 +110,41 @@ fn hot_files<'a>(calls: &[Call<'a>], tally: &mut Tally<'a>) {
     }
 }
 
-/// Each tool call pattern costing a large share of the tokens of all
-/// `calls` (src/mine R5), shown by the rows of its calls; a stub.
-const fn token_sinks<'a>(_calls: &[Call<'a>], _tally: &mut Tally<'a>) {}
+/// Each tool call pattern whose stored bodies hold at least
+/// 1/[`SINK_SHARE`] of the tokens of all `calls` (src/mine R5), shown by
+/// the rows of its calls.
+fn token_sinks<'a>(calls: &[Call<'a>], tally: &mut Tally<'a>) {
+    let (costs, total) = costs(calls);
+    for (pattern, (tokens, rows)) in costs {
+        if tokens.saturating_mul(SINK_SHARE) >= total {
+            tally.insert((Kind::TokenSink, pattern), rows);
+        }
+    }
+}
+
+/// The tokens and rows of each pattern of `calls`, and the tokens of
+/// all, each body counted as `src/hook` counts its budget (src/hook R2).
+fn costs<'a>(calls: &[Call<'a>]) -> (Costs<'a>, usize) {
+    let (mut costs, mut total) = (Costs::new(), 0_usize);
+    for call in calls {
+        let tokens = tokens_at_most(&call.row.body);
+        total = total.saturating_add(tokens);
+        let cost = costs.entry(cost_pattern(&call.tool)).or_default();
+        cost.0 = cost.0.saturating_add(tokens);
+        cost.1.push(call.row);
+    }
+    (costs, total)
+}
+
+/// What a call's cost is counted under: its tool name, then its Bash
+/// command or else the paths it names; the name alone with neither.
+fn cost_pattern(tool: &Tool) -> String {
+    let subject = tool.command.iter().chain(&tool.paths);
+    let parts: Vec<&str> = std::iter::once(tool.name.as_str())
+        .chain(subject.map(String::as_str))
+        .collect();
+    parts.join(&JOIN.to_string())
+}
 
 /// The Bash commands of each session, in order, with their rows.
 fn by_session<'a>(
@@ -140,9 +180,11 @@ fn summary(kind: Kind, pattern: &str) -> String {
         .collect();
     match kind {
         Kind::Sequence => parts.join(" then "),
-        Kind::HotFile | Kind::TokenSink => {
-            format!("hot file {}", parts.join(" "))
-        }
+        Kind::HotFile => format!("hot file {}", parts.join(" ")),
+        Kind::TokenSink => format!(
+            "token sink {}: >= 1/{SINK_SHARE} of tool call tokens",
+            parts.join(" ")
+        ),
     }
 }
 

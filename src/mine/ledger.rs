@@ -22,7 +22,7 @@ const FILE: &str = "mine/findings.db";
 
 /// What mined the kept findings: bumped with every signal change, so
 /// findings of an older miner are stale (V1).
-const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "/signals-1");
+const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "/signals-2");
 
 /// The lock timeout of a reading open, as the store's (src/store R2).
 const BUSY: Duration = Duration::from_secs(1);
