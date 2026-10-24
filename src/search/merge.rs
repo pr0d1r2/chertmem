@@ -39,9 +39,10 @@ pub(super) fn parallel(
             .map(|r| r.map_err(|_| Error::Thread).and_then(|done| done))
             .collect::<Result<Vec<_>, _>>()
     })?;
-    // RED: the merge keeps nothing yet.
-    let _ = (found, rank::top(Vec::new(), job.rater.keep));
-    Ok(Vec::new())
+    Ok(rank::top(
+        found.into_iter().flatten().collect(),
+        job.rater.keep,
+    ))
 }
 
 /// 1 worker: its own store, the best of each of its partitions.

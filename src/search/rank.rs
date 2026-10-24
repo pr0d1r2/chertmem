@@ -70,8 +70,7 @@ pub(super) fn score(stats: &Stats, terms: &[String], body: &str) -> f64 {
         let tf = count(tokens.iter().filter(|t| *t == term).count());
         idf(stats.docs, df) * tf * (K1 + 1.0) / K1.mul_add(norm, tf)
     });
-    // RED: no score yet.
-    each.sum::<f64>().min(0.0)
+    each.sum()
 }
 
 /// `1 - b + b * dl / avgdl`; 1 before any row is counted.
@@ -93,9 +92,10 @@ fn idf(docs: u64, df: u64) -> f64 {
 /// Best first: score desc, then ts desc, then id desc, so the order is
 /// total and the same on every run (V4).
 pub(super) fn order(a: &Scored, b: &Scored) -> Ordering {
-    // RED: no order yet.
-    let _ = (a, b);
-    Ordering::Equal
+    let by_score = b.score.total_cmp(&a.score);
+    by_score
+        .then(b.row.ts.cmp(&a.row.ts))
+        .then_with(|| b.row.id.cmp(&a.row.id))
 }
 
 /// The best `k` of `rows`, best first.

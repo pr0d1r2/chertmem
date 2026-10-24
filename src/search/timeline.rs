@@ -55,9 +55,8 @@ impl Engine {
 
 /// `k` rows with `at` in the middle, shifted to stay inside `rows`.
 fn window(rows: Vec<Observation>, at: usize, k: usize) -> Vec<Observation> {
-    // RED: no window yet.
-    let _ = (at, k);
-    rows.into_iter().take(0).collect()
+    let start = at.saturating_sub(k / 2).min(rows.len().saturating_sub(k));
+    rows.into_iter().skip(start).take(k).collect()
 }
 
 fn entry(o: Observation) -> Entry {
