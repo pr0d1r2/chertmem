@@ -37,6 +37,8 @@ sib|src/mine|behaviour findings & awareness report
 id|topic|finding|src
 R1|cavemem 0.2.1 grammar 2026-10-24|last pass `/[ \t]+([.,;:!?])/g` → `$1` runs on whole output ∴ blank before mark inside fence / inline code dropped (`` `a .b` `` → `` `a.b` ``); V1 ≡ oracle keeps it, V2 holds ∀ span ⊥ such blank|`dist/chunk-T35V7EPZ.js` `compress`; `src/grammar/tests.rs`
 R2|expand dead keys|`w/` `w/o` `b/c`: `/x` tokenized as path ∴ ⊥ expanded; camelCase-looking words (`tHe`) kept as identifiers|`tokenize` probe
+R3|V4 deviation vs corpus 2026-10-24|0 of 24 corpus cases change: ⊥ corpus text has blank before `.,;:!?` inside code ∴ `DEVIATES` empty, golden files ≡ chert. deviation pinned by `CODE_DEVIATIONS` (cavemem bytes = chert bytes + pass once more). prose next to kept non-code spans still loses its blank (`in ./config` → `in./config`)|`src/grammar/tests.rs`
+R4|inline code after a fence|cavemem tokenizer takes `` ` c ` `` from the fence's last tick as inline code, it loses to the fence ∴ a following `` `d ,` `` is prose & loses its blank; tokenizer kept ≡ oracle|`CODE_DEVIATIONS` last case
 
 ## §V INVARIANTS
 
@@ -52,7 +54,7 @@ T1|x|corpus + oracle runner, cavemem tarball pinned by hash|V1
 T2|x|port `compress` per intensity|V1,V2,V3
 T3|x|port `expand`|V1
 T4|x|MIT notice|-
-T5|.|punctuation pass skips fenced & inline code; tests list each golden case it changes|V2,V4
+T5|x|punctuation pass skips fenced & inline code; tests list each golden case it changes|V2,V4
 
 ## §B BUGS
 
