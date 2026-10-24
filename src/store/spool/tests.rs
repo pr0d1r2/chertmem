@@ -4,17 +4,18 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;
 
-use super::{Found, decode, encode, pending, read};
+use super::{Found, pending, read};
+use crate::store::line::encode;
 use crate::store::tests::{Scratch, Test, chunk, event, stored};
-use crate::store::write::Row;
+use crate::store::write::{Item, Row};
 use crate::store::{Appended, Error, Mode};
 
-fn row(identity: Option<&str>, body: &str) -> Row {
-    Row {
+fn row(identity: Option<&str>, body: &str) -> Item {
+    Item::Observation(Row {
         id: "01JB2X3Y4Z5A6B7C8D9E0F1G2H".into(),
         project: "proj-0123".into(),
         event: event(1_709_211_600_000, identity, body),
-    }
+    })
 }
 
 /// The catalog's write lock, held until the connection drops.
@@ -31,36 +32,6 @@ fn count(s: &Scratch, path: &str) -> Result<i64, Box<dyn StdError>> {
 
 fn spooled(s: &Scratch) -> Result<Vec<PathBuf>, Box<dyn StdError>> {
     Ok(pending(&s.data())?)
-}
-
-#[test]
-fn a_line_round_trips_every_field() -> Test {
-    for r in [
-        row(Some("toolu_1"), "a \"quoted\"\nline \u{e9}"),
-        row(None, ""),
-    ] {
-        let line = encode(&r)?;
-        assert!(!line.contains('\n'), "{line}");
-        assert_eq!(decode(&line), Some(r));
-    }
-    Ok(())
-}
-
-#[test]
-fn anything_else_decodes_to_none() -> Test {
-    let good = encode(&row(None, "b"))?;
-    let bad = [
-        "not json".to_owned(),
-        "[1, 2]".to_owned(),
-        good.replace("\"observation\"", "\"summary-x\""),
-        good.replace("\"session\"", "\"sess\""),
-        good.replace("\"1709211600000\"", "\"soon\""),
-        good.replace("\"identity\":null", "\"identity\":7"),
-    ];
-    for line in bad {
-        assert_eq!(decode(&line), None, "{line}");
-    }
-    Ok(())
 }
 
 #[test]

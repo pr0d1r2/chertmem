@@ -10,7 +10,8 @@ use super::catalog::{self, Slot};
 use super::layout::{Key, Plan};
 use super::partition::{self, Chunks};
 use super::reference;
-use super::{Error, Event, Ref};
+use super::summary;
+use super::{Error, Event, Ref, Summary};
 
 /// An event with the id and project it is stored under.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +30,49 @@ impl Row {
             id: &self.id,
         }
     }
+}
+
+/// A summary with the id and project it is stored under.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Note {
+    pub id: String,
+    pub project: String,
+    pub summary: Summary,
+}
+
+impl Note {
+    fn key(&self) -> Key<'_> {
+        Key {
+            project: &self.project,
+            ide: &self.summary.ide,
+            ts: self.summary.ts,
+            id: &self.id,
+        }
+    }
+}
+
+/// Anything the spool holds.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) enum Item {
+    Observation(Row),
+    Summary(Note),
+}
+
+/// Store a replayed item, whichever it is.
+pub(super) fn apply(cx: &mut Ctx<'_>, item: &Item) -> Result<(), Error> {
+    match item {
+        Item::Observation(row) => observation(cx, row).map(drop),
+        Item::Summary(note) => summary(cx, note),
+    }
+}
+
+/// Store `note` in the hot partition of its own timestamp; its id seen
+/// before stores nothing (a replayed spool file).
+pub(super) fn summary(cx: &mut Ctx<'_>, note: &Note) -> Result<(), Error> {
+    let tx = immediate(cx.catalog)?;
+    let slot = slot(cx.plan, &tx, note.key())?;
+    summary::insert(cx.chunks.get(&slot.path)?, note)?;
+    Ok(tx.commit()?)
 }
 
 /// What a write reaches.

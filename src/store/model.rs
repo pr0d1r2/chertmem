@@ -32,6 +32,53 @@ pub enum Appended {
     Spooled,
 }
 
+/// A summary's scope (src/store C, `src/hook` C).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scope {
+    /// 1 turn, written on `stop`.
+    Turn,
+    /// The whole session, written on `session-end`.
+    Session,
+}
+
+impl Scope {
+    /// The partition's spelling.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Turn => "turn",
+            Self::Session => "session",
+        }
+    }
+
+    /// `turn` or `session`.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        [Self::Turn, Self::Session]
+            .into_iter()
+            .find(|s| s.as_str() == text)
+    }
+}
+
+/// A turn or session summary, its body compressed by the caller like an
+/// observation's; it lands in the partition of its own timestamp.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Summary {
+    pub ts: u64,
+    pub session: String,
+    pub scope: Scope,
+    pub ide: String,
+    pub body: String,
+}
+
+/// What became of a summary append (src/store V10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Written {
+    Stored,
+    /// A lock outlasted the busy timeout: it waits in `spool/`.
+    Spooled,
+}
+
 /// A partition's tier (src/store C).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {

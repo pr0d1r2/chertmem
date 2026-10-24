@@ -8,6 +8,7 @@ mod calendar;
 mod catalog;
 mod error;
 mod layout;
+mod line;
 mod model;
 mod partition;
 mod prune;
@@ -15,6 +16,7 @@ mod read;
 mod reference;
 mod schema;
 mod spool;
+mod summary;
 mod write;
 
 use std::path::{Path, PathBuf};
@@ -25,7 +27,8 @@ use rusqlite::Connection;
 pub use error::Error;
 pub use layout::project_id;
 pub use model::{
-    Appended, Event, Filter, Lookup, Observation, Partition, State, Stats,
+    Appended, Event, Filter, Lookup, Observation, Partition, Scope, State,
+    Stats, Summary, Written,
 };
 pub use reference::Ref;
 
@@ -33,7 +36,15 @@ use crate::config::Config;
 use calendar::MAX_TS;
 use layout::Plan;
 use partition::Chunks;
-use write::{Ctx, Row};
+use write::{Ctx, Item, Note, Row};
+
+/// A new id at `ts`, which a ULID must hold.
+fn new_id(ts: u64) -> Result<String, Error> {
+    if ts > MAX_TS {
+        return Err(Error::BadTime { ts });
+    }
+    Ok(write::new_id(ts))
+}
 
 /// How a process uses the store (src/store V10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -113,15 +124,15 @@ impl Store {
 
     /// Replay 1 spool file, then drop it; an unreadable one is set aside.
     fn restore(&mut self, path: &Path) -> Result<(), Error> {
-        let rows = match spool::read(path)? {
-            spool::Found::Rows(rows) => rows,
+        let items = match spool::read(path)? {
+            spool::Found::Items(items) => items,
             spool::Found::Unreadable => {
                 return spool::set_aside(&self.root, path);
             }
             spool::Found::Gone => return Ok(()),
         };
-        for row in &rows {
-            write::observation(&mut self.ctx()?, row)?;
+        for item in &items {
+            write::apply(&mut self.ctx()?, item)?;
         }
         spool::done(path)
     }
@@ -148,29 +159,50 @@ impl Store {
     /// # Errors
     /// A timestamp past 48 bits, a sealed partition, an unusable file.
     pub fn append(&mut self, event: &Event) -> Result<Appended, Error> {
-        let row = self.row(event)?;
-        let stored = self
-            .ctx()
-            .and_then(|mut cx| write::observation(&mut cx, &row));
-        match stored {
-            Ok(reference) => Ok(Appended::Stored(reference)),
+        let row = Row {
+            id: new_id(event.ts)?,
+            project: self.project.clone(),
+            event: event.clone(),
+        };
+        let item = Item::Observation(row.clone());
+        let stored = self.store(&item, |cx| write::observation(cx, &row))?;
+        Ok(stored.map_or(Appended::Spooled, Appended::Stored))
+    }
+
+    /// Store a turn or session summary in the partition of its own
+    /// timestamp (src/store T9); spooled like an event when a lock
+    /// outlasts the busy timeout (V10).
+    ///
+    /// # Errors
+    /// A timestamp past 48 bits, a sealed partition, an unusable file.
+    pub fn append_summary(
+        &mut self,
+        summary: &Summary,
+    ) -> Result<Written, Error> {
+        let note = Note {
+            id: new_id(summary.ts)?,
+            project: self.project.clone(),
+            summary: summary.clone(),
+        };
+        let item = Item::Summary(note.clone());
+        let stored = self.store(&item, |cx| write::summary(cx, &note))?;
+        Ok(stored.map_or(Written::Spooled, |()| Written::Stored))
+    }
+
+    /// Run `write` under the catalog lock; a lock outlasting the busy
+    /// timeout spools `item` instead and answers `None` (V10).
+    fn store<T>(
+        &mut self,
+        item: &Item,
+        write: impl FnOnce(&mut Ctx<'_>) -> Result<T, Error>,
+    ) -> Result<Option<T>, Error> {
+        match self.ctx().and_then(|mut cx| write(&mut cx)) {
+            Ok(done) => Ok(Some(done)),
             Err(Error::Busy { .. }) => {
-                spool::put(&self.root, &row).map(|()| Appended::Spooled)
+                spool::put(&self.root, item).map(|()| None)
             }
             Err(e) => Err(e),
         }
-    }
-
-    /// `event` under a new id in this project.
-    fn row(&self, event: &Event) -> Result<Row, Error> {
-        if event.ts > MAX_TS {
-            return Err(Error::BadTime { ts: event.ts });
-        }
-        Ok(Row {
-            id: write::new_id(event.ts),
-            project: self.project.clone(),
-            event: event.clone(),
-        })
     }
 
     /// What a write reaches, the catalog opened first.
