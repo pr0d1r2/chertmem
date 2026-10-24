@@ -11,8 +11,10 @@ use ulid::Ulid;
 
 use super::Error;
 
-/// How many timestamps keep their last id.
-const KEPT: usize = 64;
+/// How many timestamps keep their last id: enough that a run at 1 ts
+/// survives 1000s of others minted in between, as a parallel test
+/// burst does, in ~160 KiB at most.
+const KEPT: usize = 4096;
 
 /// The last id minted at each timestamp, latest timestamps kept.
 type Last = BTreeMap<u64, Ulid>;

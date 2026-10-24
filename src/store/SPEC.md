@@ -45,7 +45,7 @@ R2|spool, wave 2|busy 2 ms write-only, 1 s reading; 1 file per item, renamed int
 R3|tiers, wave 3|file keeps own catalog row; cold `<path>.zst` + `.dict`, read via `thawed/<path>`; sealed spool item → `spool/sealed/`|`cold.rs`
 R4|generation, wave 4|bump = max(stored + 1, now ms, mark + 1); mark = file `generation` beside `catalog.db`, rewritten per bump; new catalog seeded so|`generation.rs`
 R5|tombstones, wave 4|`<path>.dropped`: JSON `{partition: [12 catalog cols], refs: [[project, ref, id, identity]]}`, before files go; rebuild restores before files; bad 1 → error. `spool_raw` → `spool/unreadable/<ULID>.hook`, as `src/hook` writes|`tombstone.rs`, `spool.rs`
-R6|ids, wave 5|next id at a held ts = last random + 1, last of latest 64 ts per process; max → `Error::NoId`, ⊥ next ms (V1); same-ms refs grow toward 26 chars|`id.rs`
+R6|ids, wave 5|next id at a held ts = last random + 1, last of latest 4096 ts per process; max → `Error::NoId`, ⊥ next ms (V1); same-ms refs grow toward 26 chars|`id.rs`
 
 ## §V INVARIANTS
 
