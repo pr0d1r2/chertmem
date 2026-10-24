@@ -36,15 +36,58 @@ pub(super) fn ensure(
     let row =
         params![p.path, dims, p.project, p.ide, t0, t1, p.shard, sum, spec];
     conn.execute(ENSURE, row)?;
-    let sql = "SELECT id, state FROM partitions WHERE path = ?1";
-    let (id, state): (i64, String) =
-        conn.query_row(sql, [&p.path], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    let (id, state) = state(conn, &p.path)?;
     let path = p.path.clone();
-    if State::parse(&state) == Some(State::Hot) {
+    if state == Some(State::Hot) {
         Ok(Slot { id, path })
     } else {
         Err(Error::ReadOnly { path })
     }
+}
+
+const STATE: &str = "SELECT id, state, dropped FROM partitions
+  WHERE path = ?1";
+
+/// The id and tier of the partition at `path`, the tier `None` once it
+/// is dropped; no such row is an error naming it.
+pub(super) fn state(
+    conn: &Connection,
+    path: &str,
+) -> Result<(i64, Option<State>), Error> {
+    let row = |r: &rusqlite::Row<'_>| {
+        Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get(2)?))
+    };
+    let found = conn.query_row(STATE, [path], row).optional()?;
+    let (id, state, dropped) = found.ok_or_else(|| Error::Sqlite {
+        reason: format!("no partition {path}"),
+    })?;
+    Ok((id, if dropped { None } else { State::parse(&state) }))
+}
+
+/// Move the partition at `path` to `state` (src/store T6).
+pub(super) fn set_state(
+    conn: &Connection,
+    path: &str,
+    state: State,
+) -> Result<(), Error> {
+    let sql = "UPDATE partitions SET state = ?2 WHERE path = ?1";
+    conn.execute(sql, [path, state.as_str()])?;
+    Ok(())
+}
+
+/// Mark the partition at `path` dropped: its row and refs stay, so no
+/// ref is issued again and each answers dropped (root V5).
+pub(super) fn mark_dropped(conn: &Connection, path: &str) -> Result<(), Error> {
+    let sql = "UPDATE partitions SET dropped = 1 WHERE path = ?1";
+    conn.execute(sql, [path])?;
+    Ok(())
+}
+
+/// Bump `generation`: rows were deleted, redacted or rewritten (D15).
+pub(super) fn bump(conn: &Connection) -> Result<(), Error> {
+    let sql = "UPDATE meta SET value = value + 1 WHERE key = 'generation'";
+    conn.execute(sql, [])?;
+    Ok(())
 }
 
 /// The ref already issued to this row's id or its identity (root V16).
@@ -76,9 +119,11 @@ pub(super) fn taken(
 pub(super) struct Hit {
     pub project: String,
     pub path: String,
+    /// The partition was dropped: the ref answers dropped (root V5).
+    pub dropped: bool,
 }
 
-const LOCATE: &str = "SELECT r.project, p.path FROM refs r
+const LOCATE: &str = "SELECT r.project, p.path, p.dropped FROM refs r
   JOIN partitions p ON p.id = r.partition
   WHERE r.ref = ?1 AND (?2 IS NULL OR r.project = ?2)
   ORDER BY r.project";
@@ -95,6 +140,7 @@ pub(super) fn locate(
         Ok(Hit {
             project: r.get(0)?,
             path: r.get(1)?,
+            dropped: r.get(2)?,
         })
     })?;
     Ok(hits.collect::<Result<_, _>>()?)

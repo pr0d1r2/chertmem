@@ -5,14 +5,14 @@
 mod tests;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
-use super::schema;
+use super::layout::Place;
 use super::write::Row;
-use super::{Error, Filter, Observation, Ref};
+use super::{Error, Filter, Observation, Ref, State, cold, schema};
 
 /// The open partition files of 1 store.
 #[derive(Debug)]
@@ -33,28 +33,100 @@ impl Chunks {
 
     /// The partition at `path` (relative to the data dir), made when new.
     pub(super) fn get(&mut self, path: &str) -> Result<&Connection, Error> {
+        let file = self.root.join(path);
+        self.open_at(path, &file)
+    }
+
+    /// The connection kept under `path`, opened on `file` first.
+    fn open_at(
+        &mut self,
+        path: &str,
+        file: &Path,
+    ) -> Result<&Connection, Error> {
         if !self.open.contains_key(path) {
-            let file = self.root.join(path);
             if let Some(dir) = file.parent() {
                 std::fs::create_dir_all(dir).map_err(|e| Error::io(dir, &e))?;
             }
-            let conn = schema::open(&file, self.busy, schema::PARTITION)?;
+            let conn = schema::open(file, self.busy, schema::PARTITION)?;
             self.open.insert(path.to_owned(), conn);
         }
         self.open.get(path).ok_or(Error::NoDataDir)
     }
 
-    /// The partition at `path` when its file exists; a read never makes
-    /// one, so a dropped file reads as gone.
+    /// The partition at `path` when its file exists, a cold one through
+    /// its thawed copy; a read never makes one, so a dropped file reads
+    /// as gone.
     pub(super) fn existing(
         &mut self,
         path: &str,
     ) -> Result<Option<&Connection>, Error> {
-        if !self.open.contains_key(path) && !self.root.join(path).is_file() {
+        if self.open.contains_key(path) || self.root.join(path).is_file() {
+            return self.get(path).map(Some);
+        }
+        if !cold::zst(&self.root, path).is_file() {
             return Ok(None);
         }
-        self.get(path).map(Some)
+        let thawed = cold::thaw(&self.root, path)?;
+        self.open_at(path, &thawed).map(Some)
     }
+
+    /// The hot file of `place` for a write, stamped with its catalog row
+    /// on first use here; a cold or sealed file refuses even when a
+    /// stale catalog calls it hot (src/store V6, V7).
+    pub(super) fn hot(
+        &mut self,
+        place: &Place,
+        dims: &str,
+        spec: &str,
+    ) -> Result<&Connection, Error> {
+        let path = &place.path;
+        let first = !self.open.contains_key(path);
+        if first && cold::zst(&self.root, path).is_file() {
+            return Err(Error::ReadOnly { path: path.clone() });
+        }
+        let conn = self.get(path)?;
+        if first {
+            stamp(conn, place, dims, spec)?;
+        }
+        Ok(conn)
+    }
+
+    /// Close the connection kept under `path`, before its file goes.
+    pub(super) fn close(&mut self, path: &str) {
+        self.open.remove(path);
+    }
+}
+
+const STAMP: &str = "INSERT INTO chunk
+  (one, dims, project, ide, t0, t1, shard, spec)
+  VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7)
+  ON CONFLICT (one) DO NOTHING";
+
+/// Stamp a new file with its catalog row; a file stamped sealed refuses.
+fn stamp(
+    conn: &Connection,
+    place: &Place,
+    dims: &str,
+    spec: &str,
+) -> Result<(), Error> {
+    let p = place;
+    let args = params![dims, p.project, p.ide, p.t0, p.t1, p.shard, spec];
+    conn.execute(STAMP, args)?;
+    let sql = "SELECT state FROM chunk";
+    let state: String = conn.query_row(sql, [], |r| r.get(0))?;
+    if State::parse(&state) == Some(State::Hot) {
+        Ok(())
+    } else {
+        Err(Error::ReadOnly {
+            path: p.path.clone(),
+        })
+    }
+}
+
+/// Record the tier in the file itself (src/store V6).
+pub(super) fn set_state(conn: &Connection, state: State) -> Result<(), Error> {
+    conn.execute("UPDATE chunk SET state = ?1", [state.as_str()])?;
+    Ok(())
 }
 
 const SCAN: &str = "SELECT ref, id, project, ts, session, ide, kind,

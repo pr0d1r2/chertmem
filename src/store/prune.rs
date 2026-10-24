@@ -11,7 +11,8 @@ use super::{Error, Filter, Partition, State, Stats};
 
 const PARTITIONS: &str = "SELECT path, dims, project, ide, t0, t1, shard,
   rows, bytes, checksum, state, spec FROM partitions
-  WHERE (?1 IS NULL OR project = ?1 OR project = '')
+  WHERE dropped = 0
+    AND (?1 IS NULL OR project = ?1 OR project = '')
     AND (?2 IS NULL OR t1 > ?2)
     AND (?3 IS NULL OR t0 < ?3)
   ORDER BY t0, path";

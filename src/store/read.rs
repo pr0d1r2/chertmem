@@ -73,6 +73,9 @@ impl Store {
     /// The row behind `hit`; a missing file or row is [`Lookup::Dropped`].
     fn fetch(&mut self, hit: &Hit, reference: &Ref) -> Result<Lookup, Error> {
         let dropped = Lookup::Dropped(reference.clone());
+        if hit.dropped {
+            return Ok(dropped);
+        }
         let Some(conn) = self.chunks.existing(&hit.path)? else {
             return Ok(dropped);
         };
