@@ -56,8 +56,11 @@ impl Window {
         store: &mut Store,
         path: &str,
     ) -> Result<(), Error> {
-        // RED stub: the rows are read but not kept yet.
-        store.tail(path, 0, &self.filter).map(drop)
+        for t in store.tail(path, 0, &self.filter)? {
+            let o = t.observation;
+            self.rows.insert((o.ts, o.id.clone()), o);
+        }
+        Ok(())
     }
 
     /// The rows `q` wants when the window holds all of them: the same
