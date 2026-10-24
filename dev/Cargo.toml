@@ -17,6 +17,9 @@ name = "chertmem-dev"
 path = "src/main.rs"
 
 [dependencies]
+# flake.lock reading for lock-graph (dev V5): MIT, no dependencies, so the
+# MIT-only deny.toml holds.
+tinyjson = "2.5.1"
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }
