@@ -12,7 +12,7 @@ const OPEN: &[u8] = b"<private>";
 const CLOSE: &[u8] = b"</private>";
 
 /// `text` without its private spans.
-pub(super) fn strip(text: &str) -> String {
+pub(crate) fn strip(text: &str) -> String {
     // Spans start and end on ASCII bytes, so what is left stays UTF-8.
     String::from_utf8_lossy(&strip_bytes(text.as_bytes())).into_owned()
 }

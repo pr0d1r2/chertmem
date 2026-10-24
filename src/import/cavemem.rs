@@ -19,7 +19,7 @@ use std::path::Path;
 
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
 
-use super::{Error, private};
+use super::Error;
 use crate::config::Grammar;
 use crate::grammar::{self, Intensity};
 use crate::store::{Event, Store};
@@ -144,7 +144,7 @@ fn millis(ts: i64) -> Result<u64, Error> {
 /// `content` as chert stores it: private spans removed first (root V8),
 /// then compressed unless cavemem already did.
 fn body(content: &str, compressed: bool, intensity: Intensity) -> String {
-    let kept = private::strip(content);
+    let kept = crate::hook::redact::strip(content);
     if compressed {
         kept
     } else {

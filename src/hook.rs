@@ -12,7 +12,7 @@ mod exclude;
 mod inject;
 mod kind;
 mod raw;
-mod redact;
+pub(crate) mod redact;
 mod summary;
 
 use std::path::Path;
