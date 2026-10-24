@@ -5,32 +5,23 @@ amends "pkl/Config.pkl"
 // (excludes, depends) by amending a step by its id.
 import "hk.pklith.pkl" as generated
 
-// Every hook's steps: the generated ones, ordered so `cargo run` never races.
+// Every hook's steps: the generated ones, shaped so `cargo run` never races.
 local fast = (generated.steps) {
-  // dev V9, B2 (lablith and actlith B9): every step that runs `cargo run`
-  // waits for this build. Started together on a stale binary, one cargo
-  // relinks the executable while another is starting it, and macOS kills
-  // that process with no output: a gate step that fails for no reason.
-  // Built once first, every later `cargo run` finds it fresh.
-  ["build"] {
-    glob = List("**/*.rs", "Cargo.toml", "Cargo.lock")
-    check = "cargo build -q --workspace --bins"
-    depends = List("clippy")
-  }
-  ["name-guard"] { depends = List("build") }
-  ["no-core-worktree"] { depends = List("build") }
-  ["lock-graph"] { depends = List("build") }
-  ["rust-mirror"] { depends = List("build") }
+  // dev V10, B2, B3 (lablith and actlith B9): cargo replaces
+  // target/debug/chertmem-dev's hard link on EVERY `cargo run`, even when
+  // nothing is rebuilt, so two such steps at once race: one execs a path
+  // the other just unlinked. Each runs alone (`exclusive`) and builds what
+  // it needs while nothing else runs.
+  ["name-guard"] { exclusive = true }
+  ["no-core-worktree"] { exclusive = true }
+  ["lock-graph"] { exclusive = true }
+  ["rust-mirror"] { exclusive = true }
 }
 
 local all = (fast) {
   // `cargo nextest run --workspace` relinks the binaries too, so `test`
-  // waits for every `cargo run` step (lablith and actlith B10).
-  ["test"] = (generated.push["test"]) {
-    depends = List(
-      "name-guard", "no-core-worktree", "lock-graph", "rust-mirror"
-    )
-  }
+  // runs alone as well (lablith and actlith B10).
+  ["test"] = (generated.push["test"]) { exclusive = true }
 }
 
 hooks {
