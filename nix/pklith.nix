@@ -4,6 +4,7 @@
 catalog: [
   catalog.editorconfig-checker
   catalog.gnugrep
+  catalog.nixfmt
   catalog.ripsecrets
   catalog.typos
 ]
