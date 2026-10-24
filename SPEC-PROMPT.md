@@ -241,3 +241,30 @@ Proposed by the agent; the owner has not ruled on them yet.
   their usage limits.
 - No general-purpose time-series database: partitions serve agent memory
   only.
+
+# Prior art and rejected designs
+
+Proposed by the agent; each rejection stands until the owner reopens it.
+
+- TimescaleDB itself: rejected as the default store. It is a Postgres
+  extension, so it needs a running server, an install, upgrades and a
+  connection per hook. Its chunking and chunk exclusion are the part
+  chert takes. It can return later as an optional backend for shared
+  team memory behind a storage trait.
+- One SQLite file for everything (cavemem): rejected. Every query and
+  every maintenance step touches the whole history.
+- Embedded stores owned by one process (redb, fjall, sled): rejected for
+  the shared store. Hooks, several MCP servers and a worker write at the
+  same time from separate processes; SQLite in WAL mode allows that.
+- DuckDB: rejected. One read-write process at a time, and its strength is
+  analytics, not small point writes.
+- `ATTACH` of every partition into one connection: rejected. SQLite
+  allows 10 attached databases by default; one connection per partition,
+  queried in parallel, has no such limit.
+- Merging raw BM25 scores across partitions: rejected. Each partition has
+  its own term statistics, so raw scores do not compare.
+- Building on an existing Rust memory server (Survey): rejected. None
+  partitions, none is mature, and none is compatible with cavemem.
+- Differentiator: cavemem's capture and compression, with a store
+  partitioned for fast targeted reads, a bounded cache that is never
+  stale, and mining that feeds rekall.
