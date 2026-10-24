@@ -6,9 +6,10 @@
 //! session's `ide` go over as they are; `content` is redacted again and,
 //! when cavemem left it uncompressed, compressed; the identity is
 //! `cavemem:<session_id>:<id>`, so a 2nd import finds the 1st row
-//! (src/store V9). `intensity`, `metadata`, the session's `cwd`,
-//! `started_at`, `ended_at`, `metadata`, the FTS index and `embeddings`
-//! are dropped: chert keeps none of them.
+//! (src/store V9). The session's `cwd` picks the project (`split`).
+//! `intensity`, `metadata`, the session's `started_at`, `ended_at`,
+//! `metadata`, the FTS index and `embeddings` are dropped: chert keeps
+//! none of them.
 
 #[cfg(test)]
 mod tests;
@@ -23,7 +24,8 @@ use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
 use super::Error;
 use crate::config::{Config, Grammar};
 use crate::grammar::{self, Intensity};
-use crate::store::{Event, Mode, Store};
+use crate::store::Event;
+use split::Cwd;
 
 /// What an import read from cavemem; every row of it is in the store.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -39,7 +41,7 @@ pub struct Imported {
 const VERSION: i64 = 2;
 
 const OBSERVATIONS: &str = "SELECT o.id, o.session_id, o.kind, o.content,
-    o.compressed, o.ts, COALESCE(s.ide, '')
+    o.compressed, o.ts, COALESCE(s.ide, ''), s.cwd
   FROM observations o LEFT JOIN sessions s ON s.id = o.session_id
   ORDER BY o.id";
 
@@ -61,16 +63,7 @@ pub fn cavemem(
     let events = observations(&conn, level)?;
     let notes = summary::read(&conn, level)?;
     drop(conn);
-    let mut store = Store::open(config, root, Mode::Read)?;
-    for event in &events {
-        store.append(event)?;
-    }
-    summary::put(&mut store, &notes)?;
-    Ok(Imported {
-        observations: events.len(),
-        summaries: notes.len(),
-        no_cwd: 0,
-    })
+    split::put(config, root, events, notes)
 }
 
 /// `db` read-only, never created, its schema version checked.
@@ -101,7 +94,7 @@ fn escaped(path: &Path) -> String {
 fn observations(
     conn: &Connection,
     intensity: Intensity,
-) -> Result<Vec<Event>, Error> {
+) -> Result<Vec<(Cwd, Event)>, Error> {
     let mut stmt = conn.prepare(OBSERVATIONS)?;
     let rows = stmt.query_map([], raw)?;
     let found = rows.collect::<Result<Vec<_>, _>>()?;
@@ -117,6 +110,7 @@ struct Raw {
     compressed: bool,
     ts: i64,
     ide: String,
+    cwd: Option<String>,
 }
 
 fn raw(r: &Row<'_>) -> rusqlite::Result<Raw> {
@@ -128,18 +122,21 @@ fn raw(r: &Row<'_>) -> rusqlite::Result<Raw> {
         compressed: r.get(4)?,
         ts: r.get(5)?,
         ide: r.get(6)?,
+        cwd: r.get(7)?,
     })
 }
 
-fn event(r: Raw, intensity: Intensity) -> Result<Event, Error> {
-    Ok(Event {
+/// 1 row as the event chert stores, with its session's cwd.
+fn event(r: Raw, intensity: Intensity) -> Result<(Cwd, Event), Error> {
+    let event = Event {
         ts: millis(r.ts)?,
         identity: Some(format!("cavemem:{}:{}", r.session, r.id)),
         body: body(&r.content, r.compressed, intensity),
         session: r.session,
         kind: r.kind,
         ide: r.ide,
-    })
+    };
+    Ok((split::cwd(r.cwd), event))
 }
 
 /// cavemem's `Date.now()` milliseconds; before the epoch is refused.
