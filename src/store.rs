@@ -6,6 +6,7 @@ mod tests;
 
 mod calendar;
 mod catalog;
+mod cold;
 mod error;
 mod layout;
 mod line;
@@ -18,6 +19,7 @@ mod schema;
 mod spool;
 mod summary;
 mod tail;
+mod tier;
 mod write;
 
 use std::path::{Path, PathBuf};
@@ -33,7 +35,7 @@ pub use model::{
 };
 pub use reference::Ref;
 
-use crate::config::Config;
+use crate::config::{Config, Zstd};
 use calendar::MAX_TS;
 use layout::Plan;
 use partition::Chunks;
@@ -76,6 +78,7 @@ pub struct Store {
     plan: Plan,
     catalog: Option<Connection>,
     chunks: Chunks,
+    zstd: Zstd,
 }
 
 impl Store {
@@ -99,6 +102,7 @@ impl Store {
             project: project_id(project_root),
             plan: Plan::new(&cfg.partition),
             catalog: None,
+            zstd: cfg.compression.zstd,
         };
         if mode == Mode::Read {
             store.catalog()?;
