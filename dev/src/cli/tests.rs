@@ -84,3 +84,32 @@ fn no_core_worktree_clean_twin_holds() -> Res {
     assert_eq!(run(&args(&["no-core-worktree"]), &root), 0);
     Ok(())
 }
+
+#[test]
+fn lock_graph_planted_second_nixpkgs_is_a_finding() -> Res {
+    let root = scratch("lock-planted")?;
+    let node = r#"{"original":{"repo":"nixpkgs"}}"#;
+    let pin = r#"{"original":{"repo":"nixpkgs-lock"}}"#;
+    let lock = format!(
+        r#"{{"nodes":{{"nixpkgs":{node},"nixpkgs_2":{node},"nixpkgs-lock":{pin}}}}}"#
+    );
+    fs::write(root.join("flake.lock"), lock)?;
+    assert_eq!(run(&args(&["lock-graph"]), &root), 1);
+    Ok(())
+}
+
+#[test]
+fn lock_graph_clean_twin_holds() -> Res {
+    let root = scratch("lock-clean")?;
+    let lock = r#"{"nodes":{"nixpkgs":{"original":{"repo":"nixpkgs"}},"nixpkgs-lock":{"original":{"repo":"nixpkgs-lock"}}}}"#;
+    fs::write(root.join("flake.lock"), lock)?;
+    assert_eq!(run(&args(&["lock-graph"]), &root), 0);
+    Ok(())
+}
+
+#[test]
+fn lock_graph_without_lock_is_unreadable_input() -> Res {
+    let root = scratch("lock-missing")?;
+    assert_eq!(run(&args(&["lock-graph"]), &root), 2);
+    Ok(())
+}
