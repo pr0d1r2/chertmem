@@ -306,3 +306,13 @@ fn raw_payloads_wait_aside_in_both_modes_and_never_replay() -> Test {
     assert!(store.observations(&Filter::default())?.is_empty());
     Ok(())
 }
+
+#[test]
+fn a_raw_payload_with_nowhere_to_go_is_an_io_error() -> Test {
+    let s = Scratch::new("spool-raw-blocked")?;
+    fs::create_dir_all(s.data().join("spool"))?;
+    fs::write(s.data().join("spool/unreadable"), "a file, not a dir")?;
+    let e = s.open(Mode::Write)?.spool_raw(b"x").err();
+    assert!(matches!(e, Some(Error::Io { .. })), "{e:?}");
+    Ok(())
+}

@@ -169,13 +169,16 @@ impl Store {
         &self.project
     }
 
-    /// Keep a hook payload that could not be parsed (src/store T14).
+    /// Keep a hook payload that could not be parsed, `bytes` as given,
+    /// in `spool/unreadable/<ULID>.hook` under the data dir, written to
+    /// a temp file and renamed into place: no replay reads, stores or
+    /// drops it, so it waits for a person or an importer (src/store
+    /// T14). Allowed in both modes; the file kept is returned.
     ///
     /// # Errors
-    /// Not built yet.
+    /// [`Error::Io`] when the dir or the file cannot be written.
     pub fn spool_raw(&self, bytes: &[u8]) -> Result<PathBuf, Error> {
-        let _ = (&self.root, bytes);
-        Err(Error::WriteOnly)
+        spool::raw(&self.root, bytes)
     }
 
     /// Store `event` in the partition of its own timestamp (src/store
