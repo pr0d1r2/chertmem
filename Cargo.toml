@@ -1,0 +1,48 @@
+[package]
+name = "chertmem"
+# Unpublished until the first release (T18).
+version = "0.0.0"
+edition = "2024"
+# The fleet pin: nixpkgs-lock (nixos-26.05) carries rustc 1.95.
+rust-version = "1.95"
+license = "MIT"
+description = "Persistent, partitioned memory for coding agents"
+repository = "https://github.com/pr0d1r2/chertmem"
+readme = "README.md"
+keywords = ["memory", "mcp", "agents", "sqlite", "claude-code"]
+categories = ["development-tools", "command-line-utilities"]
+
+[[bin]]
+name = "chert"
+path = "src/main.rs"
+
+[dependencies]
+
+[lints.rust]
+# No FFI of our own; rusqlite carries SQLite's (SPEC.md C).
+unsafe_code = "forbid"
+unreachable_pub = "deny"
+
+# Code limits, thresholds in clippy.toml; the fleet deny list, as in
+# lablith (paradigm/V42).
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+arithmetic_side_effects = "deny"
+too_many_lines = "deny"
+cognitive_complexity = "deny"
+excessive_nesting = "deny"
+fn_params_excessive_bools = "deny"
+struct_excessive_bools = "deny"
+
+[workspace]
+# `dev/` holds this repository's own gate steps and ships to nobody: a
+# `publish = false` member cannot land on a consumer's PATH (dev node).
+members = ["dev"]

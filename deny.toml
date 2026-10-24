@@ -1,0 +1,28 @@
+# cargo-deny policy: the fleet policy, as in lablith and actlith
+# (paradigm/V42).
+
+# Only the four supported platforms count, so Windows-only crates pulled in
+# by dependencies do not trip `multiple-versions`.
+[graph]
+targets = [
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+]
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[licenses]
+allow = ["MIT"]
+confidence-threshold = 0.93
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+
+[advisories]
+yanked = "deny"

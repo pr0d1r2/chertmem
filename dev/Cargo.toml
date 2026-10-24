@@ -1,0 +1,40 @@
+[package]
+name = "chertmem-dev"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+publish = false
+
+[package.metadata.release]
+release = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "chertmem-dev"
+path = "src/main.rs"
+
+[dependencies]
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+arithmetic_side_effects = "deny"
+too_many_lines = "deny"
+cognitive_complexity = "deny"
+excessive_nesting = "deny"
+fn_params_excessive_bools = "deny"
+struct_excessive_bools = "deny"
+
+[lints.rust]
+unreachable_pub = "deny"
+unsafe_code = "forbid"

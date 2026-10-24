@@ -1,0 +1,6 @@
+# Code limits (as in lablith, paradigm/V42). A function that outgrows them wants splitting;
+# raising a number is a reviewed decision.
+too-many-lines-threshold = 15
+cognitive-complexity-threshold = 7
+excessive-nesting-threshold = 4
+too-many-arguments-threshold = 4

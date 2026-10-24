@@ -1,0 +1,5 @@
+# 80 columns pairs with the 15-line function limit in clippy.toml: a deeply
+# nested function runs out of width before it runs out of lines.
+max_width = 80
+# Must track `edition` in Cargo.toml; rustfmt reads its edition from here.
+edition = "2024"

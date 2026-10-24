@@ -1,0 +1,4 @@
+//! chertmem: persistent, partitioned memory for coding agents.
+//!
+//! A stub until the waves (root T8): the module nodes under `src/` land
+//! one per worker, test first.
