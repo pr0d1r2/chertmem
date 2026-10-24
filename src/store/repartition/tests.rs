@@ -159,6 +159,55 @@ fn a_sealed_target_refuses_and_moves_nothing() -> Test {
     Ok(())
 }
 
+fn shards(s: &Scratch, n: u32) -> Result<Config, Box<dyn StdError>> {
+    let mut cfg = s.config()?;
+    cfg.partition.shards = n;
+    Ok(cfg)
+}
+
+/// 24 rows and 8 turns in week 0 over 2 shards; the refs.
+fn sharded(s: &Scratch) -> Result<Vec<Ref>, Box<dyn StdError>> {
+    let mut old = open(s, &shards(s, 2)?)?;
+    let mut refs = Vec::new();
+    for ts in 0..24 {
+        refs.push(stored(old.append(&event(ts, None, &ts.to_string()))?)?);
+    }
+    for ts in 0..8 {
+        old.append_summary(&turn(ts, &ts.to_string()))?;
+    }
+    Ok(refs)
+}
+
+#[test]
+fn shards_2_to_3_keep_some_rows_in_place_and_move_the_rest() -> Test {
+    let s = Scratch::new("repart-shards")?;
+    let refs = sharded(&s)?;
+    let mut new = open(&s, &shards(&s, 3)?)?;
+    new.repartition()?;
+    let all = new.partitions(&Filter::default())?;
+    assert_eq!(all.len(), 3);
+    let total = all.iter().map(|p| p.stats.rows).sum::<u64>();
+    assert_eq!(total, 24);
+    assert_eq!(rows(&mut new, &refs)?.len(), 24);
+    assert_eq!(new.summaries(None, Scope::Turn)?.len(), 8);
+    assert_eq!(new.observations(&Filter::default())?.len(), 24);
+    Ok(())
+}
+
+#[test]
+fn a_source_whose_file_is_gone_is_forgotten() -> Test {
+    let s = Scratch::new("repart-gone")?;
+    let (refs, _) = before(&s)?;
+    let week0 = chunk(&s.open(Mode::Read)?, "19700101-7d");
+    std::fs::remove_file(s.data().join(&week0))?;
+    let mut new = open(&s, &daily(&s)?)?;
+    new.repartition()?;
+    let lost = refs.first().cloned().ok_or("no refs")?;
+    let found = new.get(std::slice::from_ref(&lost))?;
+    assert_eq!(found, [Lookup::Dropped(lost)]);
+    Ok(())
+}
+
 #[test]
 fn nothing_to_rewrite_leaves_generation_alone() -> Test {
     let s = Scratch::new("repart-noop")?;

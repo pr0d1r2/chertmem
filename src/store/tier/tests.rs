@@ -151,6 +151,21 @@ fn every_rewrite_bumps_generation_and_a_seal_does_not() -> Test {
 }
 
 #[test]
+fn compacting_a_partition_whose_file_is_gone_is_an_io_error() -> Test {
+    let s = Scratch::new("tier-compact-gone")?;
+    let mut store = s.open(Mode::Read)?;
+    let (_, path) = fill(&mut store)?;
+    store.seal(&path)?;
+    drop(store);
+    std::fs::remove_file(s.data().join(&path))?;
+    let mut store = s.open(Mode::Read)?;
+    let e = store.compact(&path);
+    assert!(matches!(e, Err(Error::Io { .. })), "{e:?}");
+    assert_eq!(state(&store, &path)?, Some(State::Warm));
+    Ok(())
+}
+
+#[test]
 fn an_unknown_partition_is_an_error() -> Test {
     let s = Scratch::new("tier-unknown")?;
     let mut store = s.open(Mode::Read)?;

@@ -67,11 +67,12 @@ fn a_deleted_catalog_rebuilds_equal_to_the_one_before() -> Test {
     Ok(())
 }
 
-/// A row in week 3, the catalog copied aside, then 3 tiers and week 3
-/// dropped; the dropped ref and the catalog before the crash.
+/// Rows in weeks 3 and 4, the catalog copied aside, then 3 tiers and
+/// week 3 dropped; the dropped ref and the catalog before the crash.
 fn stale(s: &Scratch) -> Result<(Ref, Dump), Box<dyn StdError>> {
     let mut store = s.open(Mode::Read)?;
     let gone = stored(store.append(&event(3 * WEEK + 1, None, "gone"))?)?;
+    store.append(&event(4 * WEEK + 1, None, "kept"))?;
     drop(store);
     fs::copy(s.data().join("catalog.db"), s.data().join("stale.db"))?;
     let mut store = s.open(Mode::Read)?;
@@ -93,6 +94,29 @@ fn a_stale_catalog_rebuilds_equal_to_the_one_before() -> Test {
     let found = store.get(std::slice::from_ref(&gone))?;
     assert_eq!(found, [Lookup::Dropped(gone)]);
     Ok(())
+}
+
+/// Append into week 1 (warm) and week 2 (cold) under a catalog that
+/// was deleted and so calls them nothing, then hot.
+fn appends_after_a_lost_catalog(s: &Scratch) -> Test {
+    let mut store = s.open(Mode::Read)?;
+    tiers(&mut store)?;
+    drop(store);
+    remove_catalog(s);
+    let mut store = s.open(Mode::Read)?;
+    for (ts, week) in [(WEEK + 2, "19700108-7d"), (2 * WEEK + 2, "19700115-7d")]
+    {
+        let path = chunk(&store, week);
+        let refused = store.append(&event(ts, None, "late"));
+        assert_eq!(refused, Err(Error::ReadOnly { path }));
+    }
+    Ok(())
+}
+
+#[test]
+fn a_sealed_file_refuses_writes_even_when_the_catalog_forgot() -> Test {
+    let s = Scratch::new("doctor-forgot")?;
+    appends_after_a_lost_catalog(&s)
 }
 
 #[test]
