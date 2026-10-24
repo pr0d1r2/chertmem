@@ -23,6 +23,7 @@ local all = (fast) {
   // runs alone as well (lablith and actlith B10).
   ["test"] = (generated.push["test"]) { exclusive = true }
   ["tdd-order"] = (generated.push["tdd-order"]) { exclusive = true }
+  ["coverage"] = (generated.push["coverage"]) { exclusive = true }
 }
 
 hooks {

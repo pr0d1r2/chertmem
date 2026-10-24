@@ -162,4 +162,8 @@ push: Mapping<String, Config.Step> = new {
     glob = List("**/*.rs", "dev/tdd-order.exempt")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'tdd-order: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- tdd-order || { echo 'tdd-order: a commit adds Rust code with no test: commit before it in the push range' >&2; exit 1; }"
   }
+  ["coverage"] {
+    glob = List("**/*.rs", "Cargo.toml", ".coverage")
+    check = "command -v sherd >/dev/null 2>&1 || { echo 'coverage: sherd is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; sherd coverage --check || { echo 'coverage: line coverage fell below .coverage' >&2; exit 1; }"
+  }
 }

@@ -39,6 +39,9 @@ rust-mirror|lint|-|**/*.rs|cargo run -q -p chertmem-dev -- rust-mirror|-|-|a Rus
 # push range, unless exempt in dev/tdd-order.exempt. Push only: the order
 # is a property of history, and a RED commit must be committable.
 tdd-order|coverage|-|**/*.rs, dev/tdd-order.exempt|cargo run -q -p chertmem-dev -- tdd-order|-|-|a commit adds Rust code with no test: commit before it in the push range
+# paradigm/V25: line coverage floor, a ratchet; push only, alone (dev V10):
+# cargo-llvm-cov builds the binaries too.
+coverage|coverage|sherd|**/*.rs, Cargo.toml, .coverage|sherd coverage --check|-|-|line coverage fell below .coverage
 ## types
 type|checks|min|exempt
 *|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard, no-core-worktree|-|-
@@ -56,8 +59,9 @@ envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
-rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test|-|-
+rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test, coverage|-|-
 toml|taplo|-|-
 path:Cargo.lock|deny|-|-
 exempt|tdd-order|-|-
+coverage|coverage|-|-
 path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)
