@@ -124,3 +124,46 @@ Conclusion: none of them is mature (all created in 2026, at most 18
 stars), none partitions its store, and none is a drop-in for cavemem: none
 implements the caveman grammar or reads cavemem's data. They are reference
 code for `rusqlite`, FTS5, `rmcp` and embeddings, not a base to build on.
+
+# Config: `chert.toml`
+
+Two scopes, as rekall has: `~/.config/chert/chert.toml` (user) and
+`chert.toml` at the project root (project, tracked). The project scope
+overrides the user scope key by key. Sketch, not final:
+
+```toml
+[storage]
+data_dir = "~/.local/share/chert"
+
+[partition]
+by          = ["project", "time"]  # partition dimensions, in order
+time_bucket = "7d"                 # 1d | 7d | 1mo | ...
+shards      = 1                    # hash sub-partitions per bucket
+
+[cache]
+window      = "28d"                # recent window held in memory
+max_bytes   = "256MiB"
+on_overflow = "warn"               # warn | shrink | fail
+
+[compression]
+grammar = "full"                   # caveman grammar: off | lite | full | ultra
+zstd    = { level = 3, dictionary = true }
+
+[search]
+alpha         = 0.5                # BM25 / vector blend
+default_limit = 10
+
+[embedding]
+provider = "off"                   # off | local | ollama | openai
+
+[privacy]
+exclude = []                       # path globs never captured
+
+[mining]
+enabled = true
+min_occurrences = 3
+```
+
+- `cache.window` should be a whole multiple of `partition.time_bucket`;
+  when it is not, chert warns and names both values.
+- `<private>...</private>` is stripped before any write, as in cavemem.
