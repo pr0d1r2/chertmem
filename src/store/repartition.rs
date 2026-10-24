@@ -42,7 +42,7 @@ struct Move<'a> {
 }
 
 /// A stored observation as the row it was appended as, and its ref.
-fn row(o: Observation) -> (Row, String) {
+pub(super) fn row(o: Observation) -> (Row, String) {
     let event = Event {
         ts: o.ts,
         session: o.session,
