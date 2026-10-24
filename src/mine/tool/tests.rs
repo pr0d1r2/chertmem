@@ -25,7 +25,20 @@ fn the_same_command_compresses_to_the_same_text() {
 #[test]
 fn a_command_of_another_tool_is_no_command() {
     let tool = parse(&body("Task", r#"{"command":"ls"}"#));
-    assert_eq!(tool, Some(Tool::default()));
+    let name = "Task".to_owned();
+    assert_eq!(
+        tool,
+        Some(Tool {
+            name,
+            ..Tool::default()
+        })
+    );
+}
+
+#[test]
+fn a_call_gives_its_tool_name() {
+    let tool = parse(&body("WebSearch", r#"{"query":"rust"}"#));
+    assert_eq!(tool.map(|t| t.name).as_deref(), Some("WebSearch"));
 }
 
 #[test]

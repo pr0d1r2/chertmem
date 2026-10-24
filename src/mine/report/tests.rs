@@ -85,3 +85,17 @@ fn the_same_findings_give_the_same_bytes() -> Test {
     }
     Ok(())
 }
+
+#[test]
+fn a_token_sink_is_spelled_token_sink_in_every_format() -> Test {
+    let sink = "token sink `Read` `x.rs`: >= 1/10 of tool call tokens";
+    let one = [finding("00000000000000cc", Kind::TokenSink, sink)?];
+    let text = report(&one, Format::Text);
+    assert!(text.starts_with("2x token_sink 00000000000000cc token"));
+    let got: Value = serde_json::from_str(&report(&one, Format::Json))?;
+    let kind = got.get(0).and_then(|f| f.get("kind"));
+    assert_eq!(kind, Some(&json!("token_sink")));
+    let md = report(&one, Format::Md);
+    assert!(md.contains(&format!("| token_sink | 2 | {sink} |")), "{md}");
+    Ok(())
+}

@@ -1,5 +1,5 @@
 //! Behaviour findings with evidence refs (src/mine G): repeated command
-//! sequences and hot files, mined from the `post-tool-use` observations
+//! sequences, hot files and token sinks, mined from the `post-tool-use` observations
 //! `src/hook` stores. Mining only reads the store; it changes nothing
 //! by itself (root C) and never writes under `.rekall/` (V3).
 
@@ -35,10 +35,16 @@ pub enum Kind {
     Sequence,
     /// 1 path a tool read or wrote.
     HotFile,
+    /// 1 tool call pattern whose stored bodies cost a large share of the
+    /// tokens of every tool call (src/mine R5).
+    TokenSink,
 }
 
-const KINDS: [(Kind, &str); 2] =
-    [(Kind::Sequence, "sequence"), (Kind::HotFile, "hot_file")];
+const KINDS: [(Kind, &str); 3] = [
+    (Kind::Sequence, "sequence"),
+    (Kind::HotFile, "hot_file"),
+    (Kind::TokenSink, "token_sink"),
+];
 
 impl Kind {
     /// The spelling in a report and in the finding store.
@@ -50,7 +56,7 @@ impl Kind {
             .map_or("sequence", |&(_, name)| name)
     }
 
-    /// `sequence` or `hot_file`.
+    /// `sequence`, `hot_file` or `token_sink`.
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
         KINDS.iter().find(|(_, n)| *n == text).map(|&(k, _)| k)

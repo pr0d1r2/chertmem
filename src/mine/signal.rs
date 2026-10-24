@@ -40,6 +40,7 @@ pub(super) fn findings(rows: &[Observation], min: u32) -> Vec<Finding> {
     let mut tally = Tally::new();
     sequences(&calls, &mut tally);
     hot_files(&calls, &mut tally);
+    token_sinks(&calls, &mut tally);
     let least = usize::try_from(min).unwrap_or(usize::MAX).max(1);
     let kept = tally.into_iter().filter(|(_, seen)| seen.len() >= least);
     let mut found: Vec<Finding> = kept
@@ -101,6 +102,10 @@ fn hot_files<'a>(calls: &[Call<'a>], tally: &mut Tally<'a>) {
     }
 }
 
+/// Each tool call pattern costing a large share of the tokens of all
+/// `calls` (src/mine R5), shown by the rows of its calls; a stub.
+const fn token_sinks<'a>(_calls: &[Call<'a>], _tally: &mut Tally<'a>) {}
+
 /// The Bash commands of each session, in order, with their rows.
 fn by_session<'a>(
     calls: &[Call<'a>],
@@ -135,7 +140,9 @@ fn summary(kind: Kind, pattern: &str) -> String {
         .collect();
     match kind {
         Kind::Sequence => parts.join(" then "),
-        Kind::HotFile => format!("hot file {}", parts.join(" ")),
+        Kind::HotFile | Kind::TokenSink => {
+            format!("hot file {}", parts.join(" "))
+        }
     }
 }
 

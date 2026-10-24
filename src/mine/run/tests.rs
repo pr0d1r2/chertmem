@@ -157,8 +157,26 @@ fn hot_files_come_from_the_paths_tools_name() -> Test {
     }
     let mut store = scratch.store()?;
     let found = mine(&mut store, &scratch.config, None)?;
-    let hot: Vec<_> = found.iter().map(|f| (f.kind, f.count)).collect();
+    let hot = found.iter().filter(|f| f.kind == Kind::HotFile);
+    let hot: Vec<_> = hot.map(|f| (f.kind, f.count)).collect();
     assert_eq!(hot, [(Kind::HotFile, 3)]);
+    Ok(())
+}
+
+#[test]
+fn token_sinks_come_from_the_stored_bodies() -> Test {
+    let scratch = Scratch::new("tokensink")?;
+    for at in 0..3 {
+        let input = json!({ "file_path": "src/lib.rs" });
+        scratch.tool(at, "s", ("Read", &input))?;
+    }
+    let mut store = scratch.store()?;
+    seal_all(&mut store)?;
+    let found = mine(&mut store, &scratch.config, None)?;
+    let sinks = found.iter().filter(|f| f.kind == Kind::TokenSink);
+    let sinks: Vec<_> = sinks.map(|f| (f.count, f.summary.as_str())).collect();
+    let want = "token sink `Read` `src/lib.rs`: >= 1/10 of tool call tokens";
+    assert_eq!(sinks, [(3, want)]);
     Ok(())
 }
 
