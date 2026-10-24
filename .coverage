@@ -1,3 +1,5 @@
 # Line coverage floor, a ratchet read by `sherd coverage --check`: it may
-# rise, and only `sherd coverage --record` moves it (paradigm/V25).
+# only rise (paradigm/V25). Set to what `sherd coverage --record` measures
+# minus 0.10, rounded down (dev V13, B5): checkouts of one commit differ
+# by about 0.02.
 lines 98.22
