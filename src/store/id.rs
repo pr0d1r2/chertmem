@@ -37,13 +37,22 @@ fn new_in(last: &Mutex<Last>, ts: u64) -> Result<String, Error> {
     Ok(next(&mut held, ts)?.to_string())
 }
 
-/// The id after the last one at `ts`, or a fresh one.
+/// The id after the last one at `ts` (its random part + 1, as
+/// `ulid::Generator` does), or a fresh one; the earliest timestamp goes
+/// once more than [`KEPT`] are held. A random part already at its
+/// maximum is [`Error::NoId`]: moving to the next ms would leave the
+/// event's own time (src/store V1).
 fn next(last: &mut Last, ts: u64) -> Result<Ulid, Error> {
-    match last.get(&ts) {
-        Some(_) if KEPT == 0 => Err(Error::NoId {
+    let id = match last.get(&ts) {
+        Some(prev) => prev.increment().map_err(|_| Error::NoId {
             ts,
-            reason: String::new(),
-        }),
-        _ => Ok(Ulid::from_parts(ts, Ulid::generate().random())),
+            reason: "all 2^80 ids of this ms are minted".to_owned(),
+        })?,
+        None => Ulid::from_parts(ts, Ulid::generate().random()),
+    };
+    last.insert(ts, id);
+    if last.len() > KEPT {
+        last.pop_first();
     }
+    Ok(id)
 }
