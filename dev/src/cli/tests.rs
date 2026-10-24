@@ -141,3 +141,60 @@ fn rust_mirror_clean_twin_holds() -> Res {
     assert_eq!(run(&args(&["rust-mirror"]), &root), 0);
     Ok(())
 }
+
+/// Identity and no hooks, so a scratch commit needs no global config.
+const COMMIT: [&str; 7] = [
+    "-c",
+    "user.name=t",
+    "-c",
+    "user.email=t@t",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "commit",
+];
+
+fn commit_all(dir: &std::path::Path, subject: &str) -> Res {
+    git(dir, &["add", "-A"])?;
+    let mut a = COMMIT.to_vec();
+    a.extend(["-q", "-m", subject]);
+    git(dir, &a)
+}
+
+/// A fresh repository with an empty `dev/tdd-order.exempt`.
+fn exempt_repo(name: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let root = scratch(name)?;
+    git(&root, &["init", "-q"])?;
+    fs::create_dir_all(root.join("dev"))?;
+    fs::write(root.join("dev/tdd-order.exempt"), "# none\n")?;
+    Ok(root)
+}
+
+#[test]
+fn tdd_order_planted_code_before_test_is_a_finding() -> Res {
+    let root = exempt_repo("tdd-planted")?;
+    fs::write(root.join("a.rs"), "pub fn f() {}\n")?;
+    commit_all(&root, "feat: code first")?;
+    assert_eq!(run(&args(&["tdd-order", "HEAD"]), &root), 1);
+    Ok(())
+}
+
+#[test]
+fn tdd_order_clean_twin_holds() -> Res {
+    let root = exempt_repo("tdd-clean")?;
+    fs::write(root.join("a_test.rs"), "")?;
+    commit_all(&root, "test: RED first")?;
+    fs::write(root.join("a.rs"), "pub fn f() {}\n")?;
+    commit_all(&root, "feat: GREEN")?;
+    assert_eq!(run(&args(&["tdd-order", "HEAD"]), &root), 0);
+    Ok(())
+}
+
+#[test]
+fn tdd_order_without_exempt_file_is_a_finding() -> Res {
+    let root = scratch("tdd-noexempt")?;
+    git(&root, &["init", "-q"])?;
+    fs::write(root.join("a.md"), "x\n")?;
+    commit_all(&root, "docs: x")?;
+    assert_eq!(run(&args(&["tdd-order", "HEAD"]), &root), 1);
+    Ok(())
+}
