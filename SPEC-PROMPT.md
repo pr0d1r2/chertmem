@@ -76,3 +76,51 @@ Goals:
   - `flintknap`, `tallybone`, `petroglyph`: free, weaker fit than chert.
   - `strata`, `midden`, `quipu`, `ochre`, `cairn`, `flint`, `chert`:
     taken on crates.io.
+
+# Survey (2026-10-24)
+
+## cavemem 0.2.1, the tool being replaced
+
+Read from the published tarball. Recount: `npm pack cavemem@0.2.1`, then
+grep `dist/*.js` for `.command(`, `CREATE `, `app.get(` and `import(`.
+
+- Repository `JuliusBrussee/cavemem`, MIT, 676 stars, created 2026-04-18,
+  last push 2026-08-14 (`gh api repos/JuliusBrussee/cavemem`). Node >= 20.
+- 6 runtime dependencies: `commander`, `kleur`, `better-sqlite3` (native
+  addon), `hono`, `@hono/node-server`, `@modelcontextprotocol/sdk`.
+  Optional: `@xenova/transformers` for local embeddings, through a dynamic
+  `import()`; 7 MiniLM, BGE and GTE models listed.
+- 5 hook shims (`session-start`, `user-prompt-submit`, `post-tool-use`,
+  `stop`, `session-end`), each `exec cavemem hook run <name>`: one Node
+  start per agent event.
+- CLI verbs: `install`, `uninstall`, `status`, `config show|get|set|open|
+  path`, `start`, `stop`, `restart`, `worker`, `viewer`, `doctor`,
+  `search`, `compress`, `expand`, `reindex`, `export`, `import`, `reset`,
+  `mcp`, `hook run`.
+- One SQLite file: tables `sessions`, `observations`, `summaries`,
+  `embeddings`, `schema_version`; FTS5 table `observations_fts` kept by 3
+  triggers; indexes on session, ts and embedding model.
+- 4 MCP tools: `search`, `timeline`, `get_observations`, `list_sessions`.
+- Worker and viewer on `127.0.0.1:37777`: `/`, `/sessions/:id`,
+  `/api/search`, `/api/sessions`, `/api/sessions/:id/observations`,
+  `/api/state`, `/healthz`.
+- Bundle: 214573 bytes of JavaScript, 160478 of them in the shared chunk
+  that holds the compression grammar, store and ranker.
+
+## Existing Rust agent-memory projects
+
+Recount: `gh api repos/<repo>` for stars and last push,
+`curl https://crates.io/api/v1/crates/<crate>` for version and downloads.
+
+repo|stars|crate|last push|shape
+asanabrial/leteo|4|leteo 0.4.2, 121 downloads|2026-10-17|MCP + lifecycle hooks, one SQLite file, 22 MCP tools, TUI
+edg-l/engram-mcp|18|engram_mcp 0.12.2, 571 downloads|2026-10-18|MCP only, branch-scoped memory, ONNX embeddings, FTS5 + cosine
+rajarshighoshal/opencode-memory|1|opencode-memory 0.1.4, 110 downloads|2026-07-05|sqlite-vec, llama.cpp embeddings, RRF fusion
+abankowski/mcpmem|0|mcpmem 3.0.7, 270 downloads|2026-10-15|knowledge graph, tree-sitter indexing
+dutiona/memory-engine|2|-|2026-07-23|embeddable library: FTS5, vector, graph
+OfficialTanishSharma/agentos|1|-|2026-10-09|FTS5 only, 2 tools
+
+Conclusion: none of them is mature (all created in 2026, at most 18
+stars), none partitions its store, and none is a drop-in for cavemem: none
+implements the caveman grammar or reads cavemem's data. They are reference
+code for `rusqlite`, FTS5, `rmcp` and embeddings, not a base to build on.
