@@ -169,6 +169,15 @@ impl Store {
         &self.project
     }
 
+    /// Keep a hook payload that could not be parsed (src/store T14).
+    ///
+    /// # Errors
+    /// Not built yet.
+    pub fn spool_raw(&self, bytes: &[u8]) -> Result<PathBuf, Error> {
+        let _ = (&self.root, bytes);
+        Err(Error::WriteOnly)
+    }
+
     /// Store `event` in the partition of its own timestamp (src/store
     /// V1); an identity seen before gives back its first ref (V9). A
     /// lock outlasting the busy timeout spools it instead and still
