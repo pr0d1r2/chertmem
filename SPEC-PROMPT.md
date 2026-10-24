@@ -283,6 +283,16 @@ question 13 stays open.
     5 ms, search of the recent window under 10 ms, `get_observations`
     under 2 ms, semantic re-rank under 20 ms. A benchmark step in the
     push gate fails on a regression. Closes open question 9. Local.
+21. cavemem compatibility: chert keeps its own data directory and imports
+    cavemem's database with `chert import --from cavemem`; it never shares
+    cavemem's live files. MCP tool names and result shapes stay
+    compatible. Closes open question 10. Local.
+22. Caveman grammar: port cavemem's compress and expand at a pinned
+    cavemem version, byte for byte, proved by differential tests that run
+    cavemem's JavaScript as the oracle over a corpus. Node is a test-only
+    dependency of that step, never a run-time one (decision 1). cavemem
+    is MIT, so its copyright notice ships with the port. Closes open
+    question 11. Local.
 
 # Non-goals
 
@@ -340,15 +350,8 @@ decision or drops it.
 7. Ranking across partitions. Closed by decision 17.
 8. Defaults. Closed by decision 19.
 9. Responsiveness targets. Closed by decision 20.
-10. cavemem compatibility. Proposed: chert keeps its own data directory
-    and imports cavemem's database with `chert import --from cavemem`;
-    it does not share cavemem's live files. MCP tool names and result
-    shapes stay compatible. Blocks the import node.
-11. Caveman grammar. Proposed: port cavemem's compress and expand at a
-    pinned cavemem version, byte for byte, proved by differential tests
-    that run cavemem's JavaScript as the oracle over a corpus. cavemem is
-    MIT, so its copyright notice ships with the port. Blocks the
-    compression node.
+10. cavemem compatibility. Closed by decision 21.
+11. Caveman grammar. Closed by decision 22.
 12. Embeddings in version 1. Closed by decision 18.
 13. Mining hand-off to rekall. Either chert writes candidates straight
     into `.rekall/ledger.toml` `candidates`, or it exports its own format
