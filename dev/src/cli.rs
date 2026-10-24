@@ -4,25 +4,33 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{lock_graph, mirror, name_guard, worktree};
+use crate::{lock_graph, mirror, name_guard, tdd_order, worktree};
 use std::path::Path;
 
 const USAGE: &str = "usage: chertmem-dev name-guard [files...] | \
-                     no-core-worktree | lock-graph | rust-mirror";
+                     no-core-worktree | lock-graph | rust-mirror | \
+                     tdd-order [RANGE]";
 
 /// Run one guard from `args` against the repository at `root`.
 #[must_use]
 pub fn run(args: &[String], root: &Path) -> u8 {
-    match args.split_first() {
-        Some((verb, files)) if verb == "name-guard" => name(root, files),
-        Some((verb, [])) if verb == "no-core-worktree" => shared_config(root),
-        Some((verb, [])) if verb == "lock-graph" => lock(root),
-        Some((verb, [])) if verb == "rust-mirror" => mirror(root),
-        _ => {
-            eprintln!("{USAGE}");
-            2
-        }
+    let Some((verb, rest)) = args.split_first() else {
+        return usage();
+    };
+    match (verb.as_str(), rest) {
+        ("name-guard", files) => name(root, files),
+        ("no-core-worktree", []) => shared_config(root),
+        ("lock-graph", []) => lock(root),
+        ("rust-mirror", []) => mirror(root),
+        ("tdd-order", []) => order(root, None),
+        ("tdd-order", [range]) => order(root, Some(range)),
+        _ => usage(),
     }
+}
+
+fn usage() -> u8 {
+    eprintln!("{USAGE}");
+    2
 }
 
 fn name(root: &Path, files: &[String]) -> u8 {
@@ -170,4 +178,81 @@ fn lock(root: &Path) -> u8 {
         );
     }
     u8::from(!found.is_empty())
+}
+
+/// `tdd-order [RANGE]`: the range a push would publish by default
+/// (`@{upstream}..HEAD`, or the whole history before the first push).
+fn order(root: &Path, range: Option<&String>) -> u8 {
+    let ex = match exempt_list(root) {
+        Ok(ex) => ex,
+        Err(why) => return report_lines("tdd-order", &[why]),
+    };
+    let range = range.cloned().unwrap_or_else(|| default_range(root));
+    let Some(commits) = commits(root, &range) else {
+        eprintln!("tdd-order: cannot resolve the range {range}");
+        return 2;
+    };
+    report_lines("tdd-order", &tdd_order::findings(&commits, &ex))
+}
+
+/// `dev/tdd-order.exempt`; missing or malformed is a finding, since an
+/// exemption nobody can read is not one.
+fn exempt_list(
+    root: &Path,
+) -> Result<std::collections::BTreeSet<String>, String> {
+    let path = "dev/tdd-order.exempt";
+    let text = std::fs::read_to_string(root.join(path))
+        .map_err(|_| format!("{path} does not exist; nothing was checked"))?;
+    tdd_order::exempt(&text).map_err(|e| format!("{path} {e}"))
+}
+
+fn default_range(root: &Path) -> String {
+    let upstream =
+        git(root, &["rev-parse", "--verify", "--quiet", "@{upstream}"]);
+    if upstream.is_some() {
+        "@{upstream}..HEAD"
+    } else {
+        "HEAD"
+    }
+    .to_owned()
+}
+
+/// The range's commits, oldest first, each with the paths it adds
+/// (renames detected, so a moved file adds no code).
+fn commits(root: &Path, range: &str) -> Option<Vec<tdd_order::Commit>> {
+    let ids = git(root, &["rev-list", "--reverse", range])?;
+    ids.lines().map(|id| commit_at(root, id)).collect()
+}
+
+/// One commit's subject and the paths it adds.
+fn commit_at(root: &Path, id: &str) -> Option<tdd_order::Commit> {
+    let subject = git(root, &["log", "-1", "--format=%s", id])?;
+    Some(tdd_order::Commit {
+        id: id.to_owned(),
+        subject: subject.trim().to_owned(),
+        added: added_paths(root, id)?,
+    })
+}
+
+/// `git show` for the paths a commit adds, renames detected (`-M`), so a
+/// moved file adds no code.
+const SHOW_ADDED: [&str; 5] = [
+    "show",
+    "-M",
+    "--diff-filter=A",
+    "--name-only",
+    "--pretty=format:",
+];
+
+/// The paths a commit adds.
+fn added_paths(root: &Path, id: &str) -> Option<Vec<String>> {
+    let mut show = SHOW_ADDED.to_vec();
+    show.push(id);
+    let out = git(root, &show)?;
+    Some(
+        out.lines()
+            .filter(|l| !l.is_empty())
+            .map(str::to_owned)
+            .collect(),
+    )
 }
