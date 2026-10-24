@@ -327,6 +327,25 @@ rejects a second store for them (`src/catch` V45).
     dialect is a rekall change, proposed there by an issue only with the
     owner's approval. Closes open question 13. Local.
 
+# Decisions, round 4 (2026-10-24)
+
+Gap round 3, answered by the owner: memory implantation, raised by the
+owner during the spec run.
+
+28. Memory implantation: a skill or rule extracted from chert's history
+    points back at its evidence for the fewest tokens. Each observation
+    has a stable ref `chert:<id>`, written as the shortest ULID prefix
+    unique within its project, at least 8 characters, as git shortens
+    hashes. Refs ride in chert's export into rekall's candidate `src`
+    (decision 27), so the artifact rekall writes carries refs only, about
+    5 tokens each, never copied evidence. When the skill fires, the agent
+    expands a ref with `chert get <ref>` or MCP `get_observations`, which
+    returns the compressed body; evidence costs tokens only when read. A
+    ref resolves for as long as its observation exists, across
+    repartition and compaction, because the catalog routes by id
+    (decision 12); a ref whose observation is gone resolves to a clear
+    "dropped" answer, never to another observation. Local.
+
 # Non-goals
 
 Proposed by the agent; the owner has not ruled on them yet.
