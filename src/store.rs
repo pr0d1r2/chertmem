@@ -7,6 +7,7 @@ mod tests;
 mod calendar;
 mod catalog;
 mod cold;
+mod doctor;
 mod error;
 mod layout;
 mod line;
