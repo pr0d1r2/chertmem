@@ -1,18 +1,1 @@
-{
-  "session_id": "abc123",
-  "transcript_path": "/workspace/.claude/projects/project/abc123.jsonl",
-  "cwd": "/workspace/project",
-  "permission_mode": "default",
-  "hook_event_name": "PostToolUse",
-  "tool_name": "Write",
-  "tool_input": {
-    "file_path": "/workspace/project/src/factorial.rs",
-    "content": "pub fn factorial(n: u64) -> u64 { (1..=n).product() }\n"
-  },
-  "tool_response": {
-    "filePath": "/workspace/project/src/factorial.rs",
-    "type": "create"
-  },
-  "tool_use_id": "toolu_01ABC123",
-  "duration_ms": 12
-}
+{"session_id":"00000000-0000-4000-8000-000000000001","transcript_path":"/workspace/.claude/projects/-workspace-project/00000000-0000-4000-8000-000000000001.jsonl","cwd":"/workspace/project","prompt_id":"00000000-0000-4000-8000-000000000101","permission_mode":"default","effort":{"level":"medium"},"hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{"command":"echo chert-fixture","description":"Print fixture string"},"tool_response":{"stdout":"chert-fixture","stderr":"","interrupted":false,"isImage":false,"noOutputExpected":false},"tool_use_id":"toolu_01FIXTURE000000000000001","duration_ms":235}

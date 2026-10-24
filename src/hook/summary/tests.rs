@@ -1,6 +1,6 @@
 use super::{TURNS, rollup};
 use crate::hook::Kind;
-use crate::hook::tests::{NOW, Res, Scratch, Test, fixture};
+use crate::hook::tests::{NOW, Res, SESSION, Scratch, Test, fixture};
 use crate::store::{Scope, Summary};
 
 fn stop(session: &str, said: &str) -> Vec<u8> {
@@ -48,7 +48,7 @@ fn stop_writes_its_message_as_a_turn_summary() -> Test {
     assert_eq!(Some(&turn.body), body.as_ref());
     assert_eq!(
         (turn.session.as_str(), turn.ide.as_str()),
-        ("abc123", "claude-code")
+        (SESSION, "claude-code")
     );
     assert_eq!(turn.ts, NOW);
     Ok(())

@@ -1,5 +1,5 @@
 use super::parse;
-use crate::hook::tests::{Res, Test, fixture};
+use crate::hook::tests::{Res, SESSION, SESSION_2, Test, fixture, fixture_2};
 use crate::hook::{Kind, Payload};
 
 fn parsed(kind: Kind) -> Res<Payload> {
@@ -16,11 +16,19 @@ fn payload(body: &str) -> Payload {
     }
 }
 
+/// `body` as the first recorded session's payload.
+fn recorded(body: &str) -> Payload {
+    Payload {
+        session: SESSION.to_owned(),
+        ..payload(body)
+    }
+}
+
 #[test]
 fn session_start_keeps_its_source() -> Test {
     let want = Payload {
         source: Some("startup".to_owned()),
-        ..payload("startup")
+        ..recorded("startup")
     };
     assert_eq!(parsed(Kind::SessionStart)?, want);
     Ok(())
@@ -28,29 +36,47 @@ fn session_start_keeps_its_source() -> Test {
 
 #[test]
 fn prompt_stop_and_end_keep_their_text() -> Test {
-    let prompt = "Write a function to calculate the factorial of a number";
-    assert_eq!(parsed(Kind::UserPromptSubmit)?, payload(prompt));
-    let said = "I have added the factorial function in src/factorial.rs \
-        and the tests pass.";
-    assert_eq!(parsed(Kind::Stop)?, payload(said));
-    assert_eq!(parsed(Kind::SessionEnd)?, payload("other"));
+    let prompt = "Run exactly this shell command and reply with its output \
+        only: echo chert-fixture";
+    assert_eq!(parsed(Kind::UserPromptSubmit)?, recorded(prompt));
+    assert_eq!(parsed(Kind::Stop)?, recorded("chert-fixture"));
+    assert_eq!(parsed(Kind::SessionEnd)?, recorded("other"));
     Ok(())
 }
 
 #[test]
-fn post_tool_use_keeps_tool_input_response_id_and_path() -> Test {
-    let path = "/workspace/project/src/factorial.rs";
-    let input = format!(
-        "{{\"content\":\"pub fn factorial(n: u64) -> u64 {{ \
-         (1..=n).product() }}\\n\",\"file_path\":\"{path}\"}}"
+fn post_tool_use_keeps_tool_input_response_and_id() -> Test {
+    let input = concat!(
+        r#"{"command":"echo chert-fixture","#,
+        r#""description":"Print fixture string"}"#,
     );
-    let response = format!("{{\"filePath\":\"{path}\",\"type\":\"create\"}}");
+    let response = concat!(
+        r#"{"interrupted":false,"isImage":false,"#,
+        r#""noOutputExpected":false,"stderr":"","stdout":"chert-fixture"}"#,
+    );
     let want = Payload {
-        identity: Some("toolu_01ABC123".to_owned()),
-        paths: vec![path.to_owned()],
-        ..payload(&format!("Write\n{input}\n{response}"))
+        identity: Some("toolu_01FIXTURE000000000000001".to_owned()),
+        ..recorded(&format!("Bash\n{input}\n{response}"))
     };
     assert_eq!(parsed(Kind::PostToolUse)?, want);
+    Ok(())
+}
+
+/// The second recorded session ran the same prompt: same payloads but
+/// its session and, for the tool call, its `tool_use_id`.
+#[test]
+fn the_second_session_differs_only_in_session_and_tool_use_id() -> Test {
+    for kind in Kind::ALL {
+        let raw = fixture_2(kind)?;
+        let second = parse(kind, &raw).ok_or("fixture did not parse")?;
+        assert_eq!(second.session, SESSION_2, "{kind:?}");
+        let first = parsed(kind)?;
+        let same = |p: Payload| (p.body, p.paths, p.source);
+        assert_eq!(same(second.clone()), same(first.clone()), "{kind:?}");
+        let ids = (first.identity.is_some(), second.identity != first.identity);
+        let tool = kind == Kind::PostToolUse;
+        assert_eq!(ids, (tool, tool), "{kind:?}");
+    }
     Ok(())
 }
 
