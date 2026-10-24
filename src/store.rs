@@ -9,6 +9,7 @@ mod catalog;
 mod cold;
 mod doctor;
 mod error;
+mod fts;
 mod generation;
 mod id;
 mod layout;
@@ -37,8 +38,8 @@ use rusqlite::Connection;
 pub use error::Error;
 pub use layout::project_id;
 pub use model::{
-    Appended, Event, Filter, Lookup, Observation, Partition, Scope, Session,
-    SessionStart, State, Stats, Summary, Tailed, Written,
+    Appended, Event, Filter, Frequencies, Lookup, Observation, Partition,
+    Scope, Session, SessionStart, State, Stats, Summary, Tailed, Written,
 };
 pub use reference::Ref;
 

@@ -208,3 +208,13 @@ pub struct Session {
     /// The latest end seen; `None` while it runs.
     pub ended_at: Option<u64>,
 }
+
+/// What `src/search` needs for IDF from 1 partition's FTS5 index
+/// (src/store T17).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Frequencies {
+    /// Every indexed row of the partition, of any project.
+    pub rows: u64,
+    /// Per term, in order: the rows holding it as 1 index token.
+    pub docs: Vec<u64>,
+}
