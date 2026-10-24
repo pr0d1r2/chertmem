@@ -156,7 +156,10 @@ fn follow(
     }
 }
 
-/// Keep `stdin` raw in the spool, noting `why` and where it went.
+/// Keep `stdin` raw in the spool through the store, noting `why` and
+/// where it went. If even that fails (no data dir, an unwritable spool)
+/// there is nowhere left to keep it: exit stays 0 and the note, for
+/// stderr only, says the payload was lost and why (V2).
 fn kept(stdin: &[u8], ctx: &Ctx<'_>, why: &str) -> Outcome {
     Outcome::noted(match raw::keep(ctx, stdin) {
         Ok(path) => format!("{why}; kept raw in {}", path.display()),
