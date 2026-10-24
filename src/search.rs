@@ -119,16 +119,15 @@ impl Engine {
         }))
     }
 
-    /// The keyword best of every pruned partition; the cache's rows
-    /// land in T3.
+    /// The keyword best: the cache's rows, or every pruned partition.
     fn candidates(
         &mut self,
         filter: &Filter,
         cache: Option<&Handle>,
         rater: &Rater,
     ) -> Result<Vec<Scored>, Error> {
-        if cache.is_some() {
-            return Ok(Vec::new());
+        if let Some(handle) = cache {
+            return Ok(rater.best(handle.query(filter)?));
         }
         let parts = self.store.partitions(filter)?;
         let paths: Vec<String> = parts.into_iter().map(|p| p.path).collect();
