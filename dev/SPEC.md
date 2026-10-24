@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = crate `chertmem-dev` (`publish = false`) for gate steps in Rust (owner 2026-10-24): `name-guard`, `no-core-worktree`, `lock-graph`, `bench-gate`, target/suite parity.
+root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = crate `chertmem-dev` (`publish = false`) for gate steps in Rust (owner 2026-10-24): `name-guard`, `no-core-worktree`, `lock-graph`, `rust-mirror`, `tdd-order`, `bench-gate`, target/suite parity.
 
 ## §N NAV
 
@@ -22,7 +22,8 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 ## §I INTERFACES
 
 - cmd: `nix develop`; `.envrc` = `use flake`.
-- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `bench-gate`. exit 0 hold · 1 finding (file:line & fix on stderr) · 2 usage | unreadable input.
+- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `bench-gate`.
+- file: `dev/tdd-order.exempt` — full commit id + reason per line; ∀ entry has a §B row. exit 0 hold · 1 finding (file:line & fix on stderr) · 2 usage | unreadable input.
 - file: `.private/denylist` — untracked, 1 name per line, `#` comments (`paradigm/V37`).
 
 ## §V INVARIANTS
@@ -33,16 +34,21 @@ V3: `name-guard`: ∀ given file ∋ denylist name (case-insensitive) → 1 find
 V4: `no-core-worktree`: `core.worktree` set in shared `.git/config` → finding (`paradigm/V15`).
 V5: `lock-graph`: `flake.lock` holds exactly 1 nixpkgs node & ∀ input named `nixpkgs` | `nixpkgs-lock` follows root `nixpkgs-lock` → hold; else finding naming node.
 V6: ∀ guard proven by unit test rejecting planted violation & passing clean twin (`paradigm/V21`).
+V7: `rust-mirror` (port of xenolith v0.1.0 rule, as lablith copies it): ∀ tracked `.rs` w/ a bodied fn has wired mirror (`<m>.rs` ↔ `<m>/tests.rs`, `lib.rs`|`mod.rs` ↔ `tests.rs`, `#[cfg(test)] mod tests;`); ∀ `tests.rs` has its module; `main.rs` = shim w/ only `fn main`; `build.rs`, `vendor/`, crate `tests/` exempt.
+V8: `tdd-order` (same port, Rust rule only, ⊥ shell scripts here): ∀ commit in range adding a `.rs` outside `tests/` has a `test:` | `test(` commit before it in range, unless its full id ∈ `dev/tdd-order.exempt`; missing | malformed exempt file → finding.
 
 ## §T TASKS
 
 id|status|task|cites
 T1|x|root `flake.nix` devShell + `.envrc`|V1,V2
 T2|.|`dev` crate w/ `bench-gate`|-
-T3|.|`name-guard`, RED → GREEN → gate row|V3,V6
-T4|.|`no-core-worktree`, RED → GREEN → gate row|V4,V6
-T5|.|`lock-graph`, RED → GREEN → gate row|V5,V6
+T3|x|`name-guard`, RED → GREEN → gate row|V3,V6
+T4|x|`no-core-worktree`, RED → GREEN → gate row|V4,V6
+T5|x|`lock-graph`, RED → GREEN → gate row|V5,V6
+T6|.|`rust-mirror`, RED → GREEN → gate row|V7,V6
+T7|.|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
 
 ## §B BUGS
 
 id|date|cause|fix
+B1|2026-10-24|workspace stub (`src:T1`) laid by hand w/ bodiless `lib.rs` & `main.rs`: ⊥ behaviour for a RED test to pin ∴ exempt in `dev/tdd-order.exempt`|V8
