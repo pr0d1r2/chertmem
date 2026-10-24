@@ -19,8 +19,8 @@ use std::path::Path;
 
 pub use kind::{Ide, Kind};
 
-use crate::config::{Config, Grammar};
-use crate::grammar::{self, Intensity};
+use crate::config::Config;
+use crate::grammar;
 use crate::store::{Error, Event, Mode, Store};
 
 /// What [`run`] reads besides stdin.
@@ -183,14 +183,5 @@ fn event(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Event {
 /// `compression.grammar` (V1: redaction comes first).
 fn prepare(text: &str, config: &Config) -> String {
     let kept = redact::strip(text);
-    grammar::compress(&kept, intensity(config.compression.grammar))
-}
-
-fn intensity(grammar: Grammar) -> Intensity {
-    match grammar {
-        Grammar::Off => Intensity::Off,
-        Grammar::Lite => Intensity::Lite,
-        Grammar::Full => Intensity::Full,
-        Grammar::Ultra => Intensity::Ultra,
-    }
+    grammar::compress(&kept, config.compression.grammar.intensity())
 }

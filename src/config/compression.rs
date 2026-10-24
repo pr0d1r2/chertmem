@@ -23,6 +23,22 @@ pub enum Grammar {
     Ultra,
 }
 
+impl Grammar {
+    /// The `src/grammar` intensity this setting compresses at: the 1
+    /// mapping hook, import and search share, so stored bodies and query
+    /// text always meet at the same grammar.
+    #[must_use]
+    pub fn intensity(self) -> crate::grammar::Intensity {
+        use crate::grammar::Intensity;
+        match self {
+            Self::Off => Intensity::Off,
+            Self::Lite => Intensity::Lite,
+            Self::Full => Intensity::Full,
+            Self::Ultra => Intensity::Ultra,
+        }
+    }
+}
+
 const GRAMMARS: &[(&str, Grammar)] = &[
     ("off", Grammar::Off),
     ("lite", Grammar::Lite),

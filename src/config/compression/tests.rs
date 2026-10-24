@@ -81,3 +81,17 @@ fn zstd_level_out_of_range_names_the_range() -> Test {
     assert!(accepted.contains("1 to 22"), "{e}");
     Ok(())
 }
+
+#[test]
+fn each_grammar_maps_to_its_intensity() {
+    use crate::grammar::Intensity;
+    let pairs = [
+        (Grammar::Off, Intensity::Off),
+        (Grammar::Lite, Intensity::Lite),
+        (Grammar::Full, Intensity::Full),
+        (Grammar::Ultra, Intensity::Ultra),
+    ];
+    for (g, i) in pairs {
+        assert_eq!(g.intensity(), i);
+    }
+}

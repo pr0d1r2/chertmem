@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
 
 use super::Error;
-use crate::config::{Config, Grammar};
+use crate::config::Config;
 use crate::grammar::{self, Intensity};
 use crate::store::Event;
 use split::Cwd;
@@ -59,7 +59,7 @@ pub fn cavemem(
     root: &Path,
     db: &Path,
 ) -> Result<Imported, Error> {
-    let (conn, level) = (open(db)?, intensity(config.compression.grammar));
+    let (conn, level) = (open(db)?, config.compression.grammar.intensity());
     let events = observations(&conn, level)?;
     let notes = summary::read(&conn, level)?;
     drop(conn);
@@ -154,14 +154,5 @@ fn body(content: &str, compressed: bool, intensity: Intensity) -> String {
         kept
     } else {
         grammar::compress(&kept, intensity)
-    }
-}
-
-fn intensity(grammar: Grammar) -> Intensity {
-    match grammar {
-        Grammar::Off => Intensity::Off,
-        Grammar::Lite => Intensity::Lite,
-        Grammar::Full => Intensity::Full,
-        Grammar::Ultra => Intensity::Ultra,
     }
 }
