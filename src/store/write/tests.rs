@@ -104,3 +104,21 @@ fn a_timestamp_past_48_bits_is_refused() -> Test {
     assert_eq!(e, Some(Error::BadTime { ts: 1 << 48 }));
     Ok(())
 }
+
+#[test]
+fn an_id_with_every_candidate_issued_is_refused() -> Test {
+    let s = Scratch::new("issue-exhausted")?;
+    drop(s.open(Mode::Read)?);
+    let conn = s.sql("catalog.db")?;
+    conn.execute_batch(
+        "INSERT INTO partitions (path, dims, project, ide, t0, t1, checksum,
+           spec) VALUES ('a', 'd', 'p', '', 0, 1, 'c', 's');
+         INSERT INTO refs (project, ref, id, partition)
+           VALUES ('p', 'ABCDEFGH', 'X', 1);",
+    )?;
+    // An 8-char id has 1 candidate: itself.
+    assert_eq!(super::issue(&conn, "q", "ABCDEFGH")?, "ABCDEFGH");
+    let e = super::issue(&conn, "p", "ABCDEFGH");
+    assert!(matches!(e, Err(Error::Sqlite { .. })), "{e:?}");
+    Ok(())
+}

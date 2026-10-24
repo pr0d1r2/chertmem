@@ -195,3 +195,32 @@ fn no_spool_dir_is_an_empty_spool() -> Test {
     assert!(pending(Path::new("/no/such/chert/data"))?.is_empty());
     Ok(())
 }
+
+#[test]
+fn file_errors_other_than_gone_are_errors() -> Test {
+    let s = Scratch::new("spool-io")?;
+    let (data, spool) = (s.data(), s.data().join("spool"));
+    fs::create_dir_all(&data)?;
+    fs::write(&spool, "a file where the dir goes")?;
+    assert!(matches!(pending(&data), Err(Error::Io { .. })));
+    fs::remove_file(&spool)?;
+    let dir = spool.join("01DIR.jsonl");
+    fs::create_dir_all(dir.join("inside"))?;
+    assert!(matches!(read(&dir), Err(Error::Io { .. })));
+    assert!(matches!(super::done(&dir), Err(Error::Io { .. })));
+    Ok(())
+}
+
+#[test]
+fn set_aside_fails_loudly_when_the_target_is_taken() -> Test {
+    let s = Scratch::new("spool-aside-taken")?;
+    let spool = s.data().join("spool");
+    fs::create_dir_all(spool.join("unreadable/01BAD.jsonl/full"))?;
+    let file = spool.join("01BAD.jsonl");
+    fs::write(&file, "junk")?;
+    let e = super::set_aside(&s.data(), &file);
+    assert!(matches!(e, Err(Error::Io { .. })), "{e:?}");
+    assert!(file.exists());
+    super::set_aside(&s.data(), &spool.join("01GONE.jsonl"))?;
+    Ok(())
+}

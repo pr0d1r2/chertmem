@@ -102,6 +102,8 @@ fn spec_records_the_plan() {
     let p = plan(DEFAULT, 7, 2);
     assert_eq!(p.dims(), "project,time");
     assert_eq!(p.spec(), "by=project,time;time_bucket=7d;shards=2");
+    let by = [Dimension::Ide, Dimension::Time];
+    assert_eq!(plan(&by, 1, 1).dims(), "ide,time");
 }
 
 #[test]
