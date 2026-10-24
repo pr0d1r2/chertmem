@@ -62,6 +62,11 @@ steps: Mapping<String, Config.Step> = new {
     check = #"command -v statix >/dev/null 2>&1 || { echo 'statix: statix is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; (for f in {{files}}; do statix check "$f" || exit 1; done) || { echo 'statix: nix anti-pattern; statix names the lint and its fix' >&2; exit 1; }"#
     fix = #"(for f in {{files}}; do statix fix "$f" || exit 1; done)"#
   }
+  ["deadnix"] {
+    glob = List("**/*.nix")
+    check = "command -v deadnix >/dev/null 2>&1 || { echo 'deadnix: deadnix is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; deadnix --fail {{files}} || { echo 'deadnix: unused nix binding or argument; remove it, or prefix it with _' >&2; exit 1; }"
+    fix = "deadnix --edit {{files}}"
+  }
   ["editorconfig-checker"] {
     glob = List("**/*")
     check = "command -v editorconfig-checker >/dev/null 2>&1 || { echo 'editorconfig-checker: editorconfig-checker is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; editorconfig-checker {{files}} || { echo 'editorconfig-checker: file breaks its .editorconfig (indent, line ends, final newline)' >&2; exit 1; }"
