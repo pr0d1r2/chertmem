@@ -213,6 +213,16 @@ fn no_data_dir_setting_is_a_store_error() -> Test {
     Ok(())
 }
 
+#[test]
+fn an_unreadable_spool_dir_is_an_error() -> Test {
+    let home = Home::new("spool-file")?;
+    fs::create_dir_all(home.data())?;
+    fs::write(home.data().join("spool"), "not a dir")?;
+    let got = super::count(&home.data().join("spool"));
+    assert!(matches!(got, Err(Error::Io { .. })), "{got:?}");
+    Ok(())
+}
+
 fn wire_line(state: WireState) -> String {
     let name = "hook Stop".to_owned();
     Finding::Wiring(Wire { name, state }).to_string()

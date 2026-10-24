@@ -12,7 +12,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value, json};
 
-use super::Wire;
+use super::{Wire, WireState};
 use crate::hook::Kind;
 
 /// Each hook chert registers and Claude Code's name for its event. The
@@ -195,9 +195,40 @@ fn prune(map: &mut Map<String, Value>, key: &str, changed: bool) {
     }
 }
 
-/// How each of chert's entries stands in `root`; a stub until
-/// src/install T2 lands.
+/// How each of chert's entries stands in `root`, against the ones
+/// `chert` would write: hooks in event order, then the server.
 pub(super) fn wiring(root: &Value, chert: &str) -> Vec<Wire> {
-    let _ = (root, chert);
-    Vec::new()
+    let hooks = EVENTS.iter().map(|&(k, name)| hook(root, chert, k, name));
+    hooks.chain([server_wire(root, chert)]).collect()
+}
+
+/// How the hook of event `name` stands.
+fn hook(root: &Value, chert: &str, kind: Kind, name: &str) -> Wire {
+    let at = root.get("hooks").and_then(|h| h.get(name));
+    let groups = at.and_then(Value::as_array).map_or(&[][..], Vec::as_slice);
+    let want = command(chert, kind);
+    let other = commands(groups).find(|c| owned(c, kind));
+    let state = if commands(groups).any(|c| c == want) {
+        WireState::Ok
+    } else {
+        other.map_or(WireState::Missing, |c| WireState::Other(c.to_owned()))
+    };
+    Wire {
+        name: format!("hook {name}"),
+        state,
+    }
+}
+
+/// How the MCP server entry stands.
+fn server_wire(root: &Value, chert: &str) -> Wire {
+    let at = root.get("mcpServers").and_then(|s| s.get(SERVER));
+    let state = match at {
+        None => WireState::Missing,
+        Some(v) if *v == server(chert) => WireState::Ok,
+        Some(v) => WireState::Other(v.to_string()),
+    };
+    Wire {
+        name: format!("mcp server {SERVER}"),
+        state,
+    }
 }
