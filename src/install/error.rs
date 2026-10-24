@@ -5,7 +5,7 @@
 mod tests;
 
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::store;
 
@@ -41,6 +41,14 @@ impl From<store::Error> for Error {
 }
 
 impl Error {
+    /// An I/O failure on `path`.
+    pub(super) fn io(path: &Path, e: &std::io::Error) -> Self {
+        Self::Io {
+            path: path.to_path_buf(),
+            reason: e.to_string(),
+        }
+    }
+
     fn what(&self) -> String {
         match self {
             Self::Io { path, reason } | Self::Json { path, reason } => {
