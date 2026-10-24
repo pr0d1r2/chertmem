@@ -5,9 +5,10 @@ use std::error::Error as StdError;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 
-use super::Window;
+use super::{Fresh, Window};
 use crate::cache::tests::{
-    DAY, HOUR, NOW, START, Scratch, Test, config_at, event, from, same,
+    DAY, HOUR, NOW, START, Scratch, Test, config_at, event, from,
+    rewrite_elsewhere, same,
 };
 use crate::cache::{Handle, Source};
 use crate::store::{Filter, Mode, Store};
@@ -75,11 +76,22 @@ fn refresh_tails_another_connections_rows_by_seq_not_ulid() -> Test {
     hook.append(&event(NOW - 2 * HOUR, "earlier ts, appended later"))?;
     // A bucket the window did not list yet.
     hook.append(&event(START + HOUR, "new bucket"))?;
-    window.refresh(&mut store)?;
+    assert_eq!(window.refresh(&mut store)?, Fresh::Current);
     let q = from(&store, START);
     let rows = window.answer(&q).ok_or("declined")?;
     assert_eq!((rows.len(), window.paths().len()), (3, 2));
     assert_eq!(rows, store.observations(&q)?);
+    Ok(())
+}
+
+#[test]
+fn a_new_generation_makes_the_window_stale() -> Test {
+    let s = Scratch::new("window-stale")?;
+    let mut store = s.open(Mode::Read)?;
+    store.append(&event(NOW - HOUR, "late"))?;
+    let mut window = loaded(&mut store)?;
+    rewrite_elsewhere(&s, &store)?;
+    assert_eq!(window.refresh(&mut store)?, Fresh::Stale);
     Ok(())
 }
 

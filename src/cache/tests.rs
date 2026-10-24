@@ -248,6 +248,39 @@ fn start_runs_on_the_system_clock() -> Test {
     Ok(())
 }
 
+/// What a delete, redaction or rewrite does once `src/store` has its
+/// own (D15): change rows in place, then bump `generation`. Raw SQL
+/// here only, until the store's drop lands.
+pub(super) fn rewrite_elsewhere(s: &Scratch, store: &Store) -> Test {
+    for p in store.partitions(&from(store, 0))? {
+        let part = s.sql(&p.path)?;
+        part.execute("DELETE FROM observations WHERE body = 'late'", [])?;
+        let redact = "UPDATE observations SET body = 'gone' WHERE body = ?1";
+        part.execute(redact, ["early"])?;
+    }
+    let bump = "UPDATE meta SET value = value + 1 WHERE key = 'generation'";
+    s.sql("catalog.db")?.execute(bump, [])?;
+    Ok(())
+}
+
+#[test]
+fn a_new_generation_reloads_the_window() -> Test {
+    let s = Scratch::new("generation")?;
+    seed(&s)?;
+    let cold = s.cold(&s.config()?)?;
+    cold.handle.warm()?;
+    let mut truth = s.open(Mode::Read)?;
+    let q = from(&truth, START);
+    rewrite_elsewhere(&s, &truth)?;
+    assert_eq!(same(&cold.handle, &mut truth, &q)?, Source::Store);
+    wait_warm(&cold.handle)?;
+    assert_eq!(same(&cold.handle, &mut truth, &q)?, Source::Cache);
+    let rows = cold.handle.query(&q)?;
+    let bodies: Vec<&str> = rows.iter().map(|o| o.body.as_str()).collect();
+    assert_eq!(bodies, ["gone", "later appended, earlier ts"]);
+    Ok(())
+}
+
 const BROKEN: &str = "INSERT INTO partitions
   (path, dims, project, ide, t0, t1, checksum, spec)
   VALUES (?1, 'project,time', ?2, '', ?3, ?4, '0', '')";

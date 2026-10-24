@@ -27,8 +27,20 @@ pub(super) struct Window {
     since: u64,
     /// The catalog's `data_version` when its partitions were listed.
     catalog: u64,
+    /// The catalog's `generation` at the load (D15).
+    generation: u64,
     parts: BTreeMap<String, Part>,
     rows: BTreeMap<(u64, String), Observation>,
+}
+
+/// Whether a refreshed window may answer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Fresh {
+    Current,
+    /// A delete, redaction or rewrite bumped `generation` since the
+    /// load: a tail cannot see it, so the window must be loaded again
+    /// (V3).
+    Stale,
 }
 
 impl Window {
@@ -44,6 +56,7 @@ impl Window {
             filter,
             since,
             catalog: store.catalog_version()?,
+            generation: store.generation()?,
             parts: BTreeMap::new(),
             rows: BTreeMap::new(),
         };
@@ -64,18 +77,25 @@ impl Window {
         self.parts.keys().cloned().collect()
     }
 
-    /// Catch up before a query (D15): a moved catalog lists new
-    /// partitions; every partition is synced.
-    pub(super) fn refresh(&mut self, store: &mut Store) -> Result<(), Error> {
+    /// Catch up before a query (D15): a moved catalog is checked for a
+    /// new `generation`, then listed for new partitions; every
+    /// partition is synced.
+    pub(super) fn refresh(
+        &mut self,
+        store: &mut Store,
+    ) -> Result<Fresh, Error> {
         let catalog = store.catalog_version()?;
         if catalog != self.catalog {
+            if store.generation()? != self.generation {
+                return Ok(Fresh::Stale);
+            }
             self.catalog = catalog;
             self.list(store)?;
         }
         for path in self.paths() {
             self.sync(store, &path)?;
         }
-        Ok(())
+        Ok(Fresh::Current)
     }
 
     /// Tail the partition at `path` past its last seq, when its

@@ -17,7 +17,7 @@ pub use error::Error;
 
 use crate::config::{self, Config};
 use crate::store::{Filter, Observation, Store};
-use window::Window;
+use window::{Fresh, Window};
 
 /// Where warnings go: the MCP log, `status`, `doctor`; never into a
 /// query result (src/cache V4, root V11).
@@ -89,17 +89,18 @@ struct Inner {
 }
 
 impl Inner {
-    /// Bring a warm window up to date before a query (V2). A failure
-    /// drops it, logged, and answers `true`: warm afresh; the store
-    /// answers meanwhile.
+    /// Bring a warm window up to date before a query (V2). A stale one
+    /// (V3) or a failure, logged, drops it and answers `true`: warm
+    /// afresh; the store answers meanwhile.
     fn refresh(&mut self, env: &Env) -> bool {
         let State::Warm(window) = &mut self.state else {
             return false;
         };
-        let Err(e) = window.refresh(&mut self.store) else {
-            return false;
-        };
-        (env.log)(&e.to_string());
+        match window.refresh(&mut self.store) {
+            // RED stub: a stale window keeps answering.
+            Ok(Fresh::Current | Fresh::Stale) => return false,
+            Err(e) => (env.log)(&e.to_string()),
+        }
         self.state = State::Cold;
         true
     }
