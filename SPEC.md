@@ -55,3 +55,12 @@ self|.|-
 - dir: data dir (default `~/.local/share/chert`): `catalog.db`, `chunks/<project>/<bucket>[.<shard>].db[.zst]`, `spool/`.
 - export: JSONL, 1 observation per line, `ref` field; read by rekall `catch` via `chert` dialect (D27).
 - env: `OLLAMA_HOST` | provider key, only when `embedding.provider` opts in.
+
+## §R RESEARCH
+
+id|topic|finding|src
+R1|cavemem 0.2.1 2026-10-24|MIT, 676 stars, Node ≥ 20. 6 deps: `commander` `kleur` `better-sqlite3` (native addon) `hono` `@hono/node-server` `@modelcontextprotocol/sdk`; optional `@xenova/transformers`. 5 hook shims `exec cavemem hook run <name>` ∴ 1 Node start per event. 1 SQLite file: `sessions` `observations` `summaries` `embeddings` `schema_version` + FTS5 `observations_fts` w/ 3 triggers. 4 MCP tools. bundle 214573 B, 160478 in shared chunk (grammar, store, ranker)|`npm pack cavemem@0.2.1`; grep `dist/*.js`; `gh api repos/JuliusBrussee/cavemem`
+R2|Rust agent-memory 2026-10-24|leteo 4★ · engram-mcp 18★ · opencode-memory 1★ · mcpmem 0★ · memory-engine 2★ · agentos 1★. all created 2026, ⊥ partitioned store, ⊥ caveman grammar, ⊥ cavemem data ∴ reference code only|`gh api repos/<repo>`; `curl https://crates.io/api/v1/crates/<crate>`
+R3|rekall 3235597|candidate = `{id, src, text, at}` in `.rekall/ledger.toml`; only rekall's classifier mints (rekall `src/catch` rule 44); ⊥ 2nd candidate store (rekall `src/catch` rule 45); `catch` reads transcript roots, dialect per agent (rekall `src/catch` rule 47)|`github.com/pr0d1r2/rekall` `src/ledger/mod.rs`, `src/catch/SPEC.md`
+R4|names 2026-10-24|`chertmem` free on crates.io & npm, 0 GitHub repos; `chert` crate = `jesopo/chert` 0.2.1 (2024-02-06); ⊥ Homebrew formula `chert`|`curl https://crates.io/api/v1/crates/<name>`; `gh search repos chertmem`; `brew info --formula chert`
+R5|SQLite limits|`ATTACH` default max 10 dbs (`SQLITE_MAX_ATTACHED`) ∴ 1 connection per partition, ⊥ attach-all. WAL: readers ⊥ block writer, 1 writer at a time, multi-process|`https://sqlite.org/limits.html`; `https://sqlite.org/wal.html`
