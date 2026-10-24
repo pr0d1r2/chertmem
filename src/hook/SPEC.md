@@ -39,7 +39,7 @@ sib|src/mine|behaviour findings & awareness report
 id|topic|finding|src
 R1|Claude Code dialect, wave 4|fixtures recorded 2026-10-24 by the lead (replace wave 3's documented ones): 2 headless Claude Code 2.1.302 sessions (`claude -p`, same prompt twice, 1 `echo chert-fixture` Bash call), all 5 hooks, 1 file per event per session. sanitized: `cwd` → `/workspace/project`, `transcript_path` → `/workspace/.claude/projects/-workspace-project/<session_id>.jsonl` (recorded under a home dir `user`, moved off it for gate `no-local-paths`); rest byte-for-byte. identity: R4|`tests/hook/fixtures/claude-code/`
 R2|token count, wave 4|owner 2026-10-24 "as in itok": default = estimate bytes / 4 rounded up (⊥ dependency, deterministic, ⊥ load). exact o200k behind optional feature `bpe` (off by default): `tiktoken-rs` 0.12.1 MIT, tree MIT / Apache-2.0 / Unlicense OR MIT, deny ok w/ & w/o `bpe`; table loads once per process (~65 ms release, darwin, wave 3 probe); load failure → bytes, ⊥ panic (V2). 1 swap point: `inject.rs` `tokens_at_most`|`src/hook/inject.rs`
-R3|choices, wave 3|malformed or store error → `spool/unreadable/<ULID>.hook`, where store sets unreadable spool aside ∴ ⊥ replayed, ⊥ dropped; store has ⊥ raw-spool fn. injected ref = session's `session-end` obs at summary ts. roll-up joins by newline; gist = 1st line ≤ 200 chars. exclude reads `tool_input` `file_path` `path` `notebook_path`; glob w/o `/` = any component, else from root, dir covers subtree. unclosed `<private>` drops rest. `session-end` opens reading (needs turns)|`src/hook/*.rs`
+R3|choices, wave 3|malformed or store error → `spool/unreadable/<ULID>.hook`, where store sets unreadable spool aside ∴ ⊥ replayed, ⊥ dropped; wave 5 (T8): via `Store::spool_raw` after `<private>` strip; spool_raw fails → exit 0, stderr note "payload lost". injected ref = session's `session-end` obs at summary ts. roll-up joins by newline; gist = 1st line ≤ 200 chars. exclude reads `tool_input` `file_path` `path` `notebook_path`; glob w/o `/` = any component, else from root, dir covers subtree. unclosed `<private>` drops rest. `session-end` opens reading (needs turns)|`src/hook/*.rs`
 R4|resends & identity, wave 4|sample = 2 sessions (R1): each event exactly once per session, ⊥ resend seen. `tool_use_id` only on PostToolUse. `prompt_id` on UserPromptSubmit, PostToolUse, Stop, SessionEnd, shared by every event of 1 turn ∴ ⊥ unique per event ∴ ⊥ identity. fields past docs: `prompt_id`, `effort`, `permission_mode`, `duration_ms` (PostToolUse), `background_tasks` & `session_crons` (Stop); ignored (§C). SessionStart `source = startup`; SessionEnd `reason = other` in `-p`; Stop has `last_assistant_message`. ∴ identity stays `tool_use_id` (PostToolUse) only; other events kept every time (`.:V16`). a later recording w/ real resends may amend|`tests/hook/fixtures/claude-code/`
 
 ## §V INVARIANTS
@@ -61,7 +61,7 @@ T4|x|malformed → spool|V2
 T5|x|measure: Claude Code resends? event id field per hook? → §R (`.:V16`). R4: 2 sessions, ⊥ resend; later recording w/ real resends may amend|V3
 T6|x|injection: session-start default, prompt opt-in, budget cut (R2 count), stdout shape|V4,V5
 T7|x|turn summary on stop, session roll-up on session-end|V6
-T8|.|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writing the store's dir (owner 2026-10-24)|V2
+T8|x|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writing the store's dir (owner 2026-10-24)|V2
 
 ## §B BUGS
 
