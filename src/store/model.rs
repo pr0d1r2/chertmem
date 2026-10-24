@@ -151,6 +151,14 @@ pub struct Observation {
     pub body: String,
 }
 
+/// 1 row with its partition-local seq (src/store C), which orders a
+/// tail (`src/cache` V2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tailed {
+    pub seq: i64,
+    pub observation: Observation,
+}
+
 const STATES: &[(&str, State)] = &[
     ("hot", State::Hot),
     ("warm", State::Warm),

@@ -91,7 +91,7 @@ impl Store {
     }
 
     /// The catalog of a reading open (src/store V10).
-    fn reader(&self) -> Result<&Connection, Error> {
+    pub(super) fn reader(&self) -> Result<&Connection, Error> {
         self.reading()?;
         self.catalog.as_ref().ok_or(Error::WriteOnly)
     }
