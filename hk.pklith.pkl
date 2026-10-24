@@ -36,6 +36,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v hk >/dev/null 2>&1 || { echo 'no-private-key: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util detect-private-key {{files}} || { echo 'no-private-key: a private key block is staged' >&2; exit 1; }"
   }
+  ["ripsecrets"] {
+    glob = List("**/*")
+    check = "command -v ripsecrets >/dev/null 2>&1 || { echo 'ripsecrets: ripsecrets is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; ripsecrets {{files}} || { echo 'ripsecrets: a token or credential is staged; a false positive goes in .secretsignore' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
