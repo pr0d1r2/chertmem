@@ -109,8 +109,8 @@ impl Store {
             project: self.project.clone(),
             event: event.clone(),
         };
-        let _reference = write::observation(&mut self.ctx()?, &row)?;
-        Ok(Appended::Spooled) // RED stub: the ref is dropped
+        let reference = write::observation(&mut self.ctx()?, &row)?;
+        Ok(Appended::Stored(reference))
     }
 
     /// What a write reaches, the catalog opened first.
