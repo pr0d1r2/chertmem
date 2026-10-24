@@ -49,6 +49,11 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v nixfmt >/dev/null 2>&1 || { echo 'nixfmt: nixfmt is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; nixfmt --check {{files}} || { echo 'nixfmt: nix file not formatted' >&2; exit 1; }"
     fix = "nixfmt {{files}}"
   }
+  ["taplo"] {
+    glob = List("**/*.toml")
+    check = "command -v taplo >/dev/null 2>&1 || { echo 'taplo: taplo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; taplo fmt --check {{files}} || { echo 'taplo: TOML not formatted or not parseable' >&2; exit 1; }"
+    fix = "taplo fmt {{files}}"
+  }
   ["rustfmt"] {
     glob = List("**/*.rs")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'rustfmt: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v cargo-fmt >/dev/null 2>&1 || { echo 'rustfmt: cargo-fmt is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo fmt --check || { echo 'rustfmt: Rust not formatted' >&2; exit 1; }"
