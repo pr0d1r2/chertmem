@@ -1,0 +1,11 @@
+# Agent session state, direnv's cached shell, nix build links,
+# cargo output (paradigm/V16: ignored from the first commit).
+.claude/
+.direnv/
+/target
+result*
+
+# Per-machine, never shared: direnv overrides and the name guard's
+# denylist (paradigm/V37).
+.envrc.local
+.private/
