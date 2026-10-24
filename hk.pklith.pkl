@@ -12,6 +12,11 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v hk >/dev/null 2>&1 || { echo 'final-newline: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util end-of-file-fixer --diff {{files}} || { echo 'final-newline: file must end with a newline' >&2; exit 1; }"
     fix = "hk util end-of-file-fixer --fix {{files}}"
   }
+  ["line-endings"] {
+    glob = List("**/*")
+    check = "command -v hk >/dev/null 2>&1 || { echo 'line-endings: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util mixed-line-ending --diff {{files}} || { echo 'line-endings: file mixes CRLF and LF' >&2; exit 1; }"
+    fix = "hk util mixed-line-ending --fix {{files}}"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
