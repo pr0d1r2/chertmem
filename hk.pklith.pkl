@@ -7,6 +7,11 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v hk >/dev/null 2>&1 || { echo 'trailing-whitespace: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util trailing-whitespace --diff {{files}} || { echo 'trailing-whitespace: trailing blanks; the pre-commit hook strips them' >&2; exit 1; }"
     fix = "hk util trailing-whitespace --fix {{files}}"
   }
+  ["final-newline"] {
+    glob = List("**/*")
+    check = "command -v hk >/dev/null 2>&1 || { echo 'final-newline: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util end-of-file-fixer --diff {{files}} || { echo 'final-newline: file must end with a newline' >&2; exit 1; }"
+    fix = "hk util end-of-file-fixer --fix {{files}}"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
