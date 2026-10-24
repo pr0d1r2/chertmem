@@ -17,6 +17,10 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v hk >/dev/null 2>&1 || { echo 'line-endings: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util mixed-line-ending --diff {{files}} || { echo 'line-endings: file mixes CRLF and LF' >&2; exit 1; }"
     fix = "hk util mixed-line-ending --fix {{files}}"
   }
+  ["no-bom"] {
+    glob = List("**/*")
+    check = "command -v hk >/dev/null 2>&1 || { echo 'no-bom: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util check-byte-order-marker {{files}} || { echo 'no-bom: file starts with a byte order marker' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
