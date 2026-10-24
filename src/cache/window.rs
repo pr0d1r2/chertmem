@@ -1,12 +1,23 @@
 //! The window's rows in memory, keyed by `(ts, id)` as the store orders
-//! them, and the partitions they come from (src/cache C).
+//! them, and per partition how far they were read: its seq and its
+//! `PRAGMA data_version` (src/cache C, V2).
 
 #[cfg(test)]
 mod tests;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::store::{Error, Filter, Observation, Store};
+
+/// How far 1 partition was read.
+#[derive(Debug, Default)]
+struct Part {
+    /// `PRAGMA data_version` at the last tail; `None` while no file.
+    version: Option<u64>,
+    /// The highest seq kept: the next tail starts after it, never at a
+    /// ULID (V2).
+    seq: i64,
+}
 
 /// The rows of 1 project from `since` on.
 #[derive(Debug)]
@@ -16,7 +27,7 @@ pub(super) struct Window {
     since: u64,
     /// The catalog's `data_version` when its partitions were listed.
     catalog: u64,
-    parts: BTreeSet<String>,
+    parts: BTreeMap<String, Part>,
     rows: BTreeMap<(u64, String), Observation>,
 }
 
@@ -33,7 +44,7 @@ impl Window {
             filter,
             since,
             catalog: store.catalog_version()?,
-            parts: BTreeSet::new(),
+            parts: BTreeMap::new(),
             rows: BTreeMap::new(),
         };
         window.list(store)?;
@@ -43,30 +54,45 @@ impl Window {
     /// Add every partition the catalog names for the window.
     fn list(&mut self, store: &Store) -> Result<(), Error> {
         for p in store.partitions(&self.filter)? {
-            self.parts.insert(p.path);
+            self.parts.entry(p.path).or_default();
         }
         Ok(())
     }
 
     /// The partition paths, by path.
     pub(super) fn paths(&self) -> Vec<String> {
-        self.parts.iter().cloned().collect()
+        self.parts.keys().cloned().collect()
     }
 
-    /// Catch up before a query (D15).
+    /// Catch up before a query (D15): a moved catalog lists new
+    /// partitions; every partition is synced.
     pub(super) fn refresh(&mut self, store: &mut Store) -> Result<(), Error> {
-        // RED stub: the catalog version is read, nothing new is tailed.
-        self.catalog = store.catalog_version()?;
+        let catalog = store.catalog_version()?;
+        if catalog != self.catalog {
+            self.catalog = catalog;
+            self.list(store)?;
+        }
+        for path in self.paths() {
+            self.sync(store, &path)?;
+        }
         Ok(())
     }
 
-    /// Load the partition at `path`, in seq order (src/store tail).
+    /// Tail the partition at `path` past its last seq, when its
+    /// `data_version` moved since the last tail.
     pub(super) fn sync(
         &mut self,
         store: &mut Store,
         path: &str,
     ) -> Result<(), Error> {
-        for t in store.tail(path, 0, &self.filter)? {
+        let version = store.data_version(path)?;
+        let part = self.parts.entry(path.to_owned()).or_default();
+        if version == part.version {
+            return Ok(());
+        }
+        part.version = version;
+        for t in store.tail(path, part.seq, &self.filter)? {
+            part.seq = part.seq.max(t.seq);
             let o = t.observation;
             self.rows.insert((o.ts, o.id.clone()), o);
         }
