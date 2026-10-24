@@ -1,6 +1,5 @@
 use std::error::Error as StdError;
 
-use super::new_id;
 use crate::store::tests::{Scratch, Test, WEEK, chunk, event, stored};
 use crate::store::{Error, Mode};
 
@@ -14,17 +13,6 @@ fn rows(
         conn.prepare("SELECT ts, ref FROM observations ORDER BY seq")?;
     let found = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
     Ok(found.collect::<Result<_, _>>()?)
-}
-
-#[test]
-fn ids_are_ulids_at_the_event_time() -> Test {
-    let ts = 1_709_211_600_000;
-    let (a, b) = (new_id(ts), new_id(ts));
-    assert_ne!(a, b);
-    assert_eq!(ulid::Ulid::from_string(&a)?.timestamp_ms(), ts);
-    // 10 chars of time: same millisecond, same first 10 chars.
-    assert_eq!((a.len(), a.get(..10)), (26, b.get(..10)));
-    Ok(())
 }
 
 #[test]

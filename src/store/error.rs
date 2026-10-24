@@ -37,6 +37,9 @@ pub enum Error {
     /// A restored row's ref is already issued to another id in its
     /// project (root V15).
     RefTaken { reference: String, id: String },
+    /// No new id at `ts`: its ids ran out in this process, or the id
+    /// lock is poisoned (src/store T15).
+    NoId { ts: u64, reason: String },
 }
 
 impl fmt::Display for Error {
@@ -89,6 +92,7 @@ impl Error {
             Self::RefTaken { reference: r, id } => {
                 format!("chert:{r} is issued to another row than {id}")
             }
+            Self::NoId { ts, reason } => format!("no new id at {ts}: {reason}"),
             _ => String::new(),
         }
     }
@@ -105,6 +109,7 @@ impl Error {
             Self::Ambiguous { .. } => "give the project",
             Self::BadTime { .. } => "give milliseconds below 2^48",
             Self::RefTaken { .. } => "restore into a store without that ref",
+            Self::NoId { .. } => "retry in a new process",
         }
     }
 }
