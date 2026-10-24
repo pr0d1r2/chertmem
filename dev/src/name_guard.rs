@@ -16,13 +16,33 @@ pub struct Finding {
 /// skipped, lowercased for a case-insensitive match.
 #[must_use]
 pub fn names(denylist: &str) -> Vec<String> {
-    let _ = denylist;
-    Vec::new()
+    denylist
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(str::to_lowercase)
+        .collect()
 }
 
 /// Every line of every file that holds a name from `names`.
 #[must_use]
 pub fn scan(names: &[String], files: &[(String, String)]) -> Vec<Finding> {
-    let _ = (names, files);
-    Vec::new()
+    files
+        .iter()
+        .flat_map(|(path, text)| hits(names, path, text))
+        .collect()
+}
+
+fn hits(names: &[String], path: &str, text: &str) -> Vec<Finding> {
+    text.lines()
+        .zip(1..)
+        .filter(|(l, _)| {
+            let low = l.to_lowercase();
+            names.iter().any(|n| low.contains(n.as_str()))
+        })
+        .map(|(_, line)| Finding {
+            path: path.to_owned(),
+            line,
+        })
+        .collect()
 }
