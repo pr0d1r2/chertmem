@@ -15,6 +15,7 @@ cache|in-memory recent window in `chert mcp`: load, fit, freshness|disk store (`
 search|BM25 + vector ranking across partitions, one scoring path|row storage (`store`), MCP framing (`mcp`)|-
 mcp|MCP stdio server: 4 tools, hosts cache|ranking (`search`), cache internals (`cache`)|-
 cli|`chert` verbs via clap, exit codes|verb behaviour (owning modules)|-
+install|IDE wiring: hooks & MCP registration, status, doctor|hook payloads (`hook`)|-
 
 ## §N NAV
 

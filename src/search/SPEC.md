@@ -17,6 +17,7 @@ sib|src/hook|hook intake: event JSON on stdin → redact → append
 sib|src/cache|in-memory recent window in `chert mcp`: load, fit, freshness
 sib|src/mcp|MCP stdio server: 4 tools, hosts cache
 sib|src/cli|`chert` verbs via clap, exit codes
+sib|src/install|IDE wiring: hooks & MCP registration, status, doctor
 
 ## §C CONSTRAINTS
 
