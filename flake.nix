@@ -188,6 +188,7 @@
             pkgs.shellcheck
             pkgs.statix
             pkgs.typos
+            pkgs.taplo
             # Grammar oracle only: runs cavemem 0.2.1's JavaScript in tests,
             # never part of the `chert` closure (`src/grammar`, dev V2).
             pkgs.nodejs
