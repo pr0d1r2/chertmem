@@ -80,3 +80,22 @@ V10: §C latency targets measured by benchmark step on push; regression fails ga
 V11: cache estimate > `cache.max_bytes` → warning names estimate & limit (D7); warnings → MCP log, `status`, `doctor`, ⊥ agent context (D16).
 V12: ⊥ private repo named in committed text (`paradigm/V37`).
 V13: ∀ outward act (push, publish, issue in other repo) has owner approval on record.
+
+## §T TASKS
+
+id|status|task|cites
+T1|x|vendor `FORMAT.md` & `FORMAT-EXTENSIONS.md` from paradigm `fda10ea`|-
+T2|~|spec run: root sections & ∀ node, 1 per commit, trailer `spec-run`|-
+T3|.|freeze `SPEC-PROMPT.md`: line 1 → `HISTORICAL INPUT`, own commit|-
+T4|.|`.context-limits` from `sherd budget` + 12–20%|-
+T5|x|`.gitignore`: `.claude/`, `.direnv/`, `/target`, `result*`, `.envrc.local`, `.private/` (first commit)|V12
+T6|.|dev shell (`dev`): pinned toolchain, `mth` `sherd` `itok` on PATH; ask human to reload|-
+T7|.|guardrails via `.pklith`, 1 check per commit, planted violation each; ask human to reload|V10,V12
+T8|.|waves via `sherd wave`, order: `src/config` → `src/store` → `src/grammar` → `src/hook` → `src/cache` → `src/search` → `src/mcp` → `src/cli` → `src/install` → `src/import` → `src/mine` → `benches` → `docs`|V1,V2,V3,V4,V5
+T9|.|grammar oracle: corpus + cavemem 0.2.1 JavaScript pinned by hash, test-only|V9
+T10|.|benchmark step on push w/ baseline file; regression fails|V10
+T11|.|defaults (D19) checked against 1 real month of history; record in §R|V11
+T12|.|CI via actlith: gate on `paradigm/V28` systems|V10
+T13|.|GitHub repo `pr0d1r2/chertmem` PUBLIC, first push, w/ approval; `gh repo view` ∀ named repo first|V12,V13
+T14|.|issue in rekall proposing `chert` dialect for `catch`, w/ approval (D27)|V7,V13
+T15|.|owner review of agent-answered round 2 (D11–D26)|-
