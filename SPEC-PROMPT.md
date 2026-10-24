@@ -298,7 +298,9 @@ question 13 stays open.
     sinks. Candidates are deterministic (same partitions, same
     candidates), carry observation ids as evidence, and stay rejected
     once rejected. Each sealed partition is mined once. Closes open
-    question 14. Local.
+    question 14. Local. Aligned by decision 27: user corrections are
+    left to `rekall catch`, and candidate state lives in rekall's ledger,
+    not in chert.
 24. IDE coverage: Claude Code in version 1; Cursor, Gemini CLI, OpenCode
     and Codex once each has recorded hook-payload fixtures. Closes open
     question 15. Local.
@@ -307,6 +309,24 @@ question 13 stays open.
 26. Visibility: public on GitHub from the first push, MIT, a fleet member
     whose CI is rendered by actlith, like the other fleet tools. Closes
     open question 17. Local.
+
+# Decisions, round 3 (2026-10-24)
+
+Gap round 2, answered by the owner, after reading rekall
+(`github.com/pr0d1r2/rekall`, commit 3235597). rekall stores a candidate
+as `{id, src, text, at}` in `.rekall/ledger.toml` (`src/ledger/mod.rs`),
+mints candidates only through its own classifier (`src/catch` V44) and
+rejects a second store for them (`src/catch` V45).
+
+27. rekall reads chert; chert never writes `.rekall/ledger.toml`. chert
+    exports observations as JSONL, and rekall reads them as one more
+    transcript root, through a `chert` dialect in `rekall catch`. rekall's
+    classifier stays the only one that mints candidates. User corrections
+    are rekall's signal; chert keeps the behaviour signals of decision 23
+    (failing commands, repeated sequences, hot files, token sinks) and
+    reports them through `chert mine` and `chert report`. The `chert`
+    dialect is a rekall change, proposed there by an issue only with the
+    owner's approval. Closes open question 13. Local.
 
 # Non-goals
 
@@ -367,10 +387,7 @@ decision or drops it.
 10. cavemem compatibility. Closed by decision 21.
 11. Caveman grammar. Closed by decision 22.
 12. Embeddings in version 1. Closed by decision 18.
-13. Mining hand-off to rekall. Either chert writes candidates straight
-    into `.rekall/ledger.toml` `candidates`, or it exports its own format
-    for rekall to import. Needs rekall's candidate schema. Blocks the
-    mining node.
+13. Mining hand-off to rekall. Closed by decision 27.
 14. Mining signals in version 1. Closed by decision 23.
 15. IDE coverage in version 1. Closed by decision 24.
 16. Viewer. Closed by decision 25.
