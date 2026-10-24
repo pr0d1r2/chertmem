@@ -9,6 +9,7 @@ crate `chertmem`: lib + bin `chert` (`[[bin]] name = "chert"`, D11). 1 node per 
 dir|owns|⊥owns|tokens
 config|`chert.toml` scopes, merge, defaults, validation|reading partitions (`store`), cache sizing (`cache`)|-
 store|`catalog.db`, partition files, writes, spool, tiers, refs|ranking (`search`), in-memory rows (`cache`)|-
+grammar|caveman compress & expand, ported from cavemem 0.2.1|zstd & storage tiers (`store`)|-
 
 ## §N NAV
 

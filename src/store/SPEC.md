@@ -11,6 +11,7 @@ up|.|-
 up|src|crate `chertmem`: lib + bin `chert`, 1 node per module
 self|src/store|`catalog.db`, partition files, writes, spool, tiers, refs
 sib|src/config|`chert.toml` scopes, merge, defaults, validation
+sib|src/grammar|caveman compress & expand, ported from cavemem 0.2.1
 
 ## §C CONSTRAINTS
 
