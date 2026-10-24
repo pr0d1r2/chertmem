@@ -20,13 +20,16 @@ local fast = (generated.steps) {
   ["name-guard"] { depends = List("build") }
   ["no-core-worktree"] { depends = List("build") }
   ["lock-graph"] { depends = List("build") }
+  ["rust-mirror"] { depends = List("build") }
 }
 
 local all = (fast) {
   // `cargo nextest run --workspace` relinks the binaries too, so `test`
   // waits for every `cargo run` step (lablith and actlith B10).
   ["test"] = (generated.push["test"]) {
-    depends = List("name-guard", "no-core-worktree", "lock-graph")
+    depends = List(
+      "name-guard", "no-core-worktree", "lock-graph", "rust-mirror"
+    )
   }
 }
 
