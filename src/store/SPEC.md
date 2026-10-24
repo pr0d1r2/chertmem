@@ -33,7 +33,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. wave 3: `seal`, `compact`, `drop`, `repartition`, `rebuild`, `tail`, `data_version`, `catalog_version`. wave 4: `spool_raw(bytes)` (both modes, `spool/unreadable/<ULID>.hook`); `restore(&Observation)` keeps own id, ts, ref & project, id already stored → its ref, ref held by other id → `Error::RefTaken`, ⊥ spools.
+- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. wave 3: `seal`, `compact`, `drop`, `repartition`, `rebuild`, `tail`, `data_version`, `catalog_version`. wave 4: `spool_raw(bytes)` (both modes, `spool/unreadable/<ULID>.hook`); `restore(&Observation)` keeps own id, ts, ref & project, id already stored → its ref, ref held by other id → `Error::RefTaken`, ⊥ spools. wave 7: `session_started(&SessionStart)`, `session_ended(id, ts)` → `Written` (both modes, spooled), `sessions(limit)`; `matches(path, terms, &Filter) -> Vec<Tailed>`, `frequencies(path, terms) -> Frequencies{rows, docs}`.
 - fn: `Ref::parse("chert:<ref>")`; ref issued in `append`: shortest ULID prefix ≥ 8 ⊥ equal to issued ref in project, stored in unique column `ref`; `get` matches stored ref exactly (`.:V15`).
 - dir: `spool/` append-only JSONL, replayed by next reading `open` (V10).
 
@@ -46,6 +46,8 @@ R3|tiers, wave 3|file keeps own catalog row; cold `<path>.zst` + `.dict`, read v
 R4|generation, wave 4|bump = max(stored + 1, now ms, mark + 1); mark = file `generation` beside `catalog.db`, rewritten per bump; new catalog seeded so|`generation.rs`
 R5|tombstones, wave 4|`<path>.dropped`: JSON `{partition: [12 catalog cols], refs: [[project, ref, id, identity]]}`, before files go; rebuild restores before files; bad 1 → error. `spool_raw` → `spool/unreadable/<ULID>.hook`, as `src/hook` writes|`tombstone.rs`, `spool.rs`
 R6|ids, wave 5|next id at a held ts = last random + uniform [1, 2^70], fresh < 2^78 (>= 768 steps), last of latest 4096 ts per process; past 2^80 → `Error::NoId`, ⊥ next ms (V1); same-ms refs ~13-14 chars|`id.rs`
+R7|sessions, wave 7|catalog table (schema step 2; steps past `user_version` laid on open), key (project, id); earliest start & latest end win ∴ idempotent; end before start kept, listed at end ts. ⊥ in partition files ∴ catalog loss loses them|`session.rs`
+R8|FTS5, wave 7|term → `"…"`, `"` doubled, OR-joined, bound ∴ ⊥ syntax; df via temp `fts5vocab`, lowercased 1 token. release, 10^5 rows, 2 terms, 1874 hits: 2.4 ms median (full tail 53 ms)|`fts.rs`
 
 ## §V INVARIANTS
 
@@ -80,7 +82,8 @@ T12|x|`generation` from a monotonic source (e.g. max(stored, now ms)), survives 
 T13|x|drop tombstones under `chunks/<project>/`, read by `rebuild`|V12
 T14|x|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24); `src/hook` calls it|V10
 T15|x|ULIDs monotonic within 1 ms per process ∴ same-ms events keep insert order in `(ts, id)` order (wave 4 hook report)|V1
-T16|.|`Store::sessions(limit) -> Vec<Session{id, ide, cwd, started_at, ended_at}>` for the current project, newest first (`src/mcp` T2 list_sessions)|V1
+T16|x|`Store::sessions(limit) -> Vec<Session{id, ide, cwd, started_at, ended_at}>` for the current project, newest first (`src/mcp` T2 list_sessions); write API for `src/hook` T10 (R7)|V1,V10
+T17|x|FTS5 candidates per partition for `src/search` T6: `matches`, `frequencies` (R8)|V4
 
 ## §B BUGS
 
