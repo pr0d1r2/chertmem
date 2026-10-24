@@ -10,6 +10,8 @@ mod error;
 mod layout;
 mod model;
 mod partition;
+mod prune;
+mod read;
 mod reference;
 mod schema;
 mod spool;
@@ -22,7 +24,9 @@ use rusqlite::Connection;
 
 pub use error::Error;
 pub use layout::project_id;
-pub use model::{Appended, Event, State};
+pub use model::{
+    Appended, Event, Filter, Observation, Partition, State, Stats,
+};
 pub use reference::Ref;
 
 use crate::config::Config;

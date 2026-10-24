@@ -10,9 +10,9 @@ use std::time::Duration;
 
 use rusqlite::{Connection, params};
 
-use super::Error;
 use super::schema;
 use super::write::Row;
+use super::{Error, Filter, Observation, Ref};
 
 /// The open partition files of 1 store.
 #[derive(Debug)]
@@ -43,6 +43,54 @@ impl Chunks {
         }
         self.open.get(path).ok_or(Error::NoDataDir)
     }
+
+    /// The partition at `path` when its file exists; a read never makes
+    /// one, so a dropped file reads as gone.
+    pub(super) fn existing(
+        &mut self,
+        path: &str,
+    ) -> Result<Option<&Connection>, Error> {
+        if !self.open.contains_key(path) && !self.root.join(path).is_file() {
+            return Ok(None);
+        }
+        self.get(path).map(Some)
+    }
+}
+
+const SCAN: &str = "SELECT ref, id, project, ts, session, ide, kind,
+  identity, body FROM observations
+  WHERE (?1 IS NULL OR project = ?1)
+    AND (?2 IS NULL OR ts >= ?2)
+    AND (?3 IS NULL OR ts < ?3)
+  ORDER BY ts, id";
+
+/// The rows of 1 partition `filter` wants, by time then id.
+pub(super) fn scan(
+    conn: &Connection,
+    filter: &Filter,
+) -> Result<Vec<Observation>, Error> {
+    let mut stmt = conn.prepare(SCAN)?;
+    let args = params![filter.project, filter.since, filter.until];
+    let rows = stmt.query_map(args, observation)?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// An observation from the columns `ref, id, project, ts, session, ide,
+/// kind, identity, body`.
+pub(super) fn observation(
+    r: &rusqlite::Row<'_>,
+) -> rusqlite::Result<Observation> {
+    Ok(Observation {
+        reference: Ref::stored(r.get(0)?),
+        id: r.get(1)?,
+        project: r.get(2)?,
+        ts: r.get(3)?,
+        session: r.get(4)?,
+        ide: r.get(5)?,
+        kind: r.get(6)?,
+        identity: r.get(7)?,
+        body: r.get(8)?,
+    })
 }
 
 const INSERT: &str = "INSERT INTO observations

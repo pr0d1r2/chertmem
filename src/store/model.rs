@@ -40,6 +40,62 @@ pub enum State {
     Cold,
 }
 
+/// Which partitions and rows a read wants; `None` = unbounded. Time is
+/// `[since, until)` in milliseconds.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Filter {
+    /// A project id ([`super::project_id`]).
+    pub project: Option<String>,
+    pub since: Option<u64>,
+    pub until: Option<u64>,
+}
+
+/// A partition's size and content hash (src/store C, R1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Stats {
+    pub rows: u64,
+    /// The bytes of every observation body.
+    pub bytes: u64,
+    /// FNV-1a 64 over (id, body) of every row in insert order, hex.
+    pub checksum: String,
+}
+
+/// A partition's catalog row (src/store C).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Partition {
+    /// Relative to the data dir.
+    pub path: String,
+    /// `partition.by` it was written under, e.g. `project,time`.
+    pub dims: String,
+    /// The project dim; empty when `project` was not a dim.
+    pub project: String,
+    /// The ide dim; empty when `ide` was not a dim.
+    pub ide: String,
+    pub t0: u64,
+    pub t1: u64,
+    pub shard: Option<u32>,
+    pub stats: Stats,
+    pub state: State,
+    /// The `partition.*` spec it was written under.
+    pub spec: String,
+}
+
+/// 1 stored observation (src/store C).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Observation {
+    pub reference: Ref,
+    /// The ULID.
+    pub id: String,
+    pub project: String,
+    pub ts: u64,
+    pub session: String,
+    pub ide: String,
+    pub kind: String,
+    pub identity: Option<String>,
+    /// As appended: compressed by the caller.
+    pub body: String,
+}
+
 const STATES: &[(&str, State)] = &[
     ("hot", State::Hot),
     ("warm", State::Warm),
