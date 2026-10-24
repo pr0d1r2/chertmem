@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = crate `chertmem-dev` (`publish = false`) for gate steps in Rust (owner 2026-10-24): `name-guard`, `no-core-worktree`, `lock-graph`, `rust-mirror`, `tdd-order`, `bench-gate`, target/suite parity.
+root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = crate `chertmem-dev` (`publish = false`) for gate steps in Rust (owner 2026-10-24): `name-guard`, `no-core-worktree`, `lock-graph`, `rust-mirror`, `tdd-order`, `commit-msg`, `bench-gate`, target/suite parity.
 
 ## §N NAV
 
@@ -22,7 +22,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 ## §I INTERFACES
 
 - cmd: `nix develop`; `.envrc` = `use flake`.
-- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `bench-gate`.
+- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `commit-msg <file>` `bench-gate`.
 - file: `dev/tdd-order.exempt` — full commit id + reason per line; ∀ entry has a §B row. exit 0 hold · 1 finding (file:line & fix on stderr) · 2 usage | unreadable input.
 - file: `.private/denylist` — untracked, 1 name per line, `#` comments (`paradigm/V37`).
 
@@ -38,6 +38,7 @@ V7: `rust-mirror` (port of xenolith v0.1.0 rule, as lablith copies it): ∀ trac
 V8: `tdd-order` (same port, Rust rule only, ⊥ shell scripts here): ∀ commit in range adding a `.rs` outside `tests/` has a `test:` | `test(` commit before it in range, unless its full id ∈ `dev/tdd-order.exempt`; missing | malformed exempt file → finding.
 V9: ∀ gate step running `cargo run` depends on step `build` (`cargo build -q --workspace --bins`, after clippy); `test` waits for ∀ such step ∴ ⊥ step relinks a binary another is executing (B2). [superseded by V10]
 V10: ∀ gate step running `cargo run` | `cargo build` is hk `exclusive` ∵ cargo re-links `target/debug/<bin>` (new inode) on every run & build, even w/o rebuild ∴ 2 such steps at once race; `test` waits for them (B3).
+V11: `commit-msg`: subject `type(scope)?: claim`, type ∈ feat fix docs test chore refactor perf build ci, ≤ 72 chars; ≥ 1 body line before trailers; final paragraph carries `Paradigm-Stage: <stage>` from `paradigm` §I vocabulary (`paradigm/V36`, `paradigm/V43`); git's own Merge, Revert, fixup!, squash! subjects pass. `name-guard` reads the message too (B4).
 
 ## §T TASKS
 
@@ -49,6 +50,7 @@ T4|x|`no-core-worktree`, RED → GREEN → gate row|V4,V6
 T5|x|`lock-graph`, RED → GREEN → gate row|V5,V6
 T6|x|`rust-mirror`, RED → GREEN → gate row|V7,V6
 T7|x|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
+T8|.|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
 
 ## §B BUGS
 
@@ -56,3 +58,4 @@ id|date|cause|fix
 B1|2026-10-24|workspace stub (`src:T1`) laid by hand w/ bodiless `lib.rs` & `main.rs`: ⊥ behaviour for a RED test to pin ∴ exempt in `dev/tdd-order.exempt`|V8
 B2|2026-10-24|`name-guard` failed w/o denylist & w/o output in pre-commit while clippy, rustdoc & doctest rebuilt `chertmem-dev` beside it: a cargo step relinked the binary another was executing (lablith & actlith B9)|V9
 B3|2026-10-24|after B2's fix `no-core-worktree` failed "could not execute process `target/debug/chertmem-dev` (never executed)": measured, ∀ `cargo run` & `cargo build` replaces the binary's hard link (inode 12182331 → 12182334 → 12182340 → 12182342) even when up to date ∴ parallel `cargo run` steps race each other, ⊥ only the build|V10
+B4|2026-10-24|16 subjects over 72 chars & 1 citing wrong id landed in guardrails stage, found only by hand twice: ⊥ step read commit messages|V11
