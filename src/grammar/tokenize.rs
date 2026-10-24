@@ -30,12 +30,14 @@ const RULES: [(u8, Rule); 9] = [
 const CODE: u8 = 90;
 
 /// One piece of the text: kept as it is, or prose to rewrite. `code`
-/// marks a kept fence or inline code span (src/grammar V4).
+/// marks a kept fence or inline code span (src/grammar V4), `path` a
+/// kept path (V5 (c)).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Segment<'a> {
     pub(super) text: &'a str,
     pub(super) kept: bool,
     pub(super) code: bool,
+    pub(super) path: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -79,19 +81,29 @@ fn resolve(s: &str) -> Vec<Span> {
     spans
 }
 
+/// One segment of `text`: prose, or a kept span of rule `priority`.
+fn segment(text: &str, priority: Option<u8>) -> Segment<'_> {
+    Segment {
+        text,
+        kept: priority.is_some(),
+        code: priority >= Some(CODE),
+        path: false,
+    }
+}
+
 /// `text` cut into kept spans and the prose between them.
 pub(super) fn tokenize(text: &str) -> Vec<Segment<'_>> {
     let mut out = Vec::new();
     let mut pos = 0;
-    let mut push = |from: usize, to: usize, kept: bool, code: bool| {
+    let mut push = |from: usize, to: usize, priority: Option<u8>| {
         let piece = text.get(from..to).filter(|t| !t.is_empty());
-        out.extend(piece.map(|text| Segment { text, kept, code }));
+        out.extend(piece.map(|t| segment(t, priority)));
     };
     for span in resolve(text) {
-        push(pos, span.start, false, false);
-        push(span.start, span.end, true, span.priority >= CODE);
+        push(pos, span.start, None);
+        push(span.start, span.end, Some(span.priority));
         pos = span.end;
     }
-    push(pos, text.len(), false, false);
+    push(pos, text.len(), None);
     out
 }
