@@ -57,7 +57,7 @@ impl Store {
         let hits =
             catalog::locate(self.reader()?, project, reference.as_str())?;
         match hits.as_slice() {
-            [hit] if hit.path.is_empty() => self.fetch(hit, reference), // RED stub
+            [hit] => self.fetch(hit, reference),
             _ => Ok(Lookup::Dropped(reference.clone())),
         }
     }

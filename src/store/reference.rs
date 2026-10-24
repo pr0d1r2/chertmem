@@ -61,5 +61,5 @@ impl fmt::Display for Ref {
 /// The refs `id` may be issued as, shortest first: its prefixes of 8
 /// chars up to the whole id.
 pub(super) fn candidates(id: &str) -> impl Iterator<Item = &str> {
-    (id.len()..=id.len()).filter_map(|n| id.get(..n)) // RED stub: whole id
+    (MIN..=id.len()).filter_map(|n| id.get(..n))
 }
