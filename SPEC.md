@@ -35,6 +35,7 @@ self|.|-
 - config `chert.toml`: user `~/.config/chert/chert.toml` + project `chert.toml`, project overrides key by key. ∀ partition & cache setting configurable (D5, D6, D7).
 - defaults (D19): `partition.by = ["project","time"]`, `time_bucket = "7d"`, `shards = 1`, `cache.window = "28d"`, `cache.max_bytes = "256MiB"`, `on_overflow = "warn"`, `embedding.provider = "off"`.
 - latency targets (D20), benchmark-gated: hook write < 5 ms · recent-window search < 10 ms · `get_observations` < 2 ms · semantic re-rank < 20 ms.
+- context injection (owner 2026-10-24): `session-start` by default; `user-prompt-submit` only w/ opt-in `inject.on_prompt`, documented w/ speed disclaimer. rules in `src/hook`.
 - `<private>…</private>` stripped & `privacy.exclude` paths ⊥ read, before any write.
 - chert ⊥ writes `.rekall/` (D27). mining ⊥ changes anything by itself.
 - cavemem: own data dir; ⊥ share cavemem's live files (D21). cavemem MIT notice ships w/ grammar port (D22).
@@ -45,7 +46,7 @@ self|.|-
 
 ## §I INTERFACES
 
-- cmd: `chert hook run <event>` — event JSON on stdin → 1 write → exit. events: `session-start` `user-prompt-submit` `post-tool-use` `stop` `session-end`.
+- cmd: `chert hook run <event>` — event JSON on stdin → 1 write → exit. injecting hooks also print `additionalContext` (`src/hook`). events: `session-start` `user-prompt-submit` `post-tool-use` `stop` `session-end`.
 - cmd: `chert mcp` — MCP server on stdio; hosts cache (D14).
 - mcp: `search(query, limit?)` → `[{id, score, snippet, session_id, ts}]`; `timeline(session_id, around_id?, limit?)` → `[{id, kind, ts}]`; `get_observations(ids[], expand?)` → bodies; `list_sessions(limit?)` → `[{id, ide, cwd, started_at, ended_at}]`. tool, param & field names ≡ cavemem 0.2.1 (D21); observation `id` value = ref `chert:<ref>`. 1 deliberate deviation: `expand` defaults false (compressed body, fewest tokens, D28); cavemem defaults true.
 - ref: `chert:<ref>` — issued once at insert & stored: shortest ULID prefix ≥ 8 chars equal to ⊥ issued ref in project (D28); resolved by exact match, ⊥ prefix search (V15). gone observation → answer `dropped`, ⊥ other row.
@@ -55,7 +56,7 @@ self|.|-
 - cmd: `chert mine [--since T] [--format text|json]`; `chert report [--format text|json|md]`.
 - cmd: `chert compress <file>`; `chert expand <file>`; `chert export <out.jsonl> [--for rekall]`; `chert import <in.jsonl> [--from cavemem]`; `chert completions <shell>`; `chert man`.
 - exit: 0 ok · 1 finding · 2 usage | unreadable input.
-- file: `chert.toml` — user & project scope (§C).
+- file: `chert.toml` — user & project scope (§C). keys incl. `inject.max_tokens`, `inject.on_prompt`.
 - dir: data dir (default `~/.local/share/chert`): `catalog.db`, `chunks/<project>/<bucket>[.<shard>].db[.zst]`, `spool/`.
 - export: JSONL, 1 observation per line, `ref` field; read by rekall `catch` via `chert` dialect (D27).
 - env: `OLLAMA_HOST` | provider key, only when `embedding.provider` opts in.
@@ -87,6 +88,7 @@ V13: ∀ outward act (push, publish, issue in other repo) has owner approval on 
 V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 benchmark on generated fixtures of stated size; `docs/BENCHMARKS.md` explains run, read, targets & why, & ∀ measured number w/ date, machine, recount command (D29, `paradigm/V4`).
 V15: ref resolution = exact match on stored issued ref, ⊥ prefix match ∴ later rows ⊥ make old ref ambiguous. lookup: current project first, then all; ∃ in > 1 project → error naming projects, ⊥ guess (B1).
 V16: dedupe only by event identity dialect supplies (e.g. a tool-use id), verified in recorded fixtures; ⊥ identity → every event kept. ⊥ dedupe by payload content ∵ identical payload = real repeat (same command twice) & mining counts it (D23) (B2).
+V17: injected context ≤ `inject.max_tokens` (o200k), refs & gists only (D28).
 
 ## §T TASKS
 
