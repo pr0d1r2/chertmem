@@ -5,7 +5,30 @@ amends "pkl/Config.pkl"
 // (excludes, depends) by amending a step by its id.
 import "hk.pklith.pkl" as generated
 
-local all = (generated.steps) { ...generated.push }
+// Every hook's steps: the generated ones, ordered so `cargo run` never races.
+local fast = (generated.steps) {
+  // dev V9, B2 (lablith and actlith B9): every step that runs `cargo run`
+  // waits for this build. Started together on a stale binary, one cargo
+  // relinks the executable while another is starting it, and macOS kills
+  // that process with no output: a gate step that fails for no reason.
+  // Built once first, every later `cargo run` finds it fresh.
+  ["build"] {
+    glob = List("**/*.rs", "Cargo.toml", "Cargo.lock")
+    check = "cargo build -q --workspace --bins"
+    depends = List("clippy")
+  }
+  ["name-guard"] { depends = List("build") }
+  ["no-core-worktree"] { depends = List("build") }
+  ["lock-graph"] { depends = List("build") }
+}
+
+local all = (fast) {
+  // `cargo nextest run --workspace` relinks the binaries too, so `test`
+  // waits for every `cargo run` step (lablith and actlith B10).
+  ["test"] = (generated.push["test"]) {
+    depends = List("name-guard", "no-core-worktree", "lock-graph")
+  }
+}
 
 hooks {
   ["pre-commit"] {
@@ -15,7 +38,7 @@ hooks {
     // stash a fixer would rewrite unstaged edits, so fixing stays `hk fix`.
     fix = false
     stash = "none"
-    steps = generated.steps
+    steps = fast
   }
   ["pre-push"] {
     steps = all
