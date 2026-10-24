@@ -10,26 +10,13 @@
 #[cfg(test)]
 mod tests;
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use super::redact;
-use crate::config::Config;
+use super::Ctx;
+use crate::store::Error;
 
 /// Keep `stdin` raw in the spool; the file kept, or why it could not be.
-pub(super) fn keep(config: &Config, stdin: &[u8]) -> Result<PathBuf, String> {
-    let data = config.storage.data_dir.as_deref().ok_or("no data dir")?;
-    let dir = data.join("spool").join("unreadable");
-    fs::create_dir_all(&dir).map_err(|e| failed(&dir, &e))?;
-    let name = ulid::Ulid::generate().to_string();
-    let tmp = dir.join(format!(".{name}.tmp"));
-    let bytes = redact::strip_bytes(stdin);
-    fs::write(&tmp, bytes).map_err(|e| failed(&tmp, &e))?;
-    let done = dir.join(format!("{name}.hook"));
-    fs::rename(&tmp, &done).map_err(|e| failed(&done, &e))?;
-    Ok(done)
-}
-
-fn failed(path: &Path, e: &std::io::Error) -> String {
-    format!("{}: {e}", path.display())
+/// A stub that refuses until the store keeps it (src/hook T8).
+pub(super) fn keep(_ctx: &Ctx<'_>, _stdin: &[u8]) -> Result<PathBuf, Error> {
+    Err(Error::NoDataDir)
 }

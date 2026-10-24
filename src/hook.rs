@@ -158,7 +158,7 @@ fn follow(
 
 /// Keep `stdin` raw in the spool, noting `why` and where it went.
 fn kept(stdin: &[u8], ctx: &Ctx<'_>, why: &str) -> Outcome {
-    Outcome::noted(match raw::keep(ctx.config, stdin) {
+    Outcome::noted(match raw::keep(ctx, stdin) {
         Ok(path) => format!("{why}; kept raw in {}", path.display()),
         Err(e) => format!("{why}; payload lost: {e}"),
     })

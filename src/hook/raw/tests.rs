@@ -1,8 +1,22 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::hook::Kind;
-use crate::hook::tests::{Res, Scratch, Test};
+use super::keep;
+use crate::hook::tests::{NOW, Res, Scratch, Test};
+use crate::hook::{Ctx, Ide, Kind};
+use crate::store::Error;
+
+/// Keep `stdin` raw through the store, as the hook does for `scratch`.
+fn keep_in(scratch: &Scratch, stdin: &[u8]) -> Result<PathBuf, Error> {
+    let root = scratch.root();
+    let ctx = Ctx {
+        config: &scratch.config,
+        root: &root,
+        now: NOW,
+        ide: Ide::ClaudeCode,
+    };
+    keep(&ctx, stdin)
+}
 
 /// The raw payloads kept under `spool/unreadable/`, by name.
 fn kept(scratch: &Scratch) -> Res<Vec<Vec<u8>>> {
@@ -80,5 +94,30 @@ fn an_unwritable_spool_says_lost_and_exit_is_0() -> Test {
     let out = scratch.run(Kind::UserPromptSubmit, b"not json");
     assert_eq!(out.exit, 0);
     assert!(out.note.is_some_and(|n| n.contains("lost")));
+    Ok(())
+}
+
+#[test]
+fn a_kept_payload_lands_where_the_store_spools_it() -> Test {
+    let scratch = Scratch::new("rawviastore")?;
+    let file = keep_in(&scratch, b"a <private>pw</private>b")?;
+    let dir = scratch.data().join("spool/unreadable");
+    assert_eq!(file.parent(), Some(dir.as_path()));
+    let stem = file.file_stem().and_then(|x| x.to_str()).ok_or("name")?;
+    assert!(ulid::Ulid::from_string(stem).is_ok(), "{stem}");
+    assert_eq!(fs::read(&file)?, b"a b");
+    Ok(())
+}
+
+#[test]
+fn keeping_fails_with_the_store_s_own_errors() -> Test {
+    let mut scratch = Scratch::new("rawstoreerr")?;
+    fs::create_dir_all(scratch.data())?;
+    fs::write(scratch.data().join("spool"), "a file, not a dir")?;
+    let blocked = keep_in(&scratch, b"x").err();
+    assert!(matches!(blocked, Some(Error::Io { .. })), "{blocked:?}");
+    scratch.config.storage.data_dir = None;
+    let none = keep_in(&scratch, b"x").err();
+    assert!(matches!(none, Some(Error::NoDataDir)), "{none:?}");
     Ok(())
 }
