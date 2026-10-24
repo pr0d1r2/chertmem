@@ -9,8 +9,10 @@ use std::thread::{self, JoinHandle};
 
 use serde_json::Value;
 
-use super::{Engine, Hit, Query};
-use crate::config::{Config, load_from};
+use super::{Engine, Hit, Query, token};
+use crate::config::{Config, Grammar, load_from};
+use crate::grammar::{Intensity, compress};
+use crate::hook::{self, Ctx, Ide, Kind};
 use crate::store::{Event, Lookup, Mode, Ref, Store};
 
 pub(super) type Test = Result<(), Box<dyn StdError>>;
@@ -282,4 +284,105 @@ pub(super) fn lengths(texts: &[String]) -> String {
     let each: Vec<String> =
         texts.iter().map(|t| format!("[{}, 1]", t.len())).collect();
     format!("{{\"embeddings\": [{}]}}", each.join(", "))
+}
+
+/// `prompt` stored the way the hook stores it, at `cfg`'s grammar.
+fn prompted(s: &Scratch, cfg: &Config, prompt: &str) -> Test {
+    let stdin = serde_json::json!({
+        "session_id": "s1",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    });
+    let root = s.root();
+    let ctx = Ctx {
+        config: cfg,
+        root: &root,
+        now: BASE,
+        ide: Ide::ClaudeCode,
+    };
+    let out =
+        hook::run(Kind::UserPromptSubmit, stdin.to_string().as_bytes(), &ctx);
+    out.note.map_or(Ok(()), |n| Err(n.into()))
+}
+
+/// The snippets `text` finds at `grammar`, after the hook stored
+/// [`PROMPT`].
+fn found_at(
+    name: &str,
+    grammar: Grammar,
+    text: &str,
+) -> Result<Vec<String>, Box<dyn StdError>> {
+    let (s, mut cfg, _) = fresh(name)?;
+    cfg.compression.grammar = grammar;
+    prompted(&s, &cfg, PROMPT)?;
+    let hits = engine(&s, &cfg)?.run(&query(text), None)?;
+    Ok(hits.into_iter().map(|h| h.snippet).collect())
+}
+
+const PROMPT: &str = "fix the middleware now";
+
+#[test]
+fn a_plain_word_finds_a_body_the_hook_stored_compressed() -> Test {
+    let stored = compress(PROMPT, Intensity::Full);
+    assert!(stored.contains("mw") && !stored.contains("middleware"));
+    let got = found_at("v5-full", Grammar::Full, "middleware")?;
+    assert_eq!(got, std::slice::from_ref(&stored));
+    assert_eq!(found_at("v5-short", Grammar::Full, "mw")?, [stored]);
+    Ok(())
+}
+
+#[test]
+fn with_grammar_off_plain_text_is_stored_and_found() -> Test {
+    let got = found_at("v5-off", Grammar::Off, "middleware")?;
+    assert_eq!(got, [PROMPT]);
+    Ok(())
+}
+
+#[test]
+fn a_query_of_only_words_the_grammar_drops_finds_nothing() -> Test {
+    let (s, cfg, mut store) = fresh("v5-dropped")?;
+    store.append(&event(BASE, "s", "the a cargo"))?;
+    let mut e = engine(&s, &cfg)?;
+    assert!(e.run(&query("the a"), None)?.is_empty());
+    assert_eq!(count(&mut e, &query("the cargo"))?, 1);
+    Ok(())
+}
+
+/// The terms `text` gives at `full`, as a query or a stored body.
+fn full(text: &str) -> Vec<String> {
+    token::terms(&compress(text, Intensity::Full))
+}
+
+#[test]
+fn a_lone_word_compresses_as_it_does_inside_prose() {
+    let prose = [
+        ("middleware", "we saw the middleware fail"),
+        ("Database", "The database is down."),
+        ("dependencies", "update dependencies, then"),
+    ];
+    for (word, sentence) in prose {
+        let body = full(sentence);
+        let lone = full(word);
+        assert!(lone.iter().all(|t| body.contains(t)), "{word}: {body:?}");
+    }
+    assert_eq!(full("middleware"), ["mw"]);
+}
+
+#[test]
+fn kept_spans_and_dropped_phrases_differ_from_a_lone_word() {
+    let kept = [
+        "see middleware_x now",
+        "see `middleware` now",
+        "see src/middleware.rs now",
+        "a middleware-based y",
+    ];
+    let (mw, long) = ("mw".to_owned(), "middleware".to_owned());
+    for sentence in kept {
+        let body = full(sentence);
+        assert!(body.contains(&long) && !body.contains(&mw), "{body:?}");
+    }
+    assert_eq!(full("kind"), ["kind"]);
+    assert_eq!(full("the kind of x"), ["x"]);
+    assert_eq!(full("think"), ["think"]);
+    assert!(full("i think that").is_empty());
 }
