@@ -33,7 +33,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn: `Store::open(cfg)`; `append(event) -> Ref`; `get(&[Ref]) -> Vec<Found|Dropped>`; `partitions(filter) -> Vec<Partition>`; `seal`, `compact`, `drop`, `repartition`.
+- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. later: `seal`, `compact`, `drop`, `repartition`.
 - fn: `Ref::parse("chert:<ref>")`; ref issued in `append`: shortest ULID prefix ≥ 8 ⊥ equal to issued ref in project, stored in unique column `ref`; `get` matches stored ref exactly (`.:V15`).
 - dir: `spool/` append-only JSONL, replayed by next reading `open` (V10).
 
@@ -68,6 +68,7 @@ T6|.|seal → warm, compact → cold (`VACUUM INTO` + zstd dict), drop, repartit
 T7|.|catalog rebuild for `doctor`|V6
 T8|x|ref column & exact-match resolution, cross-project lookup|V5,V8
 T9|x|summaries table, turn & session scopes|V1
+T10|.|w/ T6: spooled item whose partition got sealed ⊥ blocks replay forever|V7,V10
 
 ## §B BUGS
 
