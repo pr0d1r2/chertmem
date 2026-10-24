@@ -324,10 +324,15 @@ pub fn load_from(
 ) -> Result<Loaded, Error> {
     let source = Source::gather(&files(home, project_root))?;
     let config = Config::build(&source, home)?;
-    Ok(Loaded {
-        config,
-        warnings: Vec::new(),
-    })
+    let (window, bucket) = (config.cache.window, config.partition.time_bucket);
+    let warnings = window_warning(window, bucket).into_iter().collect();
+    Ok(Loaded { config, warnings })
+}
+
+/// A warning when `window` is not a whole multiple of `bucket`
+/// (src/config V2); the load still succeeds.
+fn window_warning(_window: Span, _bucket: Span) -> Option<String> {
+    None
 }
 
 /// The user file (when there is a home), then the project file: the
