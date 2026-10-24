@@ -17,6 +17,7 @@ mcp|MCP stdio server: 4 tools, hosts cache|ranking (`search`), cache internals (
 cli|`chert` verbs via clap, exit codes|verb behaviour (owning modules)|-
 install|IDE wiring: hooks & MCP registration, status, doctor|hook payloads (`hook`)|-
 import|JSONL export for rekall, import incl. cavemem DB|candidate minting (rekall), mining (`mine`)|-
+mine|behaviour findings & awareness report|candidates & rules (rekall), export (`import`)|-
 
 ## §N NAV
 
