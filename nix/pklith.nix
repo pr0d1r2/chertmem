@@ -6,6 +6,7 @@ catalog: [
   catalog.editorconfig-checker
   catalog.gnugrep
   catalog.markdownlint-cli
+  catalog.microlith
   catalog.nixfmt
   catalog.ripsecrets
   catalog.shellcheck
