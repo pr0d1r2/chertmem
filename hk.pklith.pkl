@@ -62,6 +62,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*.sh", "**/*.bash", ".envrc")
     check = "command -v shellcheck >/dev/null 2>&1 || { echo 'shellcheck: shellcheck is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; shellcheck {{files}} || { echo 'shellcheck: shell script finding' >&2; exit 1; }"
   }
+  ["clippy"] {
+    glob = List("**/*.rs", "Cargo.toml", "clippy.toml")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'clippy: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v cargo-clippy >/dev/null 2>&1 || { echo 'clippy: cargo-clippy is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo clippy --workspace --all-targets -q -- -D warnings || { echo 'clippy: clippy finding' >&2; exit 1; }"
+  }
   ["statix"] {
     glob = List("**/*.nix")
     check = #"command -v statix >/dev/null 2>&1 || { echo 'statix: statix is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; (for f in {{files}}; do statix check "$f" || exit 1; done) || { echo 'statix: nix anti-pattern; statix names the lint and its fix' >&2; exit 1; }"#

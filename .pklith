@@ -32,7 +32,7 @@ envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|-|-|written by `nix flake lock`; hygiene steps only
 markdownlintignore|-|-|ignore patterns, no linter reads them
-rs|rustfmt|-|-
+rs|rustfmt, clippy|-|-
 toml|-|-|pending: taplo is laid in the next commits (T7)
 path:Cargo.lock|-|-|written by cargo; cargo-deny reads it once the deny step lands
 path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)
