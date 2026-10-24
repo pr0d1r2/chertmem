@@ -178,6 +178,16 @@
             coverageLlvm
             # `nixfmt --check` gates this file.
             pkgs.nixfmt
+            # The tools `pklith gen` names in nix/pklith.nix, here too, so
+            # `pklith lay` finds each before its step exists (dev T1, T7).
+            pkgs.deadnix
+            pkgs.editorconfig-checker
+            pkgs.gnugrep
+            pkgs.markdownlint-cli
+            pkgs.ripsecrets
+            pkgs.shellcheck
+            pkgs.statix
+            pkgs.typos
             # Grammar oracle only: runs cavemem 0.2.1's JavaScript in tests,
             # never part of the `chert` closure (`src/grammar`, dev V2).
             pkgs.nodejs
