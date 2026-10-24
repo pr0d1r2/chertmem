@@ -294,6 +294,30 @@ pub struct Mining {
     pub min_occurrences: Option<u32>,
 }
 
+/// Printed once when `inject.on_prompt` turns on (src/config V4).
+pub const ON_PROMPT_DISCLAIMER: &str = "chert: inject.on_prompt = true: \
+    every prompt now waits for a store read and a spool replay before \
+    the agent sees it (cost per docs/BENCHMARKS.md; set it to false to \
+    undo)";
+
+/// `inject.*` (root C, src/hook C).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Inject {
+    /// o200k tokens of injected context at most; default 300.
+    pub max_tokens: u32,
+    /// Also inject on `user-prompt-submit`; default false.
+    pub on_prompt: bool,
+}
+
+impl Inject {
+    /// Set `inject.on_prompt`; the speed disclaimer comes back only when
+    /// this turns it on, so a caller prints it once (src/config V4).
+    pub fn set_on_prompt(&mut self, on: bool) -> Option<&'static str> {
+        self.on_prompt = !on;
+        None
+    }
+}
+
 /// The merged, validated `chert.toml` (src/config G).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
@@ -305,6 +329,7 @@ pub struct Config {
     pub embedding: Embedding,
     pub privacy: Privacy,
     pub mining: Mining,
+    pub inject: Inject,
 }
 
 /// A loaded [`Config`] and the warnings found on the way (src/config V2).
@@ -534,6 +559,10 @@ impl Config {
             embedding: Embedding::build(src)?,
             privacy: Privacy::build(src)?,
             mining: Mining::build(src)?,
+            inject: Inject {
+                max_tokens: 0,
+                on_prompt: false,
+            },
         })
     }
 }
