@@ -5,8 +5,10 @@
 #[cfg(test)]
 mod tests;
 
+mod blend;
 mod error;
 mod merge;
+mod ollama;
 mod rank;
 mod snippet;
 mod terms;
@@ -19,10 +21,14 @@ pub use error::Error;
 pub use timeline::Entry;
 
 use crate::cache::Handle;
-use crate::config::Config;
+use crate::config::{Config, Provider};
 use crate::store::{self, Filter, Mode, Ref, Store};
+use ollama::Ollama;
 use rank::{Rater, Scored};
 use terms::Terms;
+
+/// Keyword best per wanted hit that a semantic query re-ranks.
+const POOL: usize = 4;
 
 /// 1 search (src/search I); `None` = unbounded, `limit` defaulting to
 /// `search.default_limit`.
@@ -57,6 +63,8 @@ pub struct Engine {
     root: PathBuf,
     store: Store,
     terms: Terms,
+    /// `OLLAMA_HOST`, read only when `embedding.provider = "ollama"`.
+    host: String,
 }
 
 impl Engine {
@@ -65,6 +73,20 @@ impl Engine {
     /// # Errors
     /// No data dir, an unusable store or term file.
     pub fn open(cfg: &Config, project_root: &Path) -> Result<Self, Error> {
+        let host = match cfg.embedding.provider {
+            Provider::Ollama => {
+                std::env::var("OLLAMA_HOST").unwrap_or_default()
+            }
+            Provider::Off | Provider::Openai => String::new(),
+        };
+        Self::with_host(cfg, project_root, host)
+    }
+
+    fn with_host(
+        cfg: &Config,
+        project_root: &Path,
+        host: String,
+    ) -> Result<Self, Error> {
         let store = Store::open(cfg, project_root, Mode::Read)?;
         let data = cfg.storage.data_dir.as_deref();
         let terms = Terms::open(data.ok_or(store::Error::NoDataDir)?)?;
@@ -73,6 +95,7 @@ impl Engine {
             root: project_root.to_path_buf(),
             store,
             terms,
+            host,
         })
     }
 
@@ -88,34 +111,44 @@ impl Engine {
     /// read (V1, V2).
     ///
     /// # Errors
-    /// A failed store, cache or term file.
+    /// A failed store, cache, term file or embedding call.
     pub fn run(
         &mut self,
         q: &Query,
         cache: Option<&Handle>,
     ) -> Result<Vec<Hit>, Error> {
-        let Some(rater) = self.rater(q)? else {
+        let embedder = self.embedder(q.semantic)?;
+        let Some(rater) = self.rater(q, embedder.is_some())? else {
             return Ok(Vec::new());
         };
         let best = self.candidates(&filter(q), cache, &rater)?;
-        let hits = best.into_iter().take(self.limit(q.limit));
+        let ranked = match embedder {
+            Some(e) => blend::rerank(&e, &q.text, best, self.cfg.search.alpha)?,
+            None => best,
+        };
+        let hits = ranked.into_iter().take(self.limit(q.limit));
         Ok(hits.map(|s| hit(s, &rater.terms)).collect())
     }
 
     /// The query's rater under fresh global stats; `None` when the text
     /// holds no term.
-    fn rater(&mut self, q: &Query) -> Result<Option<Rater>, Error> {
+    fn rater(
+        &mut self,
+        q: &Query,
+        rerank: bool,
+    ) -> Result<Option<Rater>, Error> {
         let terms = token::terms(&q.text);
         if terms.is_empty() {
             return Ok(None);
         }
         self.terms.refresh(&mut self.store)?;
+        let limit = self.limit(q.limit);
         Ok(Some(Rater {
             stats: self.terms.stats(&terms)?,
             terms,
             kind: q.kind.clone(),
             session: q.session.clone(),
-            keep: self.limit(q.limit),
+            keep: limit.saturating_mul(if rerank { POOL } else { 1 }),
         }))
     }
 
@@ -138,6 +171,18 @@ impl Engine {
             rater,
         };
         merge::parallel(&job, &paths)
+    }
+
+    /// The provider a query may call; `None` = no network (V3).
+    fn embedder(&self, semantic: bool) -> Result<Option<Ollama>, Error> {
+        if !semantic {
+            return Ok(None);
+        }
+        match self.cfg.embedding.provider {
+            Provider::Off => Ok(None),
+            Provider::Ollama => Ollama::new(&self.host).map(Some),
+            Provider::Openai => Err(Error::Unsupported { provider: "openai" }),
+        }
     }
 
     /// `limit`, else `search.default_limit`.

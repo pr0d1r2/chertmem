@@ -2,7 +2,12 @@
 
 use std::error::Error as StdError;
 use std::fs;
+use std::io::{BufRead, BufReader, Write};
+use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::thread::{self, JoinHandle};
+
+use serde_json::Value;
 
 use super::{Engine, Hit, Query};
 use crate::config::{Config, load_from};
@@ -216,4 +221,65 @@ fn equal_scores_order_by_ts_desc_then_id_desc() -> Test {
     assert!(tied.windows(2).all(|w| w.first() > w.get(1)), "{tied:?}");
     assert_eq!(e.run(&query("cargo"), None)?, hits);
     Ok(())
+}
+
+/// What a fake server gives back for the texts it was sent.
+pub(super) type Answer = fn(&[String]) -> String;
+
+/// The fake server thread.
+pub(super) type Server = JoinHandle<Option<Value>>;
+
+/// A fake ollama on a free local port answering 1 request; the thread
+/// gives back the request's JSON body.
+pub(super) fn serve(
+    answer: Answer,
+) -> Result<(String, Server), Box<dyn StdError>> {
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let addr = listener.local_addr()?.to_string();
+    let worker = thread::spawn(move || {
+        let (tcp, _) = listener.accept().ok()?;
+        respond(tcp, answer)
+    });
+    Ok((addr, worker))
+}
+
+fn respond(mut tcp: TcpStream, answer: Answer) -> Option<Value> {
+    let body = request_body(&mut BufReader::new(tcp.try_clone().ok()?))?;
+    let json: Value = serde_json::from_str(&body).ok()?;
+    let texts: Vec<String> = json
+        .get("input")?
+        .as_array()?
+        .iter()
+        .filter_map(|t| t.as_str().map(str::to_owned))
+        .collect();
+    let out = answer(&texts);
+    let head =
+        format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n", out.len());
+    tcp.write_all(format!("{head}{out}").as_bytes()).ok()?;
+    Some(json)
+}
+
+fn request_body(r: &mut impl BufRead) -> Option<String> {
+    let mut length = 0;
+    loop {
+        let mut line = String::new();
+        r.read_line(&mut line).ok()?;
+        let lower = line.to_ascii_lowercase();
+        if let Some(n) = lower.strip_prefix("content-length:") {
+            length = n.trim().parse().ok()?;
+        }
+        if line == "\r\n" {
+            break;
+        }
+    }
+    let mut body = vec![0; length];
+    r.read_exact(&mut body).ok()?;
+    String::from_utf8(body).ok()
+}
+
+/// 1 vector per text: its length and 1.
+pub(super) fn lengths(texts: &[String]) -> String {
+    let each: Vec<String> =
+        texts.iter().map(|t| format!("[{}, 1]", t.len())).collect();
+    format!("{{\"embeddings\": [{}]}}", each.join(", "))
 }
