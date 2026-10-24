@@ -8,6 +8,7 @@ pub mod config;
 pub mod grammar;
 pub mod hook;
 pub mod import;
+pub mod mcp;
 pub mod mine;
 pub mod search;
 pub mod store;
