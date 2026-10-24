@@ -26,7 +26,7 @@ sib|src/mine|behaviour findings & awareness report
 - `rusqlite` `bundled`; ∀ file WAL; busy timeout then spool, ⊥ block hook > `.:§C` target.
 - path: `chunks/<project>/<bucket>[.<shard>].db[.zst]`; shard = hash(project, id) mod `shards`.
 - catalog row ∀ partition: dims, `[t0,t1)`, rows, bytes, state ∈ {hot, warm, cold}, checksum, spec it was written under.
-- observation: ULID id, `seq INTEGER PRIMARY KEY AUTOINCREMENT`, idempotency key unique, ts, session, kind, body (compressed), FTS5 external-content index.
+- observation: ULID id, `seq INTEGER PRIMARY KEY AUTOINCREMENT`, event identity key unique when dialect supplies one (`.:V16`), ts, session, kind, body (compressed), FTS5 external-content index.
 - 1 connection per partition, ⊥ `ATTACH` (`.:R5`).
 - `generation` counter in catalog, bumped on any delete | redaction | rewrite (D15).
 
@@ -39,19 +39,20 @@ sib|src/mine|behaviour findings & awareness report
 ## §V INVARIANTS
 
 V1: obs stored in bucket of own ts, ⊥ session start ts (D13).
-V2: same idempotency key twice → 1 row, 2nd append returns 1st ref (`.:V3`).
+V2: same idempotency key twice → 1 row, 2nd append returns 1st ref (`.:V3`). [superseded by V9]
 V3: lock timeout → event in spool & `append` returns Ok; next `open` replays spool before any read (`.:V2`).
 V4: read path picks partitions from catalog bounds only (`.:V4`); test: change config, old rows still found.
 V5: ref resolves ∀ tier & after `repartition`; dropped partition → `Dropped` (`.:V5`).
 V6: catalog write after partition write; `doctor` rebuilds catalog from files & equals pre-crash catalog.
 V7: warm & cold partitions read-only; write into them ⊥.
 V8: ∀ issued ref stays exact-match unique: insert 10⁵ rows in 1 s → ∀ earlier ref still resolves to own row (`.:V15`, `.:B1`).
+V9: same event identity twice → 1 row, 2nd append returns 1st ref; event w/o identity → new row every time (`.:V16`).
 
 ## §T TASKS
 
 id|status|task|cites
 T1|.|schema: catalog & partition tables, FTS5 external content|V1,V7
-T2|.|append w/ idempotency key & ULID|V1,V2
+T2|.|append w/ event identity key & ULID|V1,V9
 T3|.|spool & replay|V3
 T4|.|pruning by catalog bounds|V4
 T5|.|refs: parse, shortest prefix, resolve, dropped|V5

@@ -73,7 +73,7 @@ R5|SQLite limits|`ATTACH` default max 10 dbs (`SQLITE_MAX_ATTACHED`) ∴ 1 conne
 
 V1: ∀ query: cached answer ≡ uncached answer — same rows, same order, same scores (D8). ∵ cache = accelerator ⊥ second truth.
 V2: ∀ accepted event → in partition | in spool, ⊥ lost; spool replayed next run (D13). ∵ hook ⊥ retry.
-V3: write idempotent: same (session, event, payload) twice → 1 row (D13). ∵ IDEs resend events.
+V3: write idempotent: same (session, event, payload) twice → 1 row (D13). ∵ IDEs resend events. [superseded by V16]
 V4: planner routes by `catalog.db` bounds, ⊥ by current config ∴ config change ⊥ misroutes read (D12).
 V5: ref `chert:<id>` resolves to 1 observation ∀ its life, across repartition & compaction; gone → `dropped`, ⊥ other row (D28).
 V6: ⊥ network unless `embedding.provider` opts in; ⊥ other egress at any flag (§C).
@@ -86,6 +86,7 @@ V12: ⊥ private repo named in committed text (`paradigm/V37`).
 V13: ∀ outward act (push, publish, issue in other repo) has owner approval on record.
 V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 benchmark on generated fixtures of stated size; `docs/BENCHMARKS.md` explains run, read, targets & why, & ∀ measured number w/ date, machine, recount command (D29, `paradigm/V4`).
 V15: ref resolution = exact match on stored issued ref, ⊥ prefix match ∴ later rows ⊥ make old ref ambiguous. lookup: current project first, then all; ∃ in > 1 project → error naming projects, ⊥ guess (B1).
+V16: dedupe only by event identity dialect supplies (e.g. a tool-use id), verified in recorded fixtures; ⊥ identity → every event kept. ⊥ dedupe by payload content ∵ identical payload = real repeat (same command twice) & mining counts it (D23) (B2).
 
 ## §T TASKS
 
@@ -111,3 +112,4 @@ T16|.|`docs/BENCHMARKS.md`: human page on benchmarks, first measured numbers|V14
 
 id|date|cause|fix
 B1|2026-10-24|drift round 1: D28 ref = shortest unique ULID prefix at read time; ULID first 10 chars = ms timestamp ∴ rows within ~1 s share 8 chars & later row makes issued ref ambiguous, breaking V5|V15
+B2|2026-10-24|drift round 1: V3 deduped on hash of (session, event, payload) on unmeasured claim that IDEs resend ∴ 2 real identical events collapse & repeat signal undercounts|V16

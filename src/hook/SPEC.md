@@ -45,6 +45,7 @@ T1|.|record Claude Code fixtures ∀ 5 events|V3
 T2|.|Claude Code dialect → event struct|V3
 T3|.|redaction & exclusion|V1
 T4|.|malformed → spool|V2
+T5|.|measure: does Claude Code resend a hook event? which field identifies an event per hook type? record in §R (`.:V16`)|V3
 
 ## §B BUGS
 
