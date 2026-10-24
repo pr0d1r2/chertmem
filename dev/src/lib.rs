@@ -3,5 +3,6 @@
 
 pub mod cli;
 pub mod lock_graph;
+pub mod mirror;
 pub mod name_guard;
 pub mod worktree;
