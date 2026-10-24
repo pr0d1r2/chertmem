@@ -5,8 +5,11 @@
 #[cfg(test)]
 mod tests;
 
+mod cavemem;
 mod error;
 mod export;
+mod private;
 
+pub use cavemem::{Imported, cavemem};
 pub use error::Error;
 pub use export::export;
