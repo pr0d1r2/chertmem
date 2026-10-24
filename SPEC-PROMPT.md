@@ -202,30 +202,30 @@ the owner has not decided are open questions below, not decisions.
 
 1. Rewrite cavemem in Rust to remove its Node dependencies from the
    stack: one binary, no Node at run time, no native addon tied to a
-   runtime ABI.
-2. Name: crate and repository `chertmem` (Naming).
+   runtime ABI. Local.
+2. Name: crate and repository `chertmem` (Naming). Local.
 3. Focus, in this order when they conflict: correctness, then
    responsiveness. Speed, partitionability and targeted retrieval serve
-   both; nothing trades a correct answer for a faster one.
+   both; nothing trades a correct answer for a faster one. Local.
 4. Storage is partitioned like a TimescaleDB hypertable: data split by
    dimensions (project and time bucket first), queries skip partitions
    that cannot match, and each partition is managed on its own (seal,
-   compact, move, replicate, drop).
+   compact, move, replicate, drop). Local.
 5. Partitioning is configurable: the dimensions, the time bucket and a
    shard count. The time bucket can match the cache window or divide it,
    so the window is whole partitions; reads gain parallelism from more,
-   smaller partitions, and a sharded layout is managed shard by shard.
+   smaller partitions, and a sharded layout is managed shard by shard. Local.
 6. An in-memory cache holds a recent window for the fastest retrieval.
-   The window is configurable, not fixed at 30 days.
+   The window is configurable, not fixed at 30 days. Local.
 7. The cache size is configurable. When the configured window does not
-   fit in it, chert warns, naming the estimate and the limit.
+   fit in it, chert warns, naming the estimate and the limit. Local.
 8. A cached answer equals the uncached answer: the store on disk is the
-   source of truth and the cache never serves stale or missing rows.
+   source of truth and the cache never serves stale or missing rows. Local.
 9. The package is also about awareness and optimization: it reports what
    agents do and mines the history into candidate rules, scripts and
-   tools, the way rekall turns prose rules into executable checks.
+   tools, the way rekall turns prose rules into executable checks. Local.
 10. Process: the paradigm lifecycle in full, from fda10ea. Atomic commits,
-    one topic each, from this prompt on.
+    one topic each, from this prompt on. Local.
 
 # Non-goals
 
