@@ -87,8 +87,7 @@ impl Store {
     /// [`Error::WriteOnly`] on a write-only store; a failed query.
     pub fn generation(&self) -> Result<u64, Error> {
         let sql = "SELECT value FROM meta WHERE key = 'generation'";
-        let _ = sql;
-        Ok(u64::MAX) // RED stub
+        Ok(self.reader()?.query_row(sql, [], |r| r.get(0))?)
     }
 
     /// The catalog of a reading open (src/store V10).
