@@ -33,7 +33,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. later: `seal`, `compact`, `drop`, `repartition`.
+- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. wave 3: `seal`, `compact`, `drop`, `repartition`, `rebuild`, `tail`, `data_version`, `catalog_version`.
 - fn: `Ref::parse("chert:<ref>")`; ref issued in `append`: shortest ULID prefix ≥ 8 ⊥ equal to issued ref in project, stored in unique column `ref`; `get` matches stored ref exactly (`.:V15`).
 - dir: `spool/` append-only JSONL, replayed by next reading `open` (V10).
 
@@ -42,6 +42,7 @@ sib|src/mine|behaviour findings & awareness report
 id|topic|finding|src
 R1|layout, wave 2|project id = dir name + FNV-1a 64 of canonical path; dir = non-time dims, `by` order, `+`-joined; bucket `<t0>-<span>`, h & d from epoch, mo from 0000-01; shard FNV-1a(project, id); checksum FNV-1a 64 ∀ (id, body), insert order; bytes = Σ observation bodies|`layout.rs`, `calendar.rs`
 R2|spool, wave 2|busy 2 ms write-only, 1 s reading; 1 file per item, renamed into place; spooled append → `Spooled`, ref issued at replay; unreadable → `spool/unreadable/`|`spool.rs`
+R3|tiers, wave 3|file keeps own catalog row; cold `<path>.zst` + `.dict`, read via `thawed/<path>`; sealed spool item → `spool/sealed/`|`cold.rs`
 
 ## §V INVARIANTS
 
@@ -64,11 +65,12 @@ T2|x|append w/ event identity key & ULID|V1,V9
 T3|x|spool & replay on reading open|V10
 T4|x|pruning by catalog bounds|V4
 T5|x|refs: parse, shortest prefix, resolve, dropped|V5
-T6|.|seal → warm, compact → cold (`VACUUM INTO` + zstd dict), drop, repartition|V5,V7
-T7|.|catalog rebuild for `doctor`|V6
+T6|x|seal → warm, compact → cold (`VACUUM INTO` + zstd dict), drop, repartition|V5,V7
+T7|x|catalog rebuild for `doctor`|V6
 T8|x|ref column & exact-match resolution, cross-project lookup|V5,V8
 T9|x|summaries table, turn & session scopes|V1
-T10|.|w/ T6: spooled item whose partition got sealed ⊥ blocks replay forever|V7,V10
+T10|x|w/ T6: spooled item whose partition got sealed ⊥ blocks replay forever|V7,V10
+T11|x|for `src/cache`: `tail` by seq, `data_version`, `catalog_version`|`src/cache:V2`
 
 ## §B BUGS
 
