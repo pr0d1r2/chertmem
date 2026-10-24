@@ -184,11 +184,10 @@ chert doctor # verify wiring; rebuild the catalog from partition files
 chert config show|get|set|path
 chert partitions [list|seal|compact|drop|repartition] # partition management
 chert cache [plan] # what the configured window needs against max_bytes
-chert mine [--since T] [--format text|json] # candidates with evidence
-chert candidates [list|accept|reject] <id>
+chert mine [--since T] [--format text|json] # behaviour findings with evidence
 chert report [--format text|json|md] # awareness: tools, errors, token sinks
 chert compress <file> · chert expand <file>
-chert export <out.jsonl> · chert import <in.jsonl> [--from cavemem]
+chert export <out.jsonl> [--for rekall] · chert import <in.jsonl> [--from cavemem]
 chert completions <shell> · chert man
 
 - Exit codes: 0 ok, 1 finding, 2 usage or unreadable input.
@@ -336,8 +335,9 @@ Proposed by the agent; the owner has not ruled on them yet.
   an accelerator that every path works without.
 - No cloud and no network by default. Remote embedding providers are
   opt-in, and nothing else leaves the machine.
-- No automatic changes from mining: chert proposes candidates with
-  evidence, a human accepts them, and rekall enforces them.
+- No automatic changes from mining: chert reports findings with
+  evidence, rekall mints candidates from chert's export (decision 27), a
+  human accepts them, and rekall enforces them.
 - No agent harness features: chert does not schedule agents or manage
   their usage limits.
 - No general-purpose time-series database: partitions serve agent memory
