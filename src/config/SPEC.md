@@ -31,7 +31,12 @@ sib|src/mine|behaviour findings & awareness report
 ## §I INTERFACES
 
 - fn: `config::load(project_root) -> Result<Loaded, Error>`, `Loaded { config, warnings }` (V2 warnings as data); `config::load_from(home: Option<&Path>, project_root)` w/ home injected, `None` skips user file. `config::Error` ∈ Read Parse UnknownKey Invalid, each naming file, message `chert: <what> (<fix>)`; local until `src` crate error enum lands.
-- file: `~/.config/chert/chert.toml`, `<project>/chert.toml`; keys: `storage.data_dir`, `partition.{by,time_bucket,shards}`, `cache.{window,max_bytes,on_overflow}`, `compression.{grammar,zstd}`, `search.{alpha,default_limit}`, `embedding.provider`, `privacy.exclude`, `mining.{enabled,min_occurrences}`, `inject.{max_tokens,on_prompt}` (default 300, false).
+- file: `~/.config/chert/chert.toml`, `<project>/chert.toml`; keys: `storage.data_dir`, `partition.{by,time_bucket,shards}`, `cache.{window,max_bytes,on_overflow}`, `compression.grammar`, `compression.zstd.{level,dictionary}` (`zstd` = table, ⊥ scalar), `search.{alpha,default_limit}`, `embedding.provider`, `privacy.exclude`, `mining.{enabled,min_occurrences}`, `inject.{max_tokens,on_prompt}` (default 300, false).
+
+## §R RESEARCH
+
+id|topic|finding|src
+R1|zstd levels|`compression.zstd.level` accepts 1..=22: zstd's positive levels, 20..=22 = `--ultra`; 0 (alias of default 3) & negative fast levels rejected, each 1 more spelling ⊥ asked by root §C|zstd manual: `ZSTD_minCLevel()` < 0, `ZSTD_maxCLevel()` = 22
 
 ## §V INVARIANTS
 
@@ -39,7 +44,7 @@ V1: project value overrides user value per key; absent key → default from `.:�
 V2: `cache.window` ⊥ whole multiple of `partition.time_bucket` → warning naming both values; load still succeeds (D5).
 V3: invalid value → error w/ file, key, value & accepted forms; ⊥ silent default.
 V4: setting `inject.on_prompt = true` via `chert config set` prints speed disclaimer once: ∀ prompt then waits for a store read & spool replay; cost per `docs/BENCHMARKS.md`.
-V5: accepted values (wave 1, as built): `on_overflow` ∈ warn shrink fail · `grammar` ∈ off lite full ultra · `provider` ∈ off ollama openai · `alpha` ∈ [0,1] · `shards`, `default_limit`, `min_occurrences` ≥ 1 · `max_tokens` ≥ 0 · sizes & durations n ≥ 1 · `partition.by` distinct · `privacy.exclude` string array, default empty · `storage.data_dir` default `<home>/.local/share/chert`. window & bucket: h & d compared in hours, `mo` only against `mo` ∴ mixed → warning.
+V5: accepted values (as built): `on_overflow` ∈ warn shrink fail · `grammar` ∈ off lite full ultra · `zstd.level` ∈ 1..=22 (R1), `zstd.dictionary` bool, each table key merged & defaulted alone · `provider` ∈ off ollama openai · `alpha` ∈ [0,1] · `shards`, `default_limit`, `min_occurrences` ≥ 1 · `max_tokens` ≥ 0 · sizes & durations n ≥ 1 · `partition.by` distinct · `privacy.exclude` string array, default empty · `storage.data_dir` default `<home>/.local/share/chert`. window & bucket: h & d compared in hours, `mo` only against `mo` ∴ mixed → warning.
 
 ## §T TASKS
 
@@ -47,8 +52,8 @@ id|status|task|cites
 T1|x|`Config` type, parse & merge|V1,V3
 T2|x|window/bucket multiple warning|V2
 T3|x|`inject.*` keys & on_prompt disclaimer|V4
-T4|.|defaults for `compression.*`, `search.*`, `mining.*` per `.:§C`; `compression.zstd` = table `{ level, dictionary }`, ⊥ bool|V1,V5
-T5|.|split `config.rs` (5158 tok) & its tests (4214) under the 4000-tok file budget of `sherd check`: 1 submodule per section|-
+T4|x|defaults for `compression.*`, `search.*`, `mining.*` per `.:§C`; `compression.zstd` = table `{ level, dictionary }`, ⊥ bool|V1,V5
+T5|x|split `config.rs` (5158 tok) & its tests (4214) under the 4000-tok file budget of `sherd check`: 1 submodule per section|-
 
 ## §B BUGS
 
