@@ -349,6 +349,19 @@ owner during the spec run.
     (decision 12); a ref whose observation is gone resolves to a clear
     "dropped" answer, never to another observation. Local.
 
+# Decisions, round 5 (2026-10-24)
+
+Gap round 4, answered by the owner during the spec run.
+
+29. Benchmarking is a first-class part of the package, with human docs
+    on it. Benchmarks cover every path decision 20 sets a target for,
+    plus cache warm-up and partition scans at several sizes; they run on
+    generated fixtures of stated size, so a result can be reproduced; a
+    human page explains how to run them, how to read the results, what
+    the targets are and why, and the measured numbers, each with its
+    date, machine and recount command (paradigm/V4). Decision 20's gate
+    step reads the same benchmarks. Local.
+
 # Non-goals
 
 Proposed by the agent; the owner has not ruled on them yet.
