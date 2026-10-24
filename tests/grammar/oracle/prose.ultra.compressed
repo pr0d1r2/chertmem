@@ -1,0 +1,12 @@
+for asking! that cfg is fine, but
+impl of db layer is slow. about
+that., look at docs first.
+
+note that REPO holds large num of apps,
+& each app has its own env. req
+& resp are logged b4 tx commits.
+
+mw cache auth msg.
+: worth checking authz rules thru
+deps, b/c params wld change btwn
+releases.,,.

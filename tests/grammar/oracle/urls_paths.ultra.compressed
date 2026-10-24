@@ -1,0 +1,6 @@
+See https://example.com/docs/the-guide?section=a for docs, or
+mirror at http://mirror.example.org/repository/(main) instead.
+cfg lives in./config/chert.toml & binary in
+/usr/local/bin/chert; parent is../shared/lib & home copy is
+~/.config/chert/settings.toml. On Windows it is C:\Program\chert.exe.
+Work w/ db & w/o cache, w/o surprises.

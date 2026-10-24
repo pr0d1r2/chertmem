@@ -1,0 +1,6 @@
+  Leading spaces	and a tab	here , then a comma ; and a semicolon .
+
+
+
+Three blank lines above collapse.   Spaces before a mark go away !
+A line with  two  spaces, and the end is near ?

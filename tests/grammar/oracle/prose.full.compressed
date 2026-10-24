@@ -1,0 +1,12 @@
+for asking! config is fine, but
+impl of db layer is slow. about
+that., look at docs first.
+
+note that REPO holds large number of apps,
+and each app has its own env. req
+and resp are logged before tx commits.
+
+Perhaps mw cache auth msg.
+: worth checking authz rules through
+deps, because params would usually change between
+releases.,,.

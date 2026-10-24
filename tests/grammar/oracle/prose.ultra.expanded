@@ -1,0 +1,12 @@
+for asking! that configuration is fine, but
+implementation of database layer is slow. about
+that., look at documentation first.
+
+note that REPOSITORY holds large number of applications,
+& each application has its own environment. request
+& response are logged before transaction commits.
+
+middleware cache authentication message.
+: worth checking authorization rules through
+dependencies, b/c parameters would change between
+releases.,,.

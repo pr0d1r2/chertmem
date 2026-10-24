@@ -1,0 +1,5 @@
+The release v1.2.3 replaced 1.2.0-beta.1 on 2024-01-15, and 0.2.1+build.7
+followed at 2024-03-02T10:30:45 sharp. Version 2.0 is the next one.
+The test took 3.14 seconds over 128 requests, not 1.5x the old number.
+A tag like v10.4 or 7.1.2rc and a time 2024-05-06T07:08x stay intact.
+The value 1.2.3. ends a sentence, and 4.5.6-rc. ends one too.

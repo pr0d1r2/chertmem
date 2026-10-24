@@ -1,0 +1,4 @@
+fn load_config calls parse-settings and then readFileSync with
+var max_retries set. name like _private_helper or kebab-case-name
+is identifier, and so is getHTTPResponse or x86_64 or foo-bar-.
+param MAX_SIZE and arg camelCase_tail both stay as is.

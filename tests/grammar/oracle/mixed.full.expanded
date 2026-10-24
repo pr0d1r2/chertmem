@@ -1,0 +1,10 @@
+## Session notes
+we should move database directory to
+`~/.local/share/chert` and update references in src/store/mod.rs.
+function `open_catalog()` returns message with number 42 and
+version 1.0.0 because environment variable CHERT_HOME is unset.
+```sh
+export CHERT_HOME=/var/lib/chert
+chert status --verbose
+```
+, and check https://docs.example.com/v2/setup before merging.

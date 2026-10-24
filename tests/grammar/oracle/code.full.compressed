@@ -1,0 +1,14 @@
+Here is fn that we use load config:
+```rust
+fn load_configuration(path: &Path) -> Result<Config, Error> {
+    // the database is opened before the request
+    let text = std::fs::read_to_string(path)?;
+    Ok(toml::from_str(&text)?)
+}
+```
+Run `cargo test --workspace` and then `just check` with env set.
+tilde fence works same way:
+~~~
+the very same text, just kept as it is
+~~~
+unclosed tick ` stays prose, and so does rest of msg.
