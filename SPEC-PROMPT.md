@@ -167,3 +167,30 @@ min_occurrences = 3
 - `cache.window` should be a whole multiple of `partition.time_bucket`;
   when it is not, chert warns and names both values.
 - `<private>...</private>` is stripped before any write, as in cavemem.
+
+# chert CLI
+
+Sketch, not final. Verbs keep cavemem's names where the meaning is the
+same, so existing hook shims and MCP registrations change only the
+command name.
+
+chert install [--ide NAME] · chert uninstall [--ide NAME] # hooks + MCP per IDE
+chert hook run <event> # read the event on stdin, write it, exit
+chert mcp # MCP server on stdio; hosts the cache
+chert search <query> [--limit N] [--since T] [--project P] [--no-semantic]
+chert timeline <session> [--around ID] · chert get <id>...
+chert status # wiring, partitions, cache fit, spool depth
+chert doctor # verify wiring; rebuild the catalog from partition files
+chert config show|get|set|path
+chert partitions [list|seal|compact|drop|repartition] # partition management
+chert cache [plan] # what the configured window needs against max_bytes
+chert mine [--since T] [--format text|json] # candidates with evidence
+chert candidates [list|accept|reject] <id>
+chert report [--format text|json|md] # awareness: tools, errors, token sinks
+chert compress <file> · chert expand <file>
+chert export <out.jsonl> · chert import <in.jsonl> [--from cavemem]
+chert completions <shell> · chert man
+
+- Exit codes: 0 ok, 1 finding, 2 usage or unreadable input.
+- MCP tools keep cavemem's names and result shapes: `search`, `timeline`,
+  `get_observations`, `list_sessions`.
