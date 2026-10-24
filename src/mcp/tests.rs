@@ -6,6 +6,8 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
@@ -197,5 +199,39 @@ fn a_closed_stdout_ends_the_session_with_an_io_error() -> Test {
     let ping = format!("{}\n", req(1, "ping", &Value::Null));
     let got = serve(&ctx, ping.as_bytes(), Closed);
     assert!(matches!(got, Err(Error::Io { .. })), "{got:?}");
+    Ok(())
+}
+
+/// The log once a line holding `needle` arrives, waiting up to 10 s
+/// for the cache thread.
+fn logged(lines: &Lines, needle: &str) -> Boxed<Vec<String>> {
+    let start = Instant::now();
+    loop {
+        let all = lines.lock().map_err(|_| "poisoned")?.clone();
+        let late = start.elapsed() > Duration::from_secs(10);
+        if late || all.iter().any(|l| l.contains(needle)) {
+            return Ok(all);
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
+#[test]
+fn launch_starts_the_cache_and_its_warnings_reach_only_the_log() -> Test {
+    let s = Scratch::new("cache")?;
+    s.append(&["fix the auth bug"])?;
+    let lines = Lines::default();
+    let env = Env {
+        // 1 KiB: any `cache.max_bytes` is over 25% of it.
+        memory: || Some(1024),
+        ..env(&lines)
+    };
+    let params = json!({"name": "search", "arguments": {"query": "auth"}});
+    let got = session_with(&s, env, &[req(1, "tools/call", &params)])?;
+    let all = logged(&lines, "cache.max_bytes")?;
+    assert!(all.iter().any(|l| l.contains("over 25%")), "{all:?}");
+    let text = got.first().map(Value::to_string).unwrap_or_default();
+    assert!(!text.contains("isError") && text.contains("s1"), "{text}");
+    assert!(!text.contains("cache.max_bytes"), "{text}");
     Ok(())
 }
