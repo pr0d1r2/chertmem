@@ -12,9 +12,10 @@ use serde_json::{Value, json};
 use super::{Ctx, Error, serve};
 use crate::cache::Env;
 use crate::config::{Config, load_from};
+use crate::store::{Appended, Event, Mode, Ref, Store};
 
 pub(super) type Test = Result<(), Box<dyn StdError>>;
-type Boxed<T> = Result<T, Box<dyn StdError>>;
+pub(super) type Boxed<T> = Result<T, Box<dyn StdError>>;
 
 /// A scratch dir holding `project/` and the data dir `data/`, removed on
 /// drop.
@@ -37,7 +38,35 @@ impl Scratch {
     pub(super) fn root(&self) -> PathBuf {
         self.dir.join("project")
     }
+
+    /// Append rows of session `s1`, 1 per body a second apart, from
+    /// [`BASE`]; their refs in order.
+    pub(super) fn append(&self, bodies: &[&str]) -> Boxed<Vec<Ref>> {
+        let mut store = Store::open(&self.cfg, &self.root(), Mode::Read)?;
+        let mut refs = Vec::new();
+        for (ts, body) in (BASE..).step_by(1000).zip(bodies) {
+            match store.append(&event(ts, body))? {
+                Appended::Stored(r) => refs.push(r),
+                Appended::Spooled => return Err("spooled".into()),
+            }
+        }
+        Ok(refs)
+    }
 }
+
+fn event(ts: u64, body: &str) -> Event {
+    Event {
+        ts,
+        session: "s1".into(),
+        kind: "post-tool-use".into(),
+        ide: "claude-code".into(),
+        identity: None,
+        body: body.into(),
+    }
+}
+
+/// 2026-01-01T00:00:00Z.
+pub(super) const BASE: u64 = 1_767_225_600_000;
 
 impl Drop for Scratch {
     fn drop(&mut self) {

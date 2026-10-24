@@ -1,4 +1,4 @@
-//! `chert mcp`: an MCP server on stdio with cavemem 0.2.1's 4 tools,
+//! `chert mcp`: an MCP server on stdio with cavemem 0.2.1's tools,
 //! hosting the cache of the project's recent window (src/mcp G).
 //!
 //! [`serve`] is the library entry `chert mcp` calls; stdin, stdout and
@@ -9,17 +9,18 @@ mod tests;
 
 mod error;
 mod rpc;
+mod server;
+mod shape;
+mod tools;
 
 use std::io::{BufRead, Write};
 use std::path::Path;
 
 pub use error::Error;
 
-use serde_json::{Value, json};
-
 use crate::cache::Env;
 use crate::config::Config;
-use rpc::Frame;
+use server::Server;
 
 /// What [`serve`] reads besides stdin.
 #[derive(Clone)]
@@ -41,35 +42,16 @@ pub fn serve(
     input: impl BufRead,
     mut output: impl Write,
 ) -> Result<(), Error> {
-    let _ = ctx;
+    let mut server = Server::open(ctx)?;
     for line in input.lines() {
         let line = line?;
         if line.trim().is_empty() {
             continue;
         }
-        if let Some(frame) = reply(&line) {
+        if let Some(frame) = server.reply(&line) {
             writeln!(output, "{frame}")?;
             output.flush()?;
         }
     }
     Ok(())
-}
-
-/// The frame answering `line`, if any.
-fn reply(line: &str) -> Option<Value> {
-    match rpc::parse(line) {
-        Frame::Request { id, method, params } => {
-            Some(answer(id, &method, &params))
-        }
-        Frame::Bad(frame) => Some(frame),
-        Frame::Silent => None,
-    }
-}
-
-fn answer(id: Value, method: &str, params: &Value) -> Value {
-    match method {
-        "initialize" => rpc::ok(id, rpc::initialize(params)),
-        "ping" => rpc::ok(id, json!({})),
-        _ => rpc::fail(id, rpc::NO_METHOD, "Method not found"),
-    }
 }
