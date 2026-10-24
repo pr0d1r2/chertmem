@@ -1,25 +1,28 @@
 //! cavemem's `summaries`, turn and session scope, each with its
-//! session's id and ide (src/import T4).
+//! session's id and ide, stored in its session's project (src/import
+//! T4, T5).
 
 #[cfg(test)]
 mod tests;
 
 use rusqlite::Connection;
 
+use super::split::{self, Cwd};
 use super::{Error, body, millis};
 use crate::grammar::Intensity;
 use crate::store::{Scope, Store, Summary};
 
 const SUMMARIES: &str = "SELECT m.session_id, m.scope, m.content,
-    m.compressed, m.ts, COALESCE(s.ide, '')
+    m.compressed, m.ts, COALESCE(s.ide, ''), s.cwd
   FROM summaries m LEFT JOIN sessions s ON s.id = m.session_id
   ORDER BY m.id";
 
-/// Every summary as chert stores it, in cavemem's order.
+/// Every summary as chert stores it with its session's cwd, in
+/// cavemem's order.
 pub(super) fn read(
     conn: &Connection,
     intensity: Intensity,
-) -> Result<Vec<Summary>, Error> {
+) -> Result<Vec<(Cwd, Summary)>, Error> {
     let mut stmt = conn.prepare(SUMMARIES)?;
     let rows = stmt.query_map([], raw)?;
     let found = rows.collect::<Result<Vec<_>, _>>()?;
@@ -34,6 +37,7 @@ struct Raw {
     compressed: bool,
     ts: i64,
     ide: String,
+    cwd: Option<String>,
 }
 
 fn raw(r: &rusqlite::Row<'_>) -> rusqlite::Result<Raw> {
@@ -44,20 +48,22 @@ fn raw(r: &rusqlite::Row<'_>) -> rusqlite::Result<Raw> {
         compressed: r.get(3)?,
         ts: r.get(4)?,
         ide: r.get(5)?,
+        cwd: r.get(6)?,
     })
 }
 
-fn summary(r: Raw, intensity: Intensity) -> Result<Summary, Error> {
+fn summary(r: Raw, intensity: Intensity) -> Result<(Cwd, Summary), Error> {
     let scope = Scope::parse(&r.scope).ok_or_else(|| Error::Cavemem {
         reason: format!("summary scope `{}` is not turn or session", r.scope),
     })?;
-    Ok(Summary {
+    let note = Summary {
         ts: millis(r.ts)?,
         body: body(&r.content, r.compressed, intensity),
         session: r.session,
         scope,
         ide: r.ide,
-    })
+    };
+    Ok((split::cwd(r.cwd), note))
 }
 
 /// Append each of `found` the store does not hold yet: a summary has no

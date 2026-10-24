@@ -9,7 +9,6 @@ use rusqlite::{Connection, params};
 use super::super::Error;
 use super::super::tests::{NOW, Res, Scratch, Test};
 use super::{Imported, cavemem};
-use crate::config::Grammar;
 use crate::grammar::{Intensity, compress};
 use crate::store::{Filter, Observation, Store};
 
@@ -96,7 +95,7 @@ pub(super) fn fixture(path: &Path) -> Res<Connection> {
     let conn = Connection::open(path)?;
     conn.execute_batch(SCHEMA)?;
     for (id, ide) in [("s-a", "claude-code"), ("s-b", "cursor")] {
-        let args = params![id, ide, "/w", NOW, None::<String>];
+        let args = params![id, ide, None::<String>, NOW, None::<String>];
         conn.execute(SESSION, args)?;
     }
     observations(&conn)?;
@@ -125,12 +124,12 @@ fn rows(store: &mut Store) -> Res<Vec<Observation>> {
 }
 
 /// Import the fixture at `s`'s `cavemem.db` (built on first call).
-fn imported(s: &Scratch, store: &mut Store) -> Res<Imported> {
+fn imported(s: &Scratch) -> Res<Imported> {
     let db = s.path("cavemem.db");
     if !db.exists() {
         fixture(&db)?;
     }
-    Ok(cavemem(store, &db, Grammar::Full)?)
+    Ok(cavemem(&s.config, &s.root(), &db)?)
 }
 
 /// The ts, session, ide and kind of `o`.
@@ -142,7 +141,7 @@ fn fields(o: &Observation) -> (u64, &str, &str, &str) {
 fn every_observation_lands_with_its_session_and_ide() -> Test {
     let s = Scratch::new("cm-rows")?;
     let mut store = s.store()?;
-    assert_eq!(imported(&s, &mut store)?.observations, 3);
+    assert_eq!(imported(&s)?.observations, 3);
     let got = rows(&mut store)?;
     let seen: Vec<_> = got.iter().map(fields).collect();
     let at = |n: u64| NOW.saturating_add(n);
@@ -159,7 +158,7 @@ fn every_observation_lands_with_its_session_and_ide() -> Test {
 fn bodies_are_redacted_and_compressed_as_the_hook_would() -> Test {
     let s = Scratch::new("cm-bodies")?;
     let mut store = s.store()?;
-    imported(&s, &mut store)?;
+    imported(&s)?;
     let bodies: Vec<String> =
         rows(&mut store)?.into_iter().map(|o| o.body).collect();
     let prompt = compress("Please fix the build", Intensity::Full);
@@ -172,7 +171,7 @@ fn bodies_are_redacted_and_compressed_as_the_hook_would() -> Test {
 fn each_row_carries_its_cavemem_identity() -> Test {
     let s = Scratch::new("cm-identity")?;
     let mut store = s.store()?;
-    imported(&s, &mut store)?;
+    imported(&s)?;
     let ids: Vec<Option<String>> =
         rows(&mut store)?.into_iter().map(|o| o.identity).collect();
     let want = ["cavemem:s-a:1", "cavemem:s-a:2", "cavemem:s-b:3"];
@@ -184,9 +183,9 @@ fn each_row_carries_its_cavemem_identity() -> Test {
 fn importing_twice_keeps_the_same_rows() -> Test {
     let s = Scratch::new("cm-twice")?;
     let mut store = s.store()?;
-    imported(&s, &mut store)?;
+    imported(&s)?;
     let first = rows(&mut store)?;
-    assert_eq!(imported(&s, &mut store)?.observations, 3);
+    assert_eq!(imported(&s)?.observations, 3);
     assert_eq!(rows(&mut store)?, first);
     assert_eq!(first.len(), 3);
     Ok(())
@@ -198,16 +197,15 @@ fn the_cavemem_file_is_byte_identical_after_import() -> Test {
     let db = s.path("cavemem.db");
     drop(fixture(&db)?);
     let before = fs::read(&db)?;
-    let mut store = s.store()?;
-    imported(&s, &mut store)?;
-    imported(&s, &mut store)?;
+    imported(&s)?;
+    imported(&s)?;
     assert_eq!(fs::read(&db)?, before);
     Ok(())
 }
 
 /// The error importing `db` gives.
 fn refused(s: &Scratch, db: &Path) -> Res<Error> {
-    let got = cavemem(&mut s.store()?, db, Grammar::Full);
+    let got = cavemem(&s.config, &s.root(), db);
     got.err().ok_or_else(|| "import succeeded".into())
 }
 
@@ -263,7 +261,7 @@ fn a_path_with_uri_characters_opens() -> Test {
     let s = Scratch::new("cm-uri")?;
     let db = s.path("cave %20?#mem.db");
     drop(fixture(&db)?);
-    let got = cavemem(&mut s.store()?, &db, Grammar::Full)?;
+    let got = cavemem(&s.config, &s.root(), &db)?;
     assert_eq!(got.observations, 3);
     Ok(())
 }

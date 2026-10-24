@@ -6,13 +6,15 @@
 //! session's `ide` go over as they are; `content` is redacted again and,
 //! when cavemem left it uncompressed, compressed; the identity is
 //! `cavemem:<session_id>:<id>`, so a 2nd import finds the 1st row
-//! (src/store V9). `intensity`, `metadata`, the session's `cwd`,
-//! `started_at`, `ended_at`, `metadata`, the FTS index and `embeddings`
-//! are dropped: chert keeps none of them.
+//! (src/store V9). The session's `cwd` picks the project (`split`).
+//! `intensity`, `metadata`, the session's `started_at`, `ended_at`,
+//! `metadata`, the FTS index and `embeddings` are dropped: chert keeps
+//! none of them.
 
 #[cfg(test)]
 mod tests;
 
+mod split;
 mod summary;
 
 use std::path::Path;
@@ -20,49 +22,48 @@ use std::path::Path;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
 
 use super::Error;
-use crate::config::Grammar;
+use crate::config::{Config, Grammar};
 use crate::grammar::{self, Intensity};
-use crate::store::{Event, Store};
+use crate::store::Event;
+use split::Cwd;
 
 /// What an import read from cavemem; every row of it is in the store.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Imported {
     pub observations: usize,
     pub summaries: usize,
+    /// Observations and summaries whose session has no `cwd` (missing
+    /// or empty), stored under the current project (src/import T5).
+    pub no_cwd: usize,
 }
 
 /// The `schema_version` cavemem 0.2.1 writes.
 const VERSION: i64 = 2;
 
 const OBSERVATIONS: &str = "SELECT o.id, o.session_id, o.kind, o.content,
-    o.compressed, o.ts, COALESCE(s.ide, '')
+    o.compressed, o.ts, COALESCE(s.ide, ''), s.cwd
   FROM observations o LEFT JOIN sessions s ON s.id = o.session_id
   ORDER BY o.id";
 
-/// Import the cavemem 0.2.1 file `db` into `store`, which needs a
-/// reading open. A body cavemem stored uncompressed is compressed at
-/// `grammar`, as the hook does.
+/// Import the cavemem 0.2.1 file `db` into the data dir `config` names,
+/// each session's rows under the project of its own `cwd`, as the hook
+/// derives it ([`crate::store::project_id`]); a session without one
+/// goes to the project at `root`. A body cavemem stored uncompressed is
+/// compressed at `compression.grammar`, as the hook does.
 ///
 /// # Errors
 /// A file that is not a cavemem 0.2.1 db, or a store that refuses a
 /// read or a write.
 pub fn cavemem(
-    store: &mut Store,
+    config: &Config,
+    root: &Path,
     db: &Path,
-    grammar: Grammar,
 ) -> Result<Imported, Error> {
-    let (conn, level) = (open(db)?, intensity(grammar));
+    let (conn, level) = (open(db)?, intensity(config.compression.grammar));
     let events = observations(&conn, level)?;
     let notes = summary::read(&conn, level)?;
     drop(conn);
-    for event in &events {
-        store.append(event)?;
-    }
-    summary::put(store, &notes)?;
-    Ok(Imported {
-        observations: events.len(),
-        summaries: notes.len(),
-    })
+    split::put(config, root, events, notes)
 }
 
 /// `db` read-only, never created, its schema version checked.
@@ -93,7 +94,7 @@ fn escaped(path: &Path) -> String {
 fn observations(
     conn: &Connection,
     intensity: Intensity,
-) -> Result<Vec<Event>, Error> {
+) -> Result<Vec<(Cwd, Event)>, Error> {
     let mut stmt = conn.prepare(OBSERVATIONS)?;
     let rows = stmt.query_map([], raw)?;
     let found = rows.collect::<Result<Vec<_>, _>>()?;
@@ -109,6 +110,7 @@ struct Raw {
     compressed: bool,
     ts: i64,
     ide: String,
+    cwd: Option<String>,
 }
 
 fn raw(r: &Row<'_>) -> rusqlite::Result<Raw> {
@@ -120,18 +122,21 @@ fn raw(r: &Row<'_>) -> rusqlite::Result<Raw> {
         compressed: r.get(4)?,
         ts: r.get(5)?,
         ide: r.get(6)?,
+        cwd: r.get(7)?,
     })
 }
 
-fn event(r: Raw, intensity: Intensity) -> Result<Event, Error> {
-    Ok(Event {
+/// 1 row as the event chert stores, with its session's cwd.
+fn event(r: Raw, intensity: Intensity) -> Result<(Cwd, Event), Error> {
+    let event = Event {
         ts: millis(r.ts)?,
         identity: Some(format!("cavemem:{}:{}", r.session, r.id)),
         body: body(&r.content, r.compressed, intensity),
         session: r.session,
         kind: r.kind,
         ide: r.ide,
-    })
+    };
+    Ok((split::cwd(r.cwd), event))
 }
 
 /// cavemem's `Date.now()` milliseconds; before the epoch is refused.
