@@ -31,6 +31,7 @@ deny|supply|cargo-deny|Cargo.toml, Cargo.lock, deny.toml|cargo deny check --disa
 # crate's examples never run.
 doctest|test|cargo|**/*.rs, Cargo.toml|cargo test --workspace --doc -q|-|-|a doc example failed
 rustdoc|lint|cargo|**/*.rs, Cargo.toml|cargo doc --workspace --no-deps --document-private-items -q|-|RUSTDOCFLAGS=-D warnings|docs do not build cleanly
+test|coverage|cargo-nextest|**/*.rs, Cargo.toml, Cargo.lock|cargo nextest run --workspace --no-fail-fast --status-level fail --final-status-level fail|-|-|a test failed, or the suite is empty
 ## types
 type|checks|min|exempt
 *|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard, no-core-worktree|-|-
@@ -48,7 +49,7 @@ envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
-rs|rustfmt, clippy, doctest, rustdoc|-|-
+rs|rustfmt, clippy, doctest, rustdoc, test|-|-
 toml|taplo|-|-
 path:Cargo.lock|deny|-|-
 path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)

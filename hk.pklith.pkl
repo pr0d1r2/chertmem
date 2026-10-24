@@ -150,4 +150,8 @@ steps: Mapping<String, Config.Step> = new {
 }
 
 push: Mapping<String, Config.Step> = new {
+  ["test"] {
+    glob = List("**/*.rs", "Cargo.toml", "Cargo.lock")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'test: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v cargo-nextest >/dev/null 2>&1 || { echo 'test: cargo-nextest is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo nextest run --workspace --no-fail-fast --status-level fail --final-status-level fail || { echo 'test: a test failed, or the suite is empty' >&2; exit 1; }"
+  }
 }

@@ -4,6 +4,7 @@
 catalog: [
   catalog.cargo
   catalog.cargo-deny
+  catalog.cargo-nextest
   catalog.clippy
   catalog.deadnix
   catalog.editorconfig-checker
