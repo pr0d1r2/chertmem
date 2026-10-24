@@ -1,8 +1,11 @@
 use std::error::Error as StdError;
 use std::net::TcpListener;
 
+use serde_json::Value;
+
 use super::{Embed, blend, cosine, rerank};
-use crate::config::{Config, Provider};
+use crate::config::{Config, Grammar, Provider};
+use crate::grammar::{Intensity, compress};
 use crate::search::rank::Scored;
 use crate::search::tests::{
     BASE, DAY, Scratch, Test, event, fresh, lengths, query, serve,
@@ -111,6 +114,23 @@ fn ollama_and_semantic_re_rank_by_the_vectors() -> Test {
     assert_eq!(order(&e.run(&query("cargo"), None)?), [BASE, BASE + DAY]);
     assert_eq!(order(&e.run(&semantic("cargo"), None)?), [BASE + DAY, BASE]);
     assert!(server.join().map_err(|_| "server panicked")?.is_some());
+    Ok(())
+}
+
+#[test]
+fn the_re_rank_embeds_the_compressed_query_it_scores() -> Test {
+    let (s, _, mut store) = fresh("blend-text")?;
+    store.append(&event(BASE, "s", "fix mw now"))?;
+    let (addr, server) = serve(lengths)?;
+    let (mut e, _) = engine_at(&s, Provider::Ollama, &addr)?;
+    e.cfg.compression.grammar = Grammar::Full;
+    let text = "fix the middleware now";
+    assert_eq!(e.run(&semantic(text), None)?.len(), 1);
+    let sent = server.join().map_err(|_| "server panicked")?;
+    let first = sent.as_ref().and_then(|j| j.get("input")?.get(0).cloned());
+    let want = compress(text, Intensity::Full);
+    assert_eq!(first.as_ref().and_then(Value::as_str), Some(want.as_str()));
+    assert_ne!(want, text);
     Ok(())
 }
 
