@@ -197,6 +197,28 @@ fn appends_of_1_ms_read_back_in_append_order() -> Test {
     Ok(())
 }
 
+/// The longest ref a 200-id run of 1 ms may get (root D28): consecutive
+/// ids differ near char 13, so refs stay short.
+const SHORT: usize = 16;
+
+#[test]
+fn a_run_of_1_ms_keeps_short_refs_and_rising_ids() -> Test {
+    let s = Scratch::new("same-ms-short")?;
+    let mut store = s.open(Mode::Read)?;
+    let mut issued = Vec::new();
+    for i in 0..200 {
+        let e = event(1_709_211_700_000, None, &i.to_string());
+        issued.push(stored(store.append(&e)?)?);
+    }
+    let found = store.observations(&Filter::default())?;
+    assert_eq!(refs(&found), issued);
+    let ids: Vec<&str> = found.iter().map(|o| o.id.as_str()).collect();
+    assert!(ids.windows(2).all(|w| w.first() < w.get(1)), "{ids:?}");
+    let longest = issued.iter().map(|r| r.as_str().len()).max();
+    assert!(longest <= Some(SHORT), "{longest:?}");
+    Ok(())
+}
+
 /// Rows in 1 second (src/store V8).
 const BURST: u64 = 100_000;
 

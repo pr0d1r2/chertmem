@@ -20,13 +20,32 @@ fn ids_are_ulids_at_the_event_time() -> Test {
     Ok(())
 }
 
+/// The largest step from 1 id of a ms to the next: 2^70.
+const STEP: u128 = 0x40_0000_0000_0000_0000;
+
+/// How far `b` is past `a` in their random parts.
+fn step(a: Ulid, b: Ulid) -> Option<u128> {
+    b.random().checked_sub(a.random())
+}
+
 #[test]
-fn the_next_id_of_a_millisecond_is_the_last_plus_1() -> Test {
+fn the_next_id_of_a_millisecond_steps_up_by_at_most_2_70() -> Test {
     let mut last = Last::new();
     let a = next(&mut last, TS)?;
     let b = next(&mut last, TS)?;
-    assert_eq!(b.random(), a.random().saturating_add(1));
+    let up = step(a, b);
+    assert!(up.is_some_and(|n| (1..=STEP).contains(&n)), "{up:?}");
     assert_eq!(b.timestamp_ms(), TS);
+    Ok(())
+}
+
+#[test]
+fn a_fresh_id_leaves_room_for_a_long_run() -> Test {
+    // Below 2^78: >= 768 steps of 2^70 fit before 2^80.
+    for ts in 0..64 {
+        let fresh = next(&mut Last::new(), ts)?;
+        assert!(fresh.random() < 1 << 78, "{fresh}");
+    }
     Ok(())
 }
 
@@ -38,7 +57,8 @@ fn another_millisecond_keeps_its_own_time_and_run() -> Test {
     let c = next(&mut last, TS)?;
     assert_eq!(b.timestamp_ms(), TS - 1);
     // Interleaved milliseconds still continue their own run.
-    assert_eq!(c.random(), a.random().saturating_add(1));
+    let up = step(a, c);
+    assert!(up.is_some_and(|n| (1..=STEP).contains(&n)), "{up:?}");
     Ok(())
 }
 
