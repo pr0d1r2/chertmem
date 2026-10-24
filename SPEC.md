@@ -99,3 +99,7 @@ T12|.|CI via actlith: gate on `paradigm/V28` systems|V10
 T13|.|GitHub repo `pr0d1r2/chertmem` PUBLIC, first push, w/ approval; `gh repo view` ∀ named repo first|V12,V13
 T14|.|issue in rekall proposing `chert` dialect for `catch`, w/ approval (D27)|V7,V13
 T15|.|owner review of agent-answered round 2 (D11–D26)|-
+
+## §B BUGS
+
+id|date|cause|fix
