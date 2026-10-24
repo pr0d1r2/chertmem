@@ -4,8 +4,15 @@
 #[cfg(test)]
 mod tests;
 
+mod calendar;
+mod catalog;
 mod error;
+mod layout;
+mod model;
+mod partition;
+mod reference;
 mod schema;
+mod write;
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -13,8 +20,15 @@ use std::time::Duration;
 use rusqlite::Connection;
 
 pub use error::Error;
+pub use layout::project_id;
+pub use model::{Appended, Event, State};
+pub use reference::Ref;
 
 use crate::config::Config;
+use calendar::MAX_TS;
+use layout::Plan;
+use partition::Chunks;
+use write::{Ctx, Row};
 
 /// How a process uses the store (src/store V10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,7 +55,10 @@ impl Mode {
 pub struct Store {
     root: PathBuf,
     mode: Mode,
+    project: String,
+    plan: Plan,
     catalog: Option<Connection>,
+    chunks: Chunks,
 }
 
 impl Store {
@@ -57,17 +74,54 @@ impl Store {
         project_root: &Path,
         mode: Mode,
     ) -> Result<Self, Error> {
-        let _ = project_root;
         let root = cfg.storage.data_dir.clone().ok_or(Error::NoDataDir)?;
         let mut store = Self {
+            chunks: Chunks::new(root.clone(), mode.busy()),
             root,
             mode,
+            project: project_id(project_root),
+            plan: Plan::new(&cfg.partition),
             catalog: None,
         };
         if mode == Mode::Read {
             store.catalog()?;
         }
         Ok(store)
+    }
+
+    /// This store's project id ([`project_id`] of its root).
+    #[must_use]
+    pub fn project(&self) -> &str {
+        &self.project
+    }
+
+    /// Store `event` in the partition of its own timestamp (src/store
+    /// V1); an identity seen before gives back its first ref (V9).
+    ///
+    /// # Errors
+    /// A timestamp past 48 bits, a sealed partition, an unusable file.
+    pub fn append(&mut self, event: &Event) -> Result<Appended, Error> {
+        if event.ts > MAX_TS {
+            return Err(Error::BadTime { ts: event.ts });
+        }
+        let row = Row {
+            id: write::new_id(event.ts),
+            project: self.project.clone(),
+            event: event.clone(),
+        };
+        let _reference = write::observation(&mut self.ctx()?, &row)?;
+        Ok(Appended::Spooled) // RED stub: the ref is dropped
+    }
+
+    /// What a write reaches, the catalog opened first.
+    fn ctx(&mut self) -> Result<Ctx<'_>, Error> {
+        self.catalog()?;
+        let catalog = self.catalog.as_ref().ok_or(Error::NoDataDir)?;
+        Ok(Ctx {
+            catalog,
+            chunks: &mut self.chunks,
+            plan: &self.plan,
+        })
     }
 
     /// The catalog connection, laid on first use with the data dir.

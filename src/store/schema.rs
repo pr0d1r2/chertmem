@@ -51,7 +51,6 @@ CREATE INDEX refs_ref ON refs (ref);
 
 /// A partition: observations with their FTS5 external-content index kept
 /// by triggers, and summaries (src/store C).
-#[cfg_attr(not(test), expect(dead_code, reason = "appends land in T2"))]
 pub(super) const PARTITION: &str = "
 CREATE TABLE observations (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
