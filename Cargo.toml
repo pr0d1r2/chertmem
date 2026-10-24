@@ -63,3 +63,9 @@ struct_excessive_bools = "deny"
 # `dev/` holds this repository's own gate steps and ships to nobody: a
 # `publish = false` member cannot land on a consumer's PATH (dev node).
 members = ["dev"]
+
+# SQLite is C built by libsqlite3-sys; unoptimised it makes the debug test
+# suite slow (the store ref-burst test appends 10^5 rows). Optimise only
+# that dependency, so our own code keeps debug builds (reconcile 2).
+[profile.dev.package.libsqlite3-sys]
+opt-level = 3
