@@ -10,6 +10,7 @@ mod cold;
 mod doctor;
 mod error;
 mod generation;
+mod id;
 mod layout;
 mod line;
 mod model;
@@ -46,12 +47,12 @@ use layout::Plan;
 use partition::Chunks;
 use write::{Ctx, Item, Note, Row};
 
-/// A new id at `ts`, which a ULID must hold.
+/// A new id at `ts`, which a ULID must hold (src/store T15).
 fn new_id(ts: u64) -> Result<String, Error> {
     if ts > MAX_TS {
         return Err(Error::BadTime { ts });
     }
-    Ok(write::new_id(ts))
+    id::new(ts)
 }
 
 /// How a process uses the store (src/store V10).

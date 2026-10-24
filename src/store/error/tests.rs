@@ -25,12 +25,18 @@ fn all() -> [Error; 9] {
     ]
 }
 
-/// The variants added in wave 4.
-fn later() -> [Error; 1] {
-    [Error::RefTaken {
-        reference: "R".into(),
-        id: "I".into(),
-    }]
+/// The variants added in waves 4 and 5.
+fn later() -> [Error; 2] {
+    [
+        Error::RefTaken {
+            reference: "R".into(),
+            id: "I".into(),
+        },
+        Error::NoId {
+            ts: 1,
+            reason: "r".into(),
+        },
+    ]
 }
 
 #[test]

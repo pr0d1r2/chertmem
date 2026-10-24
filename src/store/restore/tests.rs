@@ -1,7 +1,7 @@
 use std::error::Error as StdError;
 
+use crate::store::id;
 use crate::store::tests::{Scratch, Test, WEEK, event};
-use crate::store::write::new_id;
 use crate::store::{
     Appended, Error, Filter, Lookup, Mode, Observation, Ref, Store,
 };
@@ -61,7 +61,7 @@ fn a_ref_held_by_another_id_is_refused() -> Test {
     let mut store = s.open(Mode::Read)?;
     restore_all(&mut store, &rows)?;
     let mut forged = rows.first().ok_or("no row")?.clone();
-    forged.id = new_id(forged.ts);
+    forged.id = id::new(forged.ts)?;
     forged.identity = None;
     let e = store.restore(&forged).err();
     let reference = forged.reference.as_str().to_owned();

@@ -83,11 +83,6 @@ pub(super) struct Ctx<'a> {
     pub plan: &'a Plan,
 }
 
-/// A new ULID at `ts`, so the id sorts by the event's own time.
-pub(super) fn new_id(ts: u64) -> String {
-    ulid::Ulid::from_parts(ts, ulid::Ulid::generate().random()).to_string()
-}
-
 /// The catalog's write lock: 1 writer across processes, the busy timeout
 /// then [`Error::Busy`].
 pub(super) fn immediate(conn: &Connection) -> Result<Transaction<'_>, Error> {
