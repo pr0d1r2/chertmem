@@ -34,26 +34,27 @@ sib|src/mine|behaviour findings & awareness report
 
 - fn: `Store::open(cfg)`; `append(event) -> Ref`; `get(&[Ref]) -> Vec<Found|Dropped>`; `partitions(filter) -> Vec<Partition>`; `seal`, `compact`, `drop`, `repartition`.
 - fn: `Ref::parse("chert:<ref>")`; ref issued in `append`: shortest ULID prefix ≥ 8 ⊥ equal to issued ref in project, stored in unique column `ref`; `get` matches stored ref exactly (`.:V15`).
-- dir: `spool/` append-only JSONL, replayed at next `open`.
+- dir: `spool/` append-only JSONL, replayed by next reading `open` (V10).
 
 ## §V INVARIANTS
 
 V1: obs stored in bucket of own ts, ⊥ session start ts (D13).
 V2: same idempotency key twice → 1 row, 2nd append returns 1st ref (`.:V3`). [superseded by V9]
-V3: lock timeout → event in spool & `append` returns Ok; next `open` replays spool before any read (`.:V2`).
+V3: lock timeout → event in spool & `append` returns Ok; next `open` replays spool before any read (`.:V2`). [superseded by V10]
 V4: read path picks partitions from catalog bounds only (`.:V4`); test: change config, old rows still found.
 V5: ref resolves ∀ tier & after `repartition`; dropped partition → `Dropped` (`.:V5`).
 V6: catalog write after partition write; `doctor` rebuilds catalog from files & equals pre-crash catalog.
 V7: warm & cold partitions read-only; write into them ⊥.
 V8: ∀ issued ref stays exact-match unique: insert 10⁵ rows in 1 s → ∀ earlier ref still resolves to own row (`.:V15`, `.:B1`).
 V9: same event identity twice → 1 row, 2nd append returns 1st ref; event w/o identity → new row every time (`.:V16`).
+V10: lock timeout → event in spool & `append` returns Ok. write-only open (hook) ⊥ replays spool ∴ hook latency ⊥ grows w/ spool; ∀ reading open replays whole spool before first read ∴ reads complete (`.:V2`, `.:V1`, `.:B3`).
 
 ## §T TASKS
 
 id|status|task|cites
 T1|.|schema: catalog & partition tables, FTS5 external content|V1,V7
 T2|.|append w/ event identity key & ULID|V1,V9
-T3|.|spool & replay|V3
+T3|.|spool & replay on reading open|V10
 T4|.|pruning by catalog bounds|V4
 T5|.|refs: parse, shortest prefix, resolve, dropped|V5
 T6|.|seal → warm, compact → cold (`VACUUM INTO` + zstd dict), drop, repartition|V5,V7

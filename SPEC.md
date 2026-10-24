@@ -72,7 +72,7 @@ R5|SQLite limits|`ATTACH` default max 10 dbs (`SQLITE_MAX_ATTACHED`) ∴ 1 conne
 ## §V INVARIANTS
 
 V1: ∀ query: cached answer ≡ uncached answer — same rows, same order, same scores (D8). ∵ cache = accelerator ⊥ second truth.
-V2: ∀ accepted event → in partition | in spool, ⊥ lost; spool replayed next run (D13). ∵ hook ⊥ retry.
+V2: ∀ accepted event → in partition | in spool, ⊥ lost; spool replayed by next reading open (D13, `src/store:V10`). ∵ hook ⊥ retry.
 V3: write idempotent: same (session, event, payload) twice → 1 row (D13). ∵ IDEs resend events. [superseded by V16]
 V4: planner routes by `catalog.db` bounds, ⊥ by current config ∴ config change ⊥ misroutes read (D12).
 V5: ref `chert:<id>` resolves to 1 observation ∀ its life, across repartition & compaction; gone → `dropped`, ⊥ other row (D28).
@@ -113,3 +113,4 @@ T16|.|`docs/BENCHMARKS.md`: human page on benchmarks, first measured numbers|V14
 id|date|cause|fix
 B1|2026-10-24|drift round 1: D28 ref = shortest unique ULID prefix at read time; ULID first 10 chars = ms timestamp ∴ rows within ~1 s share 8 chars & later row makes issued ref ambiguous, breaking V5|V15
 B2|2026-10-24|drift round 1: V3 deduped on hash of (session, event, payload) on unmeasured claim that IDEs resend ∴ 2 real identical events collapse & repeat signal undercounts|V16
+B3|2026-10-24|drift round 1: `src/store` replayed spool on every open, hooks incl. ∴ backlog → hook > 5 ms target (§C)|`src/store:V10`
