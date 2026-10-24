@@ -2,10 +2,11 @@
 
 /// The corpus cases where chert's output differs from the golden file
 /// (src/grammar V5), as (corpus file, intensity, golden kind, chert's
-/// exact bytes). Deviation (a), the pass skips code, and (b), inline
-/// code after a fence, change no corpus case; (c), the blank before a
-/// path kept, changes `urls_paths` at every intensity, in `compress` and
-/// so in `expand` of it: `in ./config` and `is ../shared` keep a blank.
+/// exact bytes). Deviation (a), the pass skips code, (b), inline code
+/// after a fence, and (d), an article that starts a file name kept,
+/// change no corpus case; (c), the blank before a path kept, changes
+/// `urls_paths` at every intensity, in `compress` and so in `expand` of
+/// it: `in ./config` and `is ../shared` keep a blank.
 pub(super) const DEVIATES: [(&str, &str, &str, &str); 6] = [
     ("urls_paths", "lite", "compressed", URLS_LITE),
     ("urls_paths", "lite", "expanded", URLS_LITE_EXPANDED),
