@@ -46,6 +46,9 @@ Goals:
 - awareness: report what agents do, where tokens and time go, and mine
   repeated patterns into candidate rules, scripts and tools, for rekall to
   turn into enforced checks
+- memory implantation: a skill extracted from that history points back
+  at its evidence by short refs, expanded only when the skill fires
+  (decision 28)
 
 # Naming
 
@@ -178,7 +181,7 @@ chert install [--ide NAME] · chert uninstall [--ide NAME] # hooks + MCP per IDE
 chert hook run <event> # read the event on stdin, write it, exit
 chert mcp # MCP server on stdio; hosts the cache
 chert search <query> [--limit N] [--since T] [--project P] [--no-semantic]
-chert timeline <session> [--around ID] · chert get <id>...
+chert timeline <session> [--around REF] · chert get <ref>... # ref = chert:<id prefix>, decision 28
 chert status # wiring, partitions, cache fit, spool depth
 chert doctor # verify wiring; rebuild the catalog from partition files
 chert config show|get|set|path
