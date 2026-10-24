@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 
 use serde_json::Value;
 
-use super::{Asked, Engine, Hit, Query, token};
+use super::{Asked, Engine, Hit, Query, Warn, token};
 use crate::config::{Config, Grammar, load_from};
 use crate::grammar::{Intensity, compress};
 use crate::hook::{self, Ctx, Ide, Kind};
@@ -443,6 +443,15 @@ fn a_term_alike_in_both_forms_scores_as_at_grammar_off() -> Test {
     assert_eq!(scores.first(), scores.get(1));
     assert_eq!(scores.first().map(Vec::len), Some(1));
     Ok(())
+}
+
+#[test]
+fn the_default_warning_goes_to_stderr_once() {
+    let mut warn = Warn::stderr();
+    warn.once("chert: a test warning on stderr (ignore it)");
+    assert!(warn.said);
+    warn.once("chert: never shown (ignore it)");
+    assert!(format!("{warn:?}").contains("said: true"));
 }
 
 #[test]

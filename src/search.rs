@@ -15,12 +15,14 @@ mod terms;
 mod timeline;
 mod token;
 
+use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 pub use error::Error;
 pub use timeline::Entry;
 
-use crate::cache::Handle;
+use crate::cache::{Handle, Log};
 use crate::config::{Config, Grammar, Provider};
 use crate::grammar;
 use crate::store::{self, Filter, Mode, Ref, Store};
@@ -66,6 +68,39 @@ pub struct Engine {
     terms: Terms,
     /// `OLLAMA_HOST`, read only when `embedding.provider = "ollama"`.
     host: String,
+    warn: Warn,
+}
+
+/// Where an engine warns, at most once (T8): stderr, as the cache's
+/// default log, which `chert mcp` keeps apart from its protocol.
+struct Warn {
+    log: Log,
+    said: bool,
+}
+
+impl Warn {
+    fn stderr() -> Self {
+        Self {
+            log: Arc::new(|text: &str| eprintln!("{text}")),
+            said: false,
+        }
+    }
+
+    /// Log `text` unless this engine warned before.
+    fn once(&mut self, text: &str) {
+        if !self.said {
+            self.said = true;
+            (self.log)(text);
+        }
+    }
+}
+
+impl fmt::Debug for Warn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Warn")
+            .field("said", &self.said)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Engine {
@@ -97,6 +132,7 @@ impl Engine {
             store,
             terms,
             host,
+            warn: Warn::stderr(),
         })
     }
 
@@ -178,14 +214,20 @@ impl Engine {
     }
 
     /// The provider a query may call; `None` = no network (V3).
-    fn embedder(&self, semantic: bool) -> Result<Option<Ollama>, Error> {
+    /// A provider without a v1 client ranks by keyword and warns once
+    /// (T8): `src/mcp` asks every search to be semantic.
+    fn embedder(&mut self, semantic: bool) -> Result<Option<Ollama>, Error> {
         if !semantic {
             return Ok(None);
         }
         match self.cfg.embedding.provider {
             Provider::Off => Ok(None),
             Provider::Ollama => Ollama::new(&self.host).map(Some),
-            Provider::Openai => Err(Error::Unsupported { provider: "openai" }),
+            Provider::Openai => {
+                let no = Error::Unsupported { provider: "openai" };
+                self.warn.once(&no.to_string());
+                Ok(None)
+            }
         }
     }
 

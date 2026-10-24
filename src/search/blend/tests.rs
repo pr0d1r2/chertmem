@@ -1,5 +1,6 @@
 use std::error::Error as StdError;
 use std::net::TcpListener;
+use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
 
@@ -134,15 +135,32 @@ fn the_re_rank_embeds_the_compressed_query_it_scores() -> Test {
     Ok(())
 }
 
+/// Every warning `e` logs from now on, collected.
+fn collect(e: &mut Engine) -> Arc<Mutex<Vec<String>>> {
+    let logs: Arc<Mutex<Vec<String>>> = Arc::default();
+    let sink = Arc::clone(&logs);
+    e.warn.log = Arc::new(move |text: &str| {
+        if let Ok(mut all) = sink.lock() {
+            all.push(text.to_owned());
+        }
+    });
+    logs
+}
+
 #[test]
 fn openai_falls_back_to_keyword_ranking() -> Test {
     let (s, _, mut store) = fresh("blend-openai")?;
     store.append(&event(BASE, "s", "cargo"))?;
     let (mut e, _) = engine_at(&s, Provider::Openai, "")?;
+    let logs = collect(&mut e);
     let keyword = e.run(&query("cargo"), None)?;
     assert_eq!(keyword.len(), 1);
+    assert!(logs.lock().map_err(|_| "poisoned")?.is_empty());
     assert_eq!(e.run(&semantic("cargo"), None)?, keyword);
     assert_eq!(e.run(&semantic("cargo"), None)?, keyword);
+    let said = logs.lock().map_err(|_| "poisoned")?.clone();
+    let want = Error::Unsupported { provider: "openai" }.to_string();
+    assert_eq!(said, [want]);
     Ok(())
 }
 
