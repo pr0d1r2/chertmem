@@ -28,6 +28,7 @@ sib|src/mine|behaviour findings & awareness report
 - catalog row ∀ partition: dims, `[t0,t1)`, rows, bytes, state ∈ {hot, warm, cold}, checksum, spec it was written under.
 - observation: ULID id, `seq INTEGER PRIMARY KEY AUTOINCREMENT`, event identity key unique when dialect supplies one (`.:V16`), ts, session, kind, body (compressed), FTS5 external-content index.
 - 1 connection per partition, ⊥ `ATTACH` (`.:R5`).
+- summaries: table per partition, scope ∈ {`turn`, `session`}, keyed by session; stored compressed like bodies; read by injection (`src/hook`).
 - `generation` counter in catalog, bumped on any delete | redaction | rewrite (D15).
 
 ## §I INTERFACES
@@ -60,6 +61,7 @@ T5|.|refs: parse, shortest prefix, resolve, dropped|V5
 T6|.|seal → warm, compact → cold (`VACUUM INTO` + zstd dict), drop, repartition|V5,V7
 T7|.|catalog rebuild for `doctor`|V6
 T8|.|ref column & exact-match resolution, cross-project lookup|V5,V8
+T9|.|summaries table, turn & session scopes|V1
 
 ## §B BUGS
 
