@@ -58,9 +58,14 @@ impl Terms {
 
     /// Count every row the store holds and this file does not yet.
     pub(super) fn refresh(&mut self, store: &mut Store) -> Result<(), Error> {
-        // RED: nothing is counted yet.
-        let _ = (&self.conn, store.generation()?);
-        Ok(())
+        for _ in 0..TRIES {
+            if self.sync(store)? {
+                return Ok(());
+            }
+        }
+        Err(Error::Terms {
+            reason: "the store kept changing during a recount".into(),
+        })
     }
 
     /// 1 pass under the write lock; `false` (rolled back) when the
