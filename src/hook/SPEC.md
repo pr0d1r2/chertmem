@@ -60,6 +60,7 @@ T4|x|malformed → spool|V2
 T5|.|measure: Claude Code resends? event id field per hook? → §R (`.:V16`)|V3
 T6|~|injection: session-start default, prompt opt-in, budget cut, stdout shape|V4,V5
 T7|x|turn summary on stop, session roll-up on session-end|V6
+T8|.|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writing the store's dir (owner 2026-10-24)|V2
 
 ## §B BUGS
 
