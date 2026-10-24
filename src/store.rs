@@ -21,6 +21,7 @@ mod reference;
 mod repartition;
 mod restore;
 mod schema;
+mod session;
 mod spool;
 mod summary;
 mod tail;
@@ -36,8 +37,8 @@ use rusqlite::Connection;
 pub use error::Error;
 pub use layout::project_id;
 pub use model::{
-    Appended, Event, Filter, Lookup, Observation, Partition, Scope, State,
-    Stats, Summary, Tailed, Written,
+    Appended, Event, Filter, Lookup, Observation, Partition, Scope, Session,
+    SessionStart, State, Stats, Summary, Tailed, Written,
 };
 pub use reference::Ref;
 

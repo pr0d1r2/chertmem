@@ -120,3 +120,21 @@ fn an_unopenable_path_is_an_error() -> Test {
     assert!(open(&missing, BUSY, CATALOG).is_err());
     Ok(())
 }
+
+#[test]
+fn a_version_1_catalog_gains_sessions_and_keeps_its_rows() -> Test {
+    let path = scratch("upgrade")?;
+    let conn = open(&path, BUSY, CATALOG)?;
+    conn.execute_batch(
+        "DROP TABLE IF EXISTS sessions;
+         UPDATE meta SET value = 7 WHERE key = 'generation';
+         PRAGMA user_version = 1;",
+    )?;
+    drop(conn);
+    let conn = open(&path, BUSY, CATALOG)?;
+    assert!(names(&conn, "table")?.contains(&"sessions".to_owned()));
+    let sql = "SELECT value FROM meta WHERE key = 'generation'";
+    let generation: i64 = conn.query_row(sql, [], |r| r.get(0))?;
+    assert_eq!(generation, 7);
+    Ok(())
+}
