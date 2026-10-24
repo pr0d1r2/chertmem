@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-`chert hook run <event>`: read 1 IDE event from stdin, strip `<private>`, skip excluded paths, compress, append, exit. fastest path in crate (`.:§C` < 5 ms).
+`chert hook run <event>`: read 1 IDE event from stdin, strip `<private>`, skip excluded paths, compress, append; injecting events (below) then print context; exit. fastest path in crate (`.:§C` < 5 ms).
 
 ## §N NAV
 
@@ -25,6 +25,7 @@ sib|src/mine|behaviour findings & awareness report
 
 - sync, ⊥ thread pool, ⊥ cache, ⊥ network.
 - dialect per IDE; v1 = Claude Code (D24). other IDEs need recorded payload fixtures first.
+- injection (`.:V17`): `session-start` always; `user-prompt-submit` only when `inject.on_prompt = true`. injecting hook = reading open ∴ replays spool first (`src/store:V10`). output: `{"hookSpecificOutput":{"hookEventName":"SessionStart"|"UserPromptSubmit","additionalContext":<text>}}` on stdout, nothing else on stdout. content: refs + 1-line gists of last session in project & top findings, cut at `inject.max_tokens` (o200k).
 - unknown fields ignored; unreadable payload → spooled raw + exit 0 ∴ IDE ⊥ blocked.
 
 ## §I INTERFACES
@@ -37,6 +38,8 @@ sib|src/mine|behaviour findings & awareness report
 V1: `<private>…</private>` removed & `privacy.exclude` paths unread before compress (`.:V8`).
 V2: exit 0 ∀ payload, incl. malformed; malformed → spool, ⊥ lost (`.:V2`).
 V3: ∀ fixture → exactly 1 observation (or 0 when excluded), same bytes ∀ run (`.:V3`).
+V4: `inject.on_prompt` false → `user-prompt-submit` prints nothing & opens store write-only.
+V5: injected text ≤ `inject.max_tokens` o200k tokens ∀ fixture & store size; ⊥ full bodies (`.:V17`).
 
 ## §T TASKS
 
@@ -46,6 +49,7 @@ T2|.|Claude Code dialect → event struct|V3
 T3|.|redaction & exclusion|V1
 T4|.|malformed → spool|V2
 T5|.|measure: does Claude Code resend a hook event? which field identifies an event per hook type? record in §R (`.:V16`)|V3
+T6|.|injection: session-start default, prompt opt-in, budget cut, stdout shape|V4,V5
 
 ## §B BUGS
 
