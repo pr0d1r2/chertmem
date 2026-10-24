@@ -31,6 +31,13 @@ sib|src/mine|behaviour findings & awareness report
 
 - mcp: `search`, `timeline`, `get_observations`, `list_sessions` per `.:§I`.
 
+## §R RESEARCH
+
+id|topic|finding|src
+R1|transport, wave 6|hand-rolled newline-delimited JSON-RPC 2.0 on `serde_json` (already a dep ∴ +0 crates, `Cargo.lock` unchanged): `initialize` `ping` `tools/list` `tools/call`, notifications & client responses ⊥ answered, else -32601; protocol version = asked if SDK 1.32.2 supports it (`2025-11-25` `2025-06-18` `2025-03-26` `2024-11-05` `2024-10-07`), else `2025-11-25`. `rmcp` 3.7.0 Apache-2.0 (license ok) but needs `tokio` `tokio-util` `futures` `tracing` `chrono` `thiserror` `indexmap` `pin-project-lite` ∴ async runtime vs `src:§C` sync rule ∴ rejected|`npm pack @modelcontextprotocol/sdk@1.32.2` `dist/esm/types.js`, `server/index.js`; `curl https://crates.io/api/v1/crates/rmcp/3.7.0/dependencies`
+R2|tools, wave 6|entry `mcp::serve(&Ctx{config, root, env}, stdin, stdout)`; `env: cache::Env` carries log ∴ cli passes stderr. tool error → `{content, isError: true}` as SDK's `createToolError`. `search` scoped to current project (cache holds its window). `get_observations` adds `metadata: null` (⊥ stored); gone ref → `{id, dropped: true}`. 3 reading `Store`s: engine, cache, `get`|`server.rs`, `shape.rs`, cavemem `dist/server-*.js`
+R3|`list_sessions`, wave 6|store ⊥ session read & ⊥ `cwd` column ∴ tool ⊥ listed. needs `Store::sessions(&mut self, limit: usize) -> Result<Vec<Session>, Error>`, `Session{id, ide, cwd, started_at: u64, ended_at: Option<u64>}`, newest first, current project|`src/store/model.rs`, `schema.rs`
+
 ## §V INVARIANTS
 
 V1: tool names & field names ≡ cavemem 0.2.1 (`.:R1`); golden JSON test per tool.
@@ -40,9 +47,9 @@ V3: cache warnings ⊥ in tool results (`.:V11`).
 ## §T TASKS
 
 id|status|task|cites
-T1|.|transport lib choice, §R row|V2
-T2|.|4 tools w/ golden JSON|V1
-T3|.|start cache on launch|V3
+T1|x|transport lib choice, §R row|V2
+T2|~|4 tools w/ golden JSON: 3 built; `list_sessions` waits on store API (R3)|V1
+T3|x|start cache on launch|V3
 
 ## §B BUGS
 
