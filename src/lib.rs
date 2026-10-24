@@ -3,6 +3,7 @@
 //! A stub until the waves (root T8): the module nodes under `src/` land
 //! one per worker, test first.
 
+pub mod cache;
 pub mod config;
 pub mod grammar;
 pub mod store;
