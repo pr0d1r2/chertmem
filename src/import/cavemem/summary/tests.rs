@@ -2,7 +2,6 @@ use std::path::Path;
 
 use rusqlite::{Connection, params};
 
-use crate::config::Grammar;
 use crate::grammar::{Intensity, compress};
 use crate::import::cavemem::tests::fixture;
 use crate::import::tests::{NOW, Res, Scratch, Test};
@@ -32,12 +31,12 @@ fn noted(path: &Path) -> Res<Connection> {
 }
 
 /// Import the summary fixture at `s`'s `cavemem.db` (built once).
-fn imported(s: &Scratch, store: &mut Store) -> Res<Imported> {
+fn imported(s: &Scratch) -> Res<Imported> {
     let db = s.path("cavemem.db");
     if !db.exists() {
         noted(&db)?;
     }
-    Ok(cavemem(store, &db, Grammar::Full)?)
+    Ok(cavemem(&s.config, &s.root(), &db)?)
 }
 
 /// A summary `at` ms after [`NOW`].
@@ -78,7 +77,7 @@ fn held(store: &mut Store) -> Res<Vec<Summary>> {
 fn every_summary_lands_with_its_session_scope_and_ide() -> Test {
     let s = Scratch::new("sum-rows")?;
     let mut store = s.store()?;
-    let got = imported(&s, &mut store)?;
+    let got = imported(&s)?;
     assert_eq!((got.observations, got.summaries), (3, 4));
     assert_eq!(held(&mut store)?, wanted());
     let a = store.summaries(Some("s-a"), Scope::Turn)?;
@@ -90,8 +89,8 @@ fn every_summary_lands_with_its_session_scope_and_ide() -> Test {
 fn importing_twice_keeps_the_same_summaries() -> Test {
     let s = Scratch::new("sum-twice")?;
     let mut store = s.store()?;
-    imported(&s, &mut store)?;
-    assert_eq!(imported(&s, &mut store)?.summaries, 4);
+    imported(&s)?;
+    assert_eq!(imported(&s)?.summaries, 4);
     assert_eq!(held(&mut store)?, wanted());
     Ok(())
 }
@@ -101,11 +100,11 @@ fn a_summary_written_once_more_since_lands_once() -> Test {
     let s = Scratch::new("sum-more")?;
     let mut store = s.store()?;
     let conn = noted(&s.path("cavemem.db"))?;
-    imported(&s, &mut store)?;
+    imported(&s)?;
     let ts = NOW.saturating_add(40);
     let again = params!["s-a", "turn", "fixed build", 1, "full", ts];
     conn.execute(SUMMARY, again)?;
-    imported(&s, &mut store)?;
+    imported(&s)?;
     let turns = store.summaries(Some("s-a"), Scope::Turn)?;
     assert_eq!(turns.len(), 3);
     Ok(())
@@ -116,7 +115,7 @@ fn refused_after(name: &str, sql: &str) -> Res<Error> {
     let s = Scratch::new(name)?;
     let db = s.path("cavemem.db");
     noted(&db)?.execute_batch(sql)?;
-    let got = cavemem(&mut s.store()?, &db, Grammar::Full);
+    let got = cavemem(&s.config, &s.root(), &db);
     got.err().ok_or_else(|| "import succeeded".into())
 }
 

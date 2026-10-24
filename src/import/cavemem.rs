@@ -13,6 +13,7 @@
 #[cfg(test)]
 mod tests;
 
+mod split;
 mod summary;
 
 use std::path::Path;
@@ -20,15 +21,18 @@ use std::path::Path;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
 
 use super::Error;
-use crate::config::Grammar;
+use crate::config::{Config, Grammar};
 use crate::grammar::{self, Intensity};
-use crate::store::{Event, Store};
+use crate::store::{Event, Mode, Store};
 
 /// What an import read from cavemem; every row of it is in the store.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Imported {
     pub observations: usize,
     pub summaries: usize,
+    /// Observations and summaries whose session has no `cwd` (missing
+    /// or empty), stored under the current project (src/import T5).
+    pub no_cwd: usize,
 }
 
 /// The `schema_version` cavemem 0.2.1 writes.
@@ -39,29 +43,33 @@ const OBSERVATIONS: &str = "SELECT o.id, o.session_id, o.kind, o.content,
   FROM observations o LEFT JOIN sessions s ON s.id = o.session_id
   ORDER BY o.id";
 
-/// Import the cavemem 0.2.1 file `db` into `store`, which needs a
-/// reading open. A body cavemem stored uncompressed is compressed at
-/// `grammar`, as the hook does.
+/// Import the cavemem 0.2.1 file `db` into the data dir `config` names,
+/// each session's rows under the project of its own `cwd`, as the hook
+/// derives it ([`crate::store::project_id`]); a session without one
+/// goes to the project at `root`. A body cavemem stored uncompressed is
+/// compressed at `compression.grammar`, as the hook does.
 ///
 /// # Errors
 /// A file that is not a cavemem 0.2.1 db, or a store that refuses a
 /// read or a write.
 pub fn cavemem(
-    store: &mut Store,
+    config: &Config,
+    root: &Path,
     db: &Path,
-    grammar: Grammar,
 ) -> Result<Imported, Error> {
-    let (conn, level) = (open(db)?, intensity(grammar));
+    let (conn, level) = (open(db)?, intensity(config.compression.grammar));
     let events = observations(&conn, level)?;
     let notes = summary::read(&conn, level)?;
     drop(conn);
+    let mut store = Store::open(config, root, Mode::Read)?;
     for event in &events {
         store.append(event)?;
     }
-    summary::put(store, &notes)?;
+    summary::put(&mut store, &notes)?;
     Ok(Imported {
         observations: events.len(),
         summaries: notes.len(),
+        no_cwd: 0,
     })
 }
 
