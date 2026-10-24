@@ -48,6 +48,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v typos >/dev/null 2>&1 || { echo 'typos: typos is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; typos --force-exclude {{files}} || { echo 'typos: misspelling; fix it or teach .typos.toml' >&2; exit 1; }"
   }
+  ["editorconfig-checker"] {
+    glob = List("**/*")
+    check = "command -v editorconfig-checker >/dev/null 2>&1 || { echo 'editorconfig-checker: editorconfig-checker is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; editorconfig-checker {{files}} || { echo 'editorconfig-checker: file breaks its .editorconfig (indent, line ends, final newline)' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
