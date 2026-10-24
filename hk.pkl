@@ -36,6 +36,21 @@ hooks {
     stash = "none"
     steps = fast
   }
+  // dev V11, B4: the message git hands the hook. Both steps run alone
+  // (dev V10): each is a `cargo run`.
+  ["commit-msg"] {
+    steps {
+      ["commit-msg"] {
+        check = "cargo run -q -p chertmem-dev -- commit-msg {{commit_msg_file}}"
+        exclusive = true
+      }
+      // The message is committed text too; the same guard reads it.
+      ["message-names"] {
+        check = "cargo run -q -p chertmem-dev -- name-guard {{commit_msg_file}}"
+        exclusive = true
+      }
+    }
+  }
   ["pre-push"] {
     steps = all
   }

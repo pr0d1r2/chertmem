@@ -55,6 +55,7 @@ pklith|pklith-check, gen-check|-|-
 pkl|-|-|written by pklith (seed or gen)
 pre-commit|-|-|written by pklith (seed or gen)
 pre-push|-|-|written by pklith (seed or gen)
+commit-msg|-|-|hook shim, same shape as the seeded ones; its steps live in hk.pkl
 envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|lock-graph|-|-
