@@ -8,7 +8,9 @@ mod tests;
 mod cavemem;
 mod error;
 mod export;
+mod jsonl;
 
 pub use cavemem::{Imported, cavemem};
 pub use error::Error;
 pub use export::export;
+pub use jsonl::jsonl;

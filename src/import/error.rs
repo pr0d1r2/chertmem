@@ -17,24 +17,42 @@ pub enum Error {
     Cavemem { reason: String },
     /// The export could not be written.
     Io { reason: String },
+    /// A JSONL line that is not 1 line of a `chert export`.
+    Jsonl { reason: String },
+    /// Line `line` (from 1) of a JSONL import failed with `cause`.
+    Line { line: usize, cause: Box<Error> },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Store(e) => e.fmt(f),
-            Self::Cavemem { reason } => write!(
-                f,
-                "chert: cavemem db unreadable: {reason} (give a cavemem \
-                 0.2.1 db)"
-            ),
-            Self::Io { reason } => write!(
-                f,
-                "chert: export failed: {reason} (check the path and its \
-                 permissions)"
-            ),
-        }
+        let ((what, fix), reason) = match self {
+            Self::Store(e) => return e.fmt(f),
+            Self::Line { line, cause } => return at_line(f, *line, cause),
+            Self::Cavemem { reason } => (CAVEMEM, reason),
+            Self::Io { reason } => (IO, reason),
+            Self::Jsonl { reason } => (JSONL, reason),
+        };
+        write!(f, "chert: {what}: {reason} ({fix})")
     }
+}
+
+/// What failed and its fix, per message (src C).
+const CAVEMEM: (&str, &str) =
+    ("cavemem db unreadable", "give a cavemem 0.2.1 db");
+const IO: (&str, &str) =
+    ("export failed", "check the path and its permissions");
+const JSONL: (&str, &str) =
+    ("not an export line", "give a file `chert export` wrote");
+
+/// `cause`'s message with `import line <line>: ` after its `chert: `.
+fn at_line(
+    f: &mut fmt::Formatter<'_>,
+    line: usize,
+    cause: &Error,
+) -> fmt::Result {
+    let text = cause.to_string();
+    let rest = text.strip_prefix("chert: ").unwrap_or(&text);
+    write!(f, "chert: import line {line}: {rest}")
 }
 
 impl std::error::Error for Error {}
