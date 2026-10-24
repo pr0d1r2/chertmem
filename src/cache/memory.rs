@@ -25,13 +25,13 @@ pub(super) fn available() -> Option<u64> {
 }
 
 /// `MemAvailable` of `/proc/meminfo`, in bytes.
-fn meminfo(_text: &str) -> Option<u64> {
-    // RED stub: no figure read yet.
-    None
+fn meminfo(text: &str) -> Option<u64> {
+    let line = text.lines().find_map(|l| l.strip_prefix("MemAvailable:"))?;
+    let kib: u64 = line.trim().strip_suffix("kB")?.trim().parse().ok()?;
+    kib.checked_mul(1024)
 }
 
 /// The output of `sysctl -n hw.memsize`: bytes.
-fn memsize(_text: &str) -> Option<u64> {
-    // RED stub: no figure read yet.
-    None
+fn memsize(text: &str) -> Option<u64> {
+    text.trim().parse().ok()
 }

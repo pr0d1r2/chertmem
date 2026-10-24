@@ -7,7 +7,7 @@ mod tests;
 
 use std::fmt;
 
-use crate::config::{self, Span, Unit};
+use crate::config::{self, Overflow, Span, Unit};
 use crate::store::Partition;
 
 /// 1 day in milliseconds.
@@ -106,18 +106,48 @@ pub(super) fn estimate(parts: &[Partition], since: u64, now: u64) -> u64 {
     shares.fold(0, u64::saturating_add)
 }
 
-/// Fit the window of `cfg` ending at `now` to its limit (D16).
+/// The most of the newest whole days, fewer than `days`, that fit.
+fn newest(parts: &[Partition], limit: u64, days: u64, now: u64) -> u64 {
+    let since = |d: u64| now.saturating_sub(d.saturating_mul(DAY));
+    let fits = |&d: &u64| estimate(parts, since(d), now) <= limit;
+    (1..days).rev().find(fits).unwrap_or(0)
+}
+
+/// Fit the window of `cfg` ending at `now` to its limit (D16): all of
+/// it when it fits; else `warn` and `shrink` keep the newest days that
+/// fit, `fail` keeps none.
 pub(super) fn fit(parts: &[Partition], cfg: &config::Cache, now: u64) -> Fit {
-    // RED stub: the whole window is kept, whatever the estimate.
     let start = now.saturating_sub(window_ms(cfg.window));
+    let estimate = estimate(parts, start, now);
+    let (days_kept, since) = if estimate <= cfg.max_bytes {
+        (days(cfg.window), Some(start))
+    } else {
+        shrink(parts, cfg, now)
+    };
     Fit {
         plan: Plan {
-            estimate: estimate(parts, start, now),
+            estimate,
             limit: cfg.max_bytes,
-            days_kept: days(cfg.window),
+            days_kept,
         },
-        since: Some(start),
+        since,
     }
+}
+
+/// The days kept over the limit and where they start; `None`: none.
+fn shrink(
+    parts: &[Partition],
+    cfg: &config::Cache,
+    now: u64,
+) -> (u64, Option<u64>) {
+    let kept = match cfg.on_overflow {
+        Overflow::Warn | Overflow::Shrink => {
+            newest(parts, cfg.max_bytes, days(cfg.window), now)
+        }
+        Overflow::Fail => 0,
+    };
+    let since = now.saturating_sub(kept.saturating_mul(DAY));
+    (kept, (kept > 0).then_some(since))
 }
 
 /// The overflow warning: it names the estimate and the limit (V4,
@@ -139,7 +169,13 @@ pub(super) fn overflow(plan: &Plan, cfg: &config::Cache) -> String {
 
 /// A warning when `max` is over 25% of `available` (src/cache C);
 /// `None` when it is not, or the figure is unknown.
-pub(super) fn memory(_max: u64, _available: Option<u64>) -> Option<String> {
-    // RED stub: never warns.
-    None
+pub(super) fn memory(max: u64, available: Option<u64>) -> Option<String> {
+    let available = available?;
+    (max > available / 4).then(|| {
+        format!(
+            "chert: cache.max_bytes {max} bytes is over 25% of the \
+             {available} bytes of memory available (lower \
+             cache.max_bytes)"
+        )
+    })
 }
