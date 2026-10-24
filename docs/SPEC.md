@@ -18,6 +18,7 @@ sib|dev|dev shell flake & `dev` crate (`publish = false`) gate steps
 - page = claim first, evidence second, how-to last; readable on phone.
 - ∀ number dated w/ recount method (`paradigm/V4`); counts generated where a generator exists (`paradigm/V34`).
 - `docs/BENCHMARKS.md` (D29): how to run, how to read output, targets & why (`.:§C`), fixture sizes, machine & date ∀ measured number, how baseline is updated, regression rule.
+- `docs/CONFIG.md`: `inject.on_prompt` carries speed disclaimer w/ measured cost from `docs/BENCHMARKS.md`.
 
 ## §I INTERFACES
 
