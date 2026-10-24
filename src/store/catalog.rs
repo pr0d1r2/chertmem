@@ -6,9 +6,9 @@ mod tests;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
-use super::layout::{self, FNV_OFFSET, Place};
+use super::layout::{self, FNV_OFFSET, Place, Plan};
 use super::write::Row;
-use super::{Error, State};
+use super::{Error, State, Stats};
 
 /// A partition's catalog row, as a write needs it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,15 +36,67 @@ pub(super) fn ensure(
     let row =
         params![p.path, dims, p.project, p.ide, t0, t1, p.shard, sum, spec];
     conn.execute(ENSURE, row)?;
-    let sql = "SELECT id, state FROM partitions WHERE path = ?1";
-    let (id, state): (i64, String) =
-        conn.query_row(sql, [&p.path], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    let (id, state) = state(conn, &p.path)?;
     let path = p.path.clone();
-    if State::parse(&state) == Some(State::Hot) {
+    if state == Some(State::Hot) {
         Ok(Slot { id, path })
     } else {
         Err(Error::ReadOnly { path })
     }
+}
+
+const STATE: &str = "SELECT id, state, dropped FROM partitions
+  WHERE path = ?1";
+
+/// The id and tier of the partition at `path`, the tier `None` once it
+/// is dropped; no such row is an error naming it.
+pub(super) fn state(
+    conn: &Connection,
+    path: &str,
+) -> Result<(i64, Option<State>), Error> {
+    find(conn, path)?.ok_or_else(|| Error::Sqlite {
+        reason: format!("no partition {path}"),
+    })
+}
+
+/// As [`state`], `None` when the catalog has no such row.
+pub(super) fn find(
+    conn: &Connection,
+    path: &str,
+) -> Result<Option<(i64, Option<State>)>, Error> {
+    let row = |r: &rusqlite::Row<'_>| {
+        Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get(2)?))
+    };
+    let found = conn.query_row(STATE, [path], row).optional()?;
+    Ok(found.map(|(id, state, dropped)| {
+        (id, if dropped { None } else { State::parse(&state) })
+    }))
+}
+
+/// Move the partition at `path` to `state` (src/store T6).
+pub(super) fn set_state(
+    conn: &Connection,
+    path: &str,
+    state: State,
+) -> Result<(), Error> {
+    let sql = "UPDATE partitions SET state = ?2 WHERE path = ?1";
+    conn.execute(sql, [path, state.as_str()])?;
+    Ok(())
+}
+
+/// Mark the partition at `path` dropped: its row and refs stay, so no
+/// ref is issued again and each answers dropped (root V5).
+pub(super) fn mark_dropped(conn: &Connection, path: &str) -> Result<(), Error> {
+    let sql = "UPDATE partitions SET dropped = 1 WHERE path = ?1";
+    conn.execute(sql, [path])?;
+    Ok(())
+}
+
+/// Bump `generation`: rows were deleted, redacted or rewritten (D15).
+pub(super) fn bump(conn: &Connection) -> Result<(), Error> {
+    let sql = "UPDATE meta SET value = value + 1 WHERE key = 'generation'";
+    conn.execute(sql, [])?;
+    Ok(())
 }
 
 /// The ref already issued to this row's id or its identity (root V16).
@@ -76,9 +128,11 @@ pub(super) fn taken(
 pub(super) struct Hit {
     pub project: String,
     pub path: String,
+    /// The partition was dropped: the ref answers dropped (root V5).
+    pub dropped: bool,
 }
 
-const LOCATE: &str = "SELECT r.project, p.path FROM refs r
+const LOCATE: &str = "SELECT r.project, p.path, p.dropped FROM refs r
   JOIN partitions p ON p.id = r.partition
   WHERE r.ref = ?1 AND (?2 IS NULL OR r.project = ?2)
   ORDER BY r.project";
@@ -95,6 +149,7 @@ pub(super) fn locate(
         Ok(Hit {
             project: r.get(0)?,
             path: r.get(1)?,
+            dropped: r.get(2)?,
         })
     })?;
     Ok(hits.collect::<Result<_, _>>()?)
@@ -112,6 +167,23 @@ pub(super) fn record(
       VALUES (?1, ?2, ?3, ?4, ?5)";
     let identity = &row.event.identity;
     conn.execute(sql, params![row.project, stored, row.id, identity, slot.id])?;
+    grow(conn, slot, row)
+}
+
+/// Point the ref of a row a repartition moved at its new partition,
+/// and fold the row in there (src/store V5).
+pub(super) fn moved(
+    conn: &Connection,
+    slot: &Slot,
+    row: &Row,
+) -> Result<(), Error> {
+    let sql = "UPDATE refs SET partition = ?2 WHERE id = ?1";
+    conn.execute(sql, params![row.id, slot.id])?;
+    grow(conn, slot, row)
+}
+
+/// Fold `row` into its partition's rows, bytes and checksum.
+fn grow(conn: &Connection, slot: &Slot, row: &Row) -> Result<(), Error> {
     let sql = "SELECT checksum FROM partitions WHERE id = ?1";
     let sum: String = conn.query_row(sql, [slot.id], |r| r.get(0))?;
     let next = checksum(&sum, &row.id, &row.event.body);
@@ -122,9 +194,53 @@ pub(super) fn record(
     Ok(())
 }
 
+const STALE: &str = "SELECT path, state FROM partitions
+  WHERE dropped = 0 AND spec <> ?1 ORDER BY t0, path";
+
+/// Every live partition written under a spec other than `spec`, by
+/// `t0` then path, with its tier.
+pub(super) fn stale(
+    conn: &Connection,
+    spec: &str,
+) -> Result<Vec<(String, State)>, Error> {
+    let mut stmt = conn.prepare(STALE)?;
+    let rows = stmt.query_map([spec], |r| {
+        let state: String = r.get(1)?;
+        Ok((r.get(0)?, State::parse(&state).unwrap_or(State::Hot)))
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The partition at `path` now holds `stats`, under `plan`'s spec.
+pub(super) fn restate(
+    conn: &Connection,
+    path: &str,
+    plan: &Plan,
+    stats: &Stats,
+) -> Result<(), Error> {
+    let sql = "UPDATE partitions SET dims = ?2, spec = ?3, rows = ?4,
+      bytes = ?5, checksum = ?6 WHERE path = ?1";
+    let (dims, spec, s) = (plan.dims(), plan.spec(), stats);
+    let args = params![path, dims, spec, s.rows, s.bytes, s.checksum];
+    conn.execute(sql, args)?;
+    Ok(())
+}
+
+const FORGET: &str = "DELETE FROM partitions WHERE path = ?1
+  AND NOT EXISTS (SELECT 1 FROM refs r WHERE r.partition = partitions.id)";
+
+/// Forget the partition at `path` once no ref points at it; one whose
+/// refs stay (its file was lost) is marked dropped instead (root V5).
+pub(super) fn forget(conn: &Connection, path: &str) -> Result<(), Error> {
+    if conn.execute(FORGET, [path])? == 0 {
+        mark_dropped(conn, path)?;
+    }
+    Ok(())
+}
+
 /// FNV-1a 64 continued from `sum` over the row's id and body, so the
 /// checksum folds every row in insert order.
-fn checksum(sum: &str, id: &str, body: &str) -> String {
+pub(super) fn checksum(sum: &str, id: &str, body: &str) -> String {
     let state = u64::from_str_radix(sum, 16).unwrap_or(FNV_OFFSET);
     let state = layout::fnv1a(state, id.as_bytes());
     let state = layout::fnv1a(layout::fnv1a(state, &[0x1f]), body.as_bytes());

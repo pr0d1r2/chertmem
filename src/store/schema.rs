@@ -36,6 +36,7 @@ CREATE TABLE partitions (
     CHECK (state IN ('hot', 'warm', 'cold')),
   checksum TEXT NOT NULL,
   spec TEXT NOT NULL,
+  dropped INTEGER NOT NULL DEFAULT 0 CHECK (dropped IN (0, 1)),
   CHECK (t0 < t1));
 CREATE INDEX partitions_bounds ON partitions (t0, t1);
 CREATE TABLE refs (
@@ -49,9 +50,22 @@ CREATE TABLE refs (
 CREATE INDEX refs_ref ON refs (ref);
 ";
 
-/// A partition: observations with their FTS5 external-content index kept
-/// by triggers, and summaries (src/store C).
+/// A partition: its own catalog row's dims, bounds, spec and tier in
+/// `chunk`, so `doctor` can rebuild the catalog from files (src/store
+/// V6); observations with their FTS5 external-content index kept by
+/// triggers, and summaries (src/store C).
 pub(super) const PARTITION: &str = "
+CREATE TABLE chunk (
+  one INTEGER PRIMARY KEY CHECK (one = 1),
+  dims TEXT NOT NULL,
+  project TEXT NOT NULL,
+  ide TEXT NOT NULL,
+  t0 INTEGER NOT NULL,
+  t1 INTEGER NOT NULL,
+  shard INTEGER,
+  spec TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'hot'
+    CHECK (state IN ('hot', 'warm', 'cold')));
 CREATE TABLE observations (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
   id TEXT NOT NULL UNIQUE,

@@ -22,7 +22,7 @@ pub(super) struct Row {
 }
 
 impl Row {
-    fn key(&self) -> Key<'_> {
+    pub(super) fn key(&self) -> Key<'_> {
         Key {
             project: &self.project,
             ide: &self.event.ide,
@@ -41,7 +41,7 @@ pub(super) struct Note {
 }
 
 impl Note {
-    fn key(&self) -> Key<'_> {
+    pub(super) fn key(&self) -> Key<'_> {
         Key {
             project: &self.project,
             ide: &self.summary.ide,
@@ -70,8 +70,8 @@ pub(super) fn apply(cx: &mut Ctx<'_>, item: &Item) -> Result<(), Error> {
 /// before stores nothing (a replayed spool file).
 pub(super) fn summary(cx: &mut Ctx<'_>, note: &Note) -> Result<(), Error> {
     let tx = immediate(cx.catalog)?;
-    let slot = slot(cx.plan, &tx, note.key())?;
-    summary::insert(cx.chunks.get(&slot.path)?, note)?;
+    let (_, conn) = slot(cx.plan, cx.chunks, &tx, note.key())?;
+    summary::insert(conn, note)?;
     Ok(tx.commit()?)
 }
 
@@ -90,15 +90,23 @@ pub(super) fn new_id(ts: u64) -> String {
 
 /// The catalog's write lock: 1 writer across processes, the busy timeout
 /// then [`Error::Busy`].
-fn immediate(conn: &Connection) -> Result<Transaction<'_>, Error> {
+pub(super) fn immediate(conn: &Connection) -> Result<Transaction<'_>, Error> {
     let behavior = TransactionBehavior::Immediate;
     Ok(Transaction::new_unchecked(conn, behavior)?)
 }
 
-/// The hot partition `key` lands in, in the catalog.
-fn slot(plan: &Plan, conn: &Connection, key: Key<'_>) -> Result<Slot, Error> {
+/// The hot partition `key` lands in: its catalog row, then its file
+/// (src/store V7).
+pub(super) fn slot<'c>(
+    plan: &Plan,
+    chunks: &'c mut Chunks,
+    tx: &Connection,
+    key: Key<'_>,
+) -> Result<(Slot, &'c Connection), Error> {
     let place = plan.place(key)?;
-    catalog::ensure(conn, &place, &plan.dims(), &plan.spec())
+    let (dims, spec) = (plan.dims(), plan.spec());
+    let slot = catalog::ensure(tx, &place, &dims, &spec)?;
+    Ok((slot, chunks.hot(&place, &dims, &spec)?))
 }
 
 /// Store `row`; its ref, the first one for a known id or identity.
@@ -107,9 +115,9 @@ pub(super) fn observation(cx: &mut Ctx<'_>, row: &Row) -> Result<Ref, Error> {
     if let Some(found) = catalog::existing(&tx, row)? {
         return Ok(Ref::stored(found));
     }
-    let slot = slot(cx.plan, &tx, row.key())?;
+    let (slot, conn) = slot(cx.plan, cx.chunks, &tx, row.key())?;
     let issued = issue(&tx, &row.project, &row.id)?;
-    let stored = partition::insert(cx.chunks.get(&slot.path)?, row, &issued)?;
+    let stored = partition::insert(conn, row, &issued)?;
     catalog::record(&tx, &slot, row, &stored)?;
     tx.commit()?;
     Ok(Ref::stored(stored))

@@ -39,6 +39,13 @@ tinyjson = "2.5.1"
 toml = "1.1.8"
 # Observation ids (src/store C): MIT; its rand tree is MIT OR Apache-2.0.
 ulid = "3.0.0"
+# Cold partitions (src/store T6): zstd MIT, zstd-safe and zstd-sys
+# BSD-3-Clause (owner 2026-10-24), jobserver MIT OR Apache-2.0. Default
+# features off: `legacy` decodes pre-1.0 frames we never write;
+# `zdict_builder` trains the per-partition dictionary.
+zstd = { version = "0.13.3", default-features = false, features = [
+  "zdict_builder",
+] }
 
 [lints.rust]
 # No FFI of our own; rusqlite carries SQLite's (SPEC.md C).

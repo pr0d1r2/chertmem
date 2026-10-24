@@ -23,7 +23,7 @@ fn version(conn: &Connection) -> Result<u64, Error> {
 }
 
 /// The rows of 1 partition past `after` that `filter` wants, by seq.
-fn rows(
+pub(super) fn rows(
     conn: &Connection,
     after: i64,
     filter: &Filter,

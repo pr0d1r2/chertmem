@@ -224,3 +224,50 @@ fn set_aside_fails_loudly_when_the_target_is_taken() -> Test {
     super::set_aside(&s.data(), &spool.join("01GONE.jsonl"))?;
     Ok(())
 }
+
+/// A reading store with 1 row in week 0, sealed, and 1 more event for
+/// week 0 spooled by a hook after the seal; the reader and the file.
+fn sealed_then_spooled(
+    s: &Scratch,
+) -> Result<(crate::store::Store, PathBuf), Box<dyn StdError>> {
+    let mut reader = s.open(Mode::Read)?;
+    reader.append(&event(5, None, "before the seal"))?;
+    reader.seal(&chunk(&reader, "19700101-7d"))?;
+    let held = lock(s)?;
+    s.open(Mode::Write)?
+        .append(&event(6, None, "after the seal"))?;
+    drop(held);
+    let file = spooled(s)?.pop().ok_or("nothing spooled")?;
+    Ok((reader, file))
+}
+
+#[test]
+fn a_spooled_item_for_a_sealed_partition_is_held_not_blocking() -> Test {
+    let s = Scratch::new("spool-sealed")?;
+    let (mut reader, file) = sealed_then_spooled(&s)?;
+    let text = fs::read_to_string(&file)?;
+    reader.replay()?;
+    drop(s.open(Mode::Read)?);
+    assert!(spooled(&s)?.is_empty());
+    let name = file.file_name().ok_or("no name")?;
+    let held = s.data().join("spool/sealed").join(name);
+    assert_eq!(fs::read_to_string(held)?, text);
+    assert_eq!(count(&s, &chunk(&reader, "19700101-7d"))?, 1);
+    Ok(())
+}
+
+#[test]
+fn seal_replays_the_spool_first() -> Test {
+    let s = Scratch::new("spool-seal-drains")?;
+    let mut reader = s.open(Mode::Read)?;
+    reader.append(&event(5, None, "before"))?;
+    let held = lock(&s)?;
+    s.open(Mode::Write)?.append(&event(6, None, "spooled"))?;
+    drop(held);
+    let path = chunk(&reader, "19700101-7d");
+    reader.seal(&path)?;
+    assert!(spooled(&s)?.is_empty());
+    assert_eq!(count(&s, &path)?, 2);
+    assert!(!s.data().join("spool/sealed").exists());
+    Ok(())
+}

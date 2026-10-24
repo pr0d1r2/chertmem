@@ -24,6 +24,31 @@ pub(super) fn insert(conn: &Connection, note: &Note) -> Result<(), Error> {
     Ok(())
 }
 
+const ALL: &str = "SELECT ts, session, scope, ide, body, id, project
+  FROM summaries ORDER BY seq";
+
+/// Every summary of 1 partition, in insert order, as stored.
+pub(super) fn all(conn: &Connection) -> Result<Vec<Note>, Error> {
+    let mut stmt = conn.prepare(ALL)?;
+    let rows = stmt.query_map([], |r| {
+        let scope: String = r.get(2)?;
+        // The table's CHECK admits only the 2 names.
+        let scope = Scope::parse(&scope).unwrap_or(Scope::Turn);
+        Ok(Note {
+            id: r.get(5)?,
+            project: r.get(6)?,
+            summary: summary(r, scope)?,
+        })
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// Delete the summary `id`, which a repartition moved elsewhere.
+pub(super) fn remove(conn: &Connection, id: &str) -> Result<(), Error> {
+    conn.execute("DELETE FROM summaries WHERE id = ?1", [id])?;
+    Ok(())
+}
+
 const LIST: &str = "SELECT ts, session, scope, ide, body, id FROM summaries
   WHERE project = ?1 AND (?2 IS NULL OR session = ?2) AND scope = ?3
   ORDER BY ts, id";

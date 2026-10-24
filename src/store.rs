@@ -6,6 +6,8 @@ mod tests;
 
 mod calendar;
 mod catalog;
+mod cold;
+mod doctor;
 mod error;
 mod layout;
 mod line;
@@ -14,10 +16,12 @@ mod partition;
 mod prune;
 mod read;
 mod reference;
+mod repartition;
 mod schema;
 mod spool;
 mod summary;
 mod tail;
+mod tier;
 mod write;
 
 use std::path::{Path, PathBuf};
@@ -33,7 +37,7 @@ pub use model::{
 };
 pub use reference::Ref;
 
-use crate::config::Config;
+use crate::config::{Config, Zstd};
 use calendar::MAX_TS;
 use layout::Plan;
 use partition::Chunks;
@@ -76,6 +80,7 @@ pub struct Store {
     plan: Plan,
     catalog: Option<Connection>,
     chunks: Chunks,
+    zstd: Zstd,
 }
 
 impl Store {
@@ -99,6 +104,7 @@ impl Store {
             project: project_id(project_root),
             plan: Plan::new(&cfg.partition),
             catalog: None,
+            zstd: cfg.compression.zstd,
         };
         if mode == Mode::Read {
             store.catalog()?;
@@ -123,7 +129,8 @@ impl Store {
         Ok(())
     }
 
-    /// Replay 1 spool file, then drop it; an unreadable one is set aside.
+    /// Replay 1 spool file, then drop it; an unreadable one is set
+    /// aside, and one for a sealed partition held (src/store T10).
     fn restore(&mut self, path: &Path) -> Result<(), Error> {
         let items = match spool::read(path)? {
             spool::Found::Items(items) => items,
@@ -132,10 +139,18 @@ impl Store {
             }
             spool::Found::Gone => return Ok(()),
         };
-        for item in &items {
+        match self.apply_all(&items) {
+            Err(Error::ReadOnly { .. }) => spool::hold(&self.root, path),
+            done => done.and_then(|()| spool::done(path)),
+        }
+    }
+
+    /// Store every replayed item in order.
+    fn apply_all(&mut self, items: &[Item]) -> Result<(), Error> {
+        for item in items {
             write::apply(&mut self.ctx()?, item)?;
         }
-        spool::done(path)
+        Ok(())
     }
 
     /// Refuse a read on a write-only store (src/store V10).
