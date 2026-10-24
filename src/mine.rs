@@ -6,8 +6,11 @@
 #[cfg(test)]
 mod tests;
 
+mod report;
 mod signal;
 mod tool;
+
+pub use report::{Format, report};
 
 use crate::store::{Observation, Ref};
 

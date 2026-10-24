@@ -114,3 +114,40 @@ fn the_same_pattern_has_the_same_id_and_others_differ() -> Test {
     assert!(ids.first() != ids.get(1));
     Ok(())
 }
+
+#[test]
+fn a_path_named_by_enough_calls_is_a_hot_file() -> Test {
+    let read = |n, s| row(n, s, "Read", r#"{"file_path":"src/lib.rs"}"#);
+    let edit = r#"{"file_path":"src/lib.rs","path":"src/lib.rs"}"#;
+    let mut rows = vec![read(4, "b")?, read(1, "a")?];
+    rows.push(row(2, "a", "Edit", edit)?);
+    rows.extend(calls(&[(3, "a", "cat src/lib.rs")])?);
+    let found = findings(&rows, 3);
+    let hot = of(&found, Kind::HotFile);
+    let [only] = hot.as_slice() else {
+        return Err(format!("not 1 hot file: {found:?}").into());
+    };
+    assert_eq!((only.count, only.refs.clone()), (3, refs(&[1, 2, 4])?));
+    assert_eq!(only.summary, "hot file `src/lib.rs`");
+    Ok(())
+}
+
+#[test]
+fn a_path_named_too_few_times_is_no_hot_file() -> Test {
+    let read = |n| row(n, "s", "Read", r#"{"file_path":"src/main.rs"}"#);
+    let found = findings(&[read(1)?, read(2)?], 3);
+    assert!(of(&found, Kind::HotFile).is_empty(), "{found:?}");
+    Ok(())
+}
+
+#[test]
+fn hot_files_and_sequences_share_1_order() -> Test {
+    let read = |n| row(n, "s", "Read", r#"{"file_path":"README.md"}"#);
+    let mut rows = calls(&[(1, "s", "ls"), (2, "s", "pwd"), (3, "s", "ls")])?;
+    rows.extend([read(4)?, read(5)?, read(6)?]);
+    let found = findings(&rows, 1);
+    let kinds: Vec<_> = found.iter().map(|f| (f.kind, f.count)).collect();
+    let seq = Kind::Sequence;
+    assert_eq!(kinds, [(Kind::HotFile, 3), (seq, 1), (seq, 1)]);
+    Ok(())
+}
