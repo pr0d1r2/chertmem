@@ -17,6 +17,10 @@ name = "chert"
 path = "src/main.rs"
 
 [dependencies]
+# `chert.toml` parsing (src/config C): every crate in its tree is MIT
+# or MIT OR Apache-2.0, and serde_core brings no proc macro, so the
+# MIT-only deny.toml holds.
+toml = "1.1.8"
 
 [lints.rust]
 # No FFI of our own; rusqlite carries SQLite's (SPEC.md C).
