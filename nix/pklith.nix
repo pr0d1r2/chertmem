@@ -4,4 +4,5 @@
 catalog: [
   catalog.gnugrep
   catalog.ripsecrets
+  catalog.typos
 ]
