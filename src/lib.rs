@@ -4,3 +4,4 @@
 //! one per worker, test first.
 
 pub mod config;
+pub mod grammar;

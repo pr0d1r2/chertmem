@@ -66,3 +66,7 @@ path:Cargo.lock|deny|-|-
 exempt|tdd-order|-|-
 coverage|coverage|-|-
 path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)
+mjs|-|-|test-only oracle runner for src/grammar, never in the chert binary
+txt|-|-|src/grammar corpus: input texts for the oracle and the grammar tests
+compressed|-|-|golden output of cavemem compress, compared byte for byte by src/grammar tests
+expanded|-|-|golden output of cavemem expand, compared byte for byte by src/grammar tests

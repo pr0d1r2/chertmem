@@ -1,0 +1,12 @@
+for asking! I think that the configuration is fine, but
+the implementation of the database layer is slow. about
+that., we should probably look at the documentation first.
+
+note that THE REPOSITORY holds a large number of applications,
+and each application has its own environment. It seems that the request
+and the response are logged before the transaction commits.
+
+Perhaps the middleware could potentially cache the authentication message.
+Happy to help: it might be worth checking the authorization rules through
+the dependencies, because the parameters would usually change between
+releases.,,.

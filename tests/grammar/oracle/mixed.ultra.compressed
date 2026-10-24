@@ -1,0 +1,10 @@
+## Session notes
+that we shld move db dir to
+`~/.local/share/chert` & update refs in src/store/mod.rs.
+fn `open_catalog()` returns msg w/ num 42 &
+version 1.0.0 b/c env var CHERT_HOME is unset.
+```sh
+export CHERT_HOME=/var/lib/chert
+chert status --verbose
+```
+, & check https://docs.example.com/v2/setup b4 merging.

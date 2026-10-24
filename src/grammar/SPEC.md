@@ -32,6 +32,12 @@ sib|src/mine|behaviour findings & awareness report
 - fn: `grammar::compress(text, Intensity) -> String`; `grammar::expand(text) -> String`.
 - dir: `tests/grammar/corpus/` input texts; `tests/grammar/oracle/` outputs written by cavemem.
 
+## §R RESEARCH
+
+id|topic|finding|src
+R1|cavemem 0.2.1 grammar 2026-10-24|last pass `/[ \t]+([.,;:!?])/g` → `$1` runs on whole output ∴ blank before mark inside fence / inline code dropped (`` `a .b` `` → `` `a.b` ``); V1 ≡ oracle keeps it, V2 holds ∀ span ⊥ such blank|`dist/chunk-T35V7EPZ.js` `compress`; `src/grammar/tests.rs`
+R2|expand dead keys|`w/` `w/o` `b/c`: `/x` tokenized as path ∴ ⊥ expanded; camelCase-looking words (`tHe`) kept as identifiers|`tokenize` probe
+
 ## §V INVARIANTS
 
 V1: ∀ corpus text & intensity: `compress` ≡ oracle bytes; `expand(compress(x))` ≡ oracle expand bytes.
@@ -41,10 +47,10 @@ V3: deterministic: same input → same bytes (`.:V9`).
 ## §T TASKS
 
 id|status|task|cites
-T1|.|corpus + oracle runner, cavemem tarball pinned by hash|V1
-T2|.|port `compress` per intensity|V1,V2,V3
-T3|.|port `expand`|V1
-T4|.|MIT notice|-
+T1|x|corpus + oracle runner, cavemem tarball pinned by hash|V1
+T2|x|port `compress` per intensity|V1,V2,V3
+T3|x|port `expand`|V1
+T4|x|MIT notice|-
 
 ## §B BUGS
 
