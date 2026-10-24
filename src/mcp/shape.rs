@@ -12,22 +12,41 @@ use crate::store::Lookup;
 
 /// `search`: `[{id, score, snippet, session_id, ts}]`.
 pub(super) fn hits(found: &[Hit]) -> Value {
-    let _ = found;
-    Value::Null
+    let hit = |h: &Hit| {
+        json!({"id": h.reference.to_string(), "score": h.score,
+            "snippet": h.snippet, "session_id": h.session, "ts": h.ts})
+    };
+    found.iter().map(hit).collect()
 }
 
 /// `timeline`: `[{id, kind, ts}]`.
 pub(super) fn entries(found: &[Entry]) -> Value {
-    let _ = found;
-    Value::Null
+    let entry = |e: &Entry| {
+        let id = e.reference.to_string();
+        json!({"id": id, "kind": e.kind, "ts": e.ts})
+    };
+    found.iter().map(entry).collect()
 }
 
 /// `get_observations`: `[{id, session_id, kind, ts, content, metadata}]`
 /// in the order asked; `content` compressed as stored unless `expand`
 /// (root I); a gone ref answers `{id, dropped: true}` (root V5).
+/// chert keeps no metadata, so it is `null`.
 pub(super) fn observations(found: &[Lookup], expand: bool) -> Value {
-    let _ = (found, expand, grammar::expand(""));
-    Value::Null
+    found.iter().map(|l| lookup(l, expand)).collect()
+}
+
+fn lookup(found: &Lookup, expand: bool) -> Value {
+    match found {
+        Lookup::Found(o) => json!({
+            "id": o.reference.to_string(), "session_id": o.session,
+            "kind": o.kind, "ts": o.ts, "metadata": null,
+            "content": if expand { grammar::expand(&o.body) } else {
+                o.body.clone()
+            },
+        }),
+        Lookup::Dropped(r) => json!({"id": r.to_string(), "dropped": true}),
+    }
 }
 
 /// A tool's result: `value` as JSON text in 1 content item.
