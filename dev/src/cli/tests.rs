@@ -198,3 +198,37 @@ fn tdd_order_without_exempt_file_is_a_finding() -> Res {
     assert_eq!(run(&args(&["tdd-order", "HEAD"]), &root), 1);
     Ok(())
 }
+
+/// A message with a body and the stage trailer under `subject`.
+fn commit_message(subject: &str) -> String {
+    format!(
+        "{subject}\n\nWhy it changed.\n\nParadigm-Stage: wave-1\n\
+         Co-Authored-By: A <a@example.com>\n"
+    )
+}
+
+#[test]
+fn commit_msg_planted_long_subject_is_a_finding() -> Res {
+    let root = scratch("msg-planted")?;
+    let subject = format!("feat: {}", "x".repeat(67));
+    fs::write(root.join("MSG"), commit_message(&subject))?;
+    assert_eq!(run(&args(&["commit-msg", "MSG"]), &root), 1);
+    Ok(())
+}
+
+#[test]
+fn commit_msg_clean_twin_holds() -> Res {
+    let root = scratch("msg-clean")?;
+    let subject = format!("feat: {}", "x".repeat(66));
+    fs::write(root.join("MSG"), commit_message(&subject))?;
+    assert_eq!(run(&args(&["commit-msg", "MSG"]), &root), 0);
+    Ok(())
+}
+
+#[test]
+fn commit_msg_unreadable_file_is_usage() -> Res {
+    let root = scratch("msg-missing")?;
+    assert_eq!(run(&args(&["commit-msg", "MSG"]), &root), 2);
+    assert_eq!(run(&args(&["commit-msg"]), &root), 2);
+    Ok(())
+}
