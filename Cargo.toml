@@ -46,6 +46,14 @@ ulid = "3.0.0"
 zstd = { version = "0.13.3", default-features = false, features = [
   "zdict_builder",
 ] }
+# Exact o200k token count for injected context (src/hook C, T6), only
+# with feature `bpe`: MIT. Off by default, as in itok: the default count
+# is the bytes / 4 estimate, so the hook path loads no BPE table.
+tiktoken-rs = { version = "0.12.1", optional = true }
+
+[features]
+# Count injected tokens exactly with o200k instead of bytes / 4.
+bpe = ["dep:tiktoken-rs"]
 
 [lints.rust]
 # No FFI of our own; rusqlite carries SQLite's (SPEC.md C).

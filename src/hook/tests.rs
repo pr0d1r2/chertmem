@@ -16,10 +16,26 @@ pub(super) type Res<T> = Result<T, Box<dyn StdError>>;
 /// Milliseconds of 2026-10-24, the time every test event happens at.
 pub(super) const NOW: u64 = 1_792_800_000_000;
 
-/// The fixture payload of `kind` (src/hook I).
+/// The session of the first recorded session's fixtures (src/hook R1).
+pub(super) const SESSION: &str = "00000000-0000-4000-8000-000000000001";
+
+/// The session of the second recorded session's fixtures.
+pub(super) const SESSION_2: &str = "00000000-0000-4000-8000-000000000002";
+
+/// The recorded payload of `kind` from the first session (src/hook I).
 pub(super) fn fixture(kind: Kind) -> Res<Vec<u8>> {
+    recorded(kind, "")
+}
+
+/// The recorded payload of `kind` from the second session.
+pub(super) fn fixture_2(kind: Kind) -> Res<Vec<u8>> {
+    recorded(kind, ".2")
+}
+
+/// `tests/hook/fixtures/claude-code/<event><suffix>.json`.
+fn recorded(kind: Kind, suffix: &str) -> Res<Vec<u8>> {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let name = format!("{}.json", kind.as_str());
+    let name = format!("{}{suffix}.json", kind.as_str());
     let path = dir.join("tests/hook/fixtures/claude-code").join(name);
     Ok(fs::read(path)?)
 }
@@ -88,21 +104,29 @@ fn shape(o: &Observation) -> Shape {
     (o.session, o.kind, o.ide, o.identity, o.body)
 }
 
+/// Fixture `stdin` of `kind` in a fresh store: exactly 1 observation,
+/// of `session`, at [`NOW`] (V3).
+fn stores_one(kind: Kind, stdin: &[u8], session: &str) -> Test {
+    let scratch = Scratch::new(&format!("one-{}-{session}", kind.as_str()))?;
+    let out = scratch.run(kind, stdin);
+    assert_eq!((out.exit, &out.note), (0, &None), "{kind:?}");
+    let found = scratch.observations()?;
+    assert_eq!(found.len(), 1, "{kind:?}");
+    let obs = found.first().ok_or("no observation")?;
+    assert_eq!(obs.kind, kind.as_str());
+    assert_eq!(
+        (obs.session.as_str(), obs.ide.as_str()),
+        (session, "claude-code")
+    );
+    assert_eq!(obs.ts, NOW);
+    Ok(())
+}
+
 #[test]
 fn every_fixture_stores_exactly_one_observation() -> Test {
     for kind in Kind::ALL {
-        let scratch = Scratch::new(&format!("one-{}", kind.as_str()))?;
-        let out = scratch.run(kind, &fixture(kind)?);
-        assert_eq!((out.exit, &out.note), (0, &None), "{kind:?}");
-        let found = scratch.observations()?;
-        assert_eq!(found.len(), 1, "{kind:?}");
-        let obs = found.first().ok_or("no observation")?;
-        assert_eq!(obs.kind, kind.as_str());
-        assert_eq!(
-            (obs.session.as_str(), obs.ide.as_str()),
-            ("abc123", "claude-code")
-        );
-        assert_eq!(obs.ts, NOW);
+        stores_one(kind, &fixture(kind)?, SESSION)?;
+        stores_one(kind, &fixture_2(kind)?, SESSION_2)?;
     }
     Ok(())
 }
@@ -135,7 +159,39 @@ fn post_tool_use_keeps_its_tool_use_id_as_identity() -> Test {
     let found = scratch.observations()?;
     assert_eq!(found.len(), 1);
     let id = found.first().and_then(|o| o.identity.clone());
-    assert_eq!(id.as_deref(), Some("toolu_01ABC123"));
+    assert_eq!(id.as_deref(), Some(TOOL_USE));
+    Ok(())
+}
+
+/// The `tool_use_id` of each recorded session's 1 tool call.
+const TOOL_USE: &str = "toolu_01FIXTURE000000000000001";
+const TOOL_USE_2: &str = "toolu_01FIXTURE000000000000002";
+
+#[test]
+fn each_recorded_tool_use_has_its_own_identity() -> Test {
+    let scratch = Scratch::new("identity2")?;
+    let kind = Kind::PostToolUse;
+    scratch.run(kind, &fixture(kind)?);
+    // 1 ms later: rows of 1 ms are ordered by random ULID.
+    scratch.run_at(kind, &fixture_2(kind)?, NOW + 1);
+    let found = scratch.observations()?;
+    let ids: Vec<_> = found.iter().map(|o| o.identity.as_deref()).collect();
+    assert_eq!(ids, [Some(TOOL_USE), Some(TOOL_USE_2)]);
+    Ok(())
+}
+
+/// Every event of 1 recorded turn shares its `prompt_id`, so it is no
+/// identity (root V16, src/hook T5): each event is kept, repeats too.
+#[test]
+fn a_shared_prompt_id_dedupes_nothing() -> Test {
+    let scratch = Scratch::new("promptid")?;
+    let turn = [Kind::UserPromptSubmit, Kind::Stop, Kind::SessionEnd];
+    for kind in turn.into_iter().chain(turn) {
+        scratch.run(kind, &fixture(kind)?);
+    }
+    let found = scratch.observations()?;
+    assert_eq!(found.len(), 6);
+    assert!(found.iter().all(|o| o.identity.is_none()));
     Ok(())
 }
 

@@ -115,9 +115,21 @@ fn cut(lines: &[String], max: u32) -> Option<String> {
     fitted.then_some(text)
 }
 
-/// An upper bound on the o200k tokens of `text`: its bytes, as every
-/// o200k token is at least 1 byte, so V5 holds without a tokenizer. It
-/// stands in until the owner picks one (src/hook R).
+/// The tokens `text` counts against `inject.max_tokens`, the 1 place
+/// the count is chosen (src/hook C, R2): the itok estimate, bytes / 4
+/// rounded up, so the hook path loads no tokenizer.
+#[cfg(not(feature = "bpe"))]
 fn tokens_at_most(text: &str) -> usize {
-    text.len()
+    text.len().div_ceil(4)
+}
+
+/// The exact o200k tokens of `text` (feature `bpe`); its bytes, an upper
+/// bound, should the embedded table fail to load.
+#[cfg(feature = "bpe")]
+fn tokens_at_most(text: &str) -> usize {
+    static O200K: std::sync::OnceLock<Option<tiktoken_rs::CoreBPE>> =
+        std::sync::OnceLock::new();
+    let bpe = O200K.get_or_init(|| tiktoken_rs::o200k_base().ok());
+    bpe.as_ref()
+        .map_or(text.len(), |bpe| bpe.encode_ordinary(text).len())
 }

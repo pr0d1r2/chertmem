@@ -26,20 +26,21 @@ sib|src/mine|behaviour findings & awareness report
 - sync, ⊥ thread pool, ⊥ cache, ⊥ network.
 - dialect per IDE; v1 = Claude Code (D24). other IDEs need recorded payload fixtures first.
 - summaries (cavemem 0.2.1, `.:R1`): `stop` → turn summary from `last_assistant_message`; `session-end` → session summary = first 20 turn summaries; ⊥ model.
-- injection (`.:V17`): `session-start` w/ `source = startup` (resume | compact → nothing) & `user-prompt-submit` iff `inject.on_prompt`. reading open ∴ replays spool (`src/store:V10`). stdout = only `hookSpecificOutput.additionalContext` JSON. text: last 3 other sessions' summaries as gists + refs, then top findings; cut at `inject.max_tokens` (o200k).
+- injection (`.:V17`): `session-start` w/ `source = startup` (resume | compact → nothing) & `user-prompt-submit` iff `inject.on_prompt`. reading open ∴ replays spool (`src/store:V10`). stdout = only `hookSpecificOutput.additionalContext` JSON. text: last 3 other sessions' summaries as gists + refs, then top findings; cut at `inject.max_tokens` estimated tokens, bytes/4 as itok; exact o200k with feature `bpe`.
 - unknown fields ignored; unreadable payload → spool raw, exit 0.
 
 ## §I INTERFACES
 
 - cmd: `chert hook run session-start|user-prompt-submit|post-tool-use|stop|session-end [--ide NAME]`.
-- dir: `tests/hook/fixtures/<ide>/<event>.json` recorded payloads.
+- dir: `tests/hook/fixtures/<ide>/<event>.json` recorded payloads; `<event>.2.json` = same event, 2nd recorded session.
 
 ## §R RESEARCH
 
 id|topic|finding|src
-R1|Claude Code dialect, wave 3|fixtures built from documented hook input, ⊥ recorded ∴ T1 `~` until recorded ones replace them. identity = `tool_use_id` (post-tool-use, docs example); other events ⊥ identity → every event kept (`.:V16`); resends unmeasured (T5)|`https://code.claude.com/docs/en/hooks` 2026-10-24
-R2|o200k count, wave 3|`tiktoken-rs` 0.12.1 MIT, deny ok, but +11 crates, ~4.5 MB binary, o200k load 65 ms (release, darwin) ∴ owner picks. till then count = bytes ≥ o200k tokens ∴ V5 holds, ~¼ of budget used (T6 `~`)|probe crate `tiktoken_rs::o200k_base()`
+R1|Claude Code dialect, wave 4|fixtures recorded 2026-10-24 by the lead (replace wave 3's documented ones): 2 headless Claude Code 2.1.302 sessions (`claude -p`, same prompt twice, 1 `echo chert-fixture` Bash call), all 5 hooks, 1 file per event per session. sanitized: `cwd` → `/workspace/project`, `transcript_path` → `/workspace/.claude/projects/-workspace-project/<session_id>.jsonl` (recorded under a home dir `user`, moved off it for gate `no-local-paths`); rest byte-for-byte. identity: R4|`tests/hook/fixtures/claude-code/`
+R2|token count, wave 4|owner 2026-10-24 "as in itok": default = estimate bytes / 4 rounded up (⊥ dependency, deterministic, ⊥ load). exact o200k behind optional feature `bpe` (off by default): `tiktoken-rs` 0.12.1 MIT, tree MIT / Apache-2.0 / Unlicense OR MIT, deny ok w/ & w/o `bpe`; table loads once per process (~65 ms release, darwin, wave 3 probe); load failure → bytes, ⊥ panic (V2). 1 swap point: `inject.rs` `tokens_at_most`|`src/hook/inject.rs`
 R3|choices, wave 3|malformed or store error → `spool/unreadable/<ULID>.hook`, where store sets unreadable spool aside ∴ ⊥ replayed, ⊥ dropped; store has ⊥ raw-spool fn. injected ref = session's `session-end` obs at summary ts. roll-up joins by newline; gist = 1st line ≤ 200 chars. exclude reads `tool_input` `file_path` `path` `notebook_path`; glob w/o `/` = any component, else from root, dir covers subtree. unclosed `<private>` drops rest. `session-end` opens reading (needs turns)|`src/hook/*.rs`
+R4|resends & identity, wave 4|sample = 2 sessions (R1): each event exactly once per session, ⊥ resend seen. `tool_use_id` only on PostToolUse. `prompt_id` on UserPromptSubmit, PostToolUse, Stop, SessionEnd, shared by every event of 1 turn ∴ ⊥ unique per event ∴ ⊥ identity. fields past docs: `prompt_id`, `effort`, `permission_mode`, `duration_ms` (PostToolUse), `background_tasks` & `session_crons` (Stop); ignored (§C). SessionStart `source = startup`; SessionEnd `reason = other` in `-p`; Stop has `last_assistant_message`. ∴ identity stays `tool_use_id` (PostToolUse) only; other events kept every time (`.:V16`). a later recording w/ real resends may amend|`tests/hook/fixtures/claude-code/`
 
 ## §V INVARIANTS
 
@@ -47,18 +48,18 @@ V1: `<private>…</private>` removed & `privacy.exclude` paths unread before com
 V2: exit 0 ∀ payload, incl. malformed; malformed → spool, ⊥ lost (`.:V2`).
 V3: ∀ fixture → exactly 1 observation (or 0 when excluded), same bytes ∀ run (`.:V3`).
 V4: `inject.on_prompt` false → `user-prompt-submit` prints nothing & opens store write-only.
-V5: injected text ≤ `inject.max_tokens` o200k tokens ∀ fixture & store size; ⊥ full bodies (`.:V17`).
+V5: injected text ≤ `inject.max_tokens` tokens as counted (bytes/4 estimate; exact o200k w/ `bpe`, R2) ∀ fixture & store size; ⊥ full bodies (`.:V17`).
 V6: `session-end` summary ≡ concat of first 20 turn summaries of that session, same bytes ∀ run.
 
 ## §T TASKS
 
 id|status|task|cites
-T1|~|record Claude Code fixtures ∀ 5 events|V3
+T1|x|record Claude Code fixtures ∀ 5 events (R1)|V3
 T2|x|Claude Code dialect → event struct|V3
 T3|x|redaction & exclusion|V1
 T4|x|malformed → spool|V2
-T5|.|measure: Claude Code resends? event id field per hook? → §R (`.:V16`)|V3
-T6|~|injection: session-start default, prompt opt-in, budget cut, stdout shape|V4,V5
+T5|x|measure: Claude Code resends? event id field per hook? → §R (`.:V16`). R4: 2 sessions, ⊥ resend; later recording w/ real resends may amend|V3
+T6|x|injection: session-start default, prompt opt-in, budget cut (R2 count), stdout shape|V4,V5
 T7|x|turn summary on stop, session roll-up on session-end|V6
 T8|.|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writing the store's dir (owner 2026-10-24)|V2
 

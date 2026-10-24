@@ -211,20 +211,32 @@ fn injected_text_stays_within_budget_at_every_size() -> Test {
 #[test]
 fn cut_keeps_whole_lines_until_one_does_not_fit() {
     let lines = ["- a".to_owned(), "- bbbb".to_owned(), "- c".to_owned()];
-    let room = |extra: usize| u32::try_from(HEADER.len().saturating_add(extra));
-    assert_eq!(
-        cut(&lines, room(4).unwrap_or(0)),
-        Some(format!("{HEADER}\n- a"))
-    );
+    let room = |text: &str| u32::try_from(tokens_at_most(text)).unwrap_or(0);
+    let first = format!("{HEADER}\n- a");
+    assert_eq!(cut(&lines, room(&first)), Some(first));
     let all = format!("{HEADER}\n- a\n- bbbb\n- c");
     assert_eq!(cut(&lines, u32::MAX), Some(all));
-    assert_eq!(cut(&lines, room(3).unwrap_or(0)), None);
+    assert_eq!(cut(&lines, room(HEADER)), None);
     assert_eq!(cut(&[], u32::MAX), None);
 }
 
+/// The default count is the itok estimate: bytes / 4, rounded up
+/// (owner 2026-10-24).
+#[cfg(not(feature = "bpe"))]
 #[test]
-fn the_token_bound_is_never_below_the_bytes() {
+fn the_default_count_is_bytes_over_4_rounded_up() {
     assert_eq!(tokens_at_most(""), 0);
-    assert_eq!(tokens_at_most("chert"), 5);
-    assert_eq!(tokens_at_most("\u{e9}"), 2);
+    assert_eq!(tokens_at_most("\u{e9}"), 1);
+    assert_eq!(tokens_at_most("chert"), 2);
+    assert_eq!(tokens_at_most("chertmem"), 2);
+    assert_eq!(tokens_at_most("chertmem!"), 3);
+}
+
+/// With feature `bpe` the count is exact o200k.
+#[cfg(feature = "bpe")]
+#[test]
+fn the_bpe_count_is_exact_o200k() {
+    assert_eq!(tokens_at_most(""), 0);
+    assert_eq!(tokens_at_most("hello world"), 2);
+    assert_eq!(tokens_at_most(&"a".repeat(64)), 8);
 }
