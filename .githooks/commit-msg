@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Same shape as the pre-commit shim pklith seeded: the steps live in hk.pkl.
+# It refuses when hk is missing: a gate that cannot run has not passed.
+set -e
+if ! command -v hk >/dev/null 2>&1; then
+  echo 'commit-msg REFUSED: hk is not on PATH, so nothing was checked.' >&2
+  exit 1
+fi
+exec hk run commit-msg --from-hook "$@"
