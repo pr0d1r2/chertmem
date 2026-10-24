@@ -293,6 +293,20 @@ question 13 stays open.
     dependency of that step, never a run-time one (decision 1). cavemem
     is MIT, so its copyright notice ships with the port. Closes open
     question 11. Local.
+23. Mining signals in version 1: repeated failing commands and errors,
+    repeated command sequences, user corrections, and hot files and token
+    sinks. Candidates are deterministic (same partitions, same
+    candidates), carry observation ids as evidence, and stay rejected
+    once rejected. Each sealed partition is mined once. Closes open
+    question 14. Local.
+24. IDE coverage: Claude Code in version 1; Cursor, Gemini CLI, OpenCode
+    and Codex once each has recorded hook-payload fixtures. Closes open
+    question 15. Local.
+25. Viewer: no web viewer in version 1; `chert report` and `chert status`
+    cover awareness. Closes open question 16. Local.
+26. Visibility: public on GitHub from the first push, MIT, a fleet member
+    whose CI is rendered by actlith, like the other fleet tools. Closes
+    open question 17. Local.
 
 # Non-goals
 
@@ -357,15 +371,7 @@ decision or drops it.
     into `.rekall/ledger.toml` `candidates`, or it exports its own format
     for rekall to import. Needs rekall's candidate schema. Blocks the
     mining node.
-14. Mining signals in version 1. Proposed: repeated failing commands and
-    errors, repeated command sequences, user corrections, and hot files
-    and token sinks; candidates are deterministic, carry observation ids
-    as evidence, and stay rejected once rejected. Blocks the mining node.
-15. IDE coverage in version 1. Proposed: Claude Code first; Cursor,
-    Gemini CLI, OpenCode and Codex once each has recorded hook-payload
-    fixtures. Blocks the install node.
-16. Viewer. Proposed: no web viewer in version 1; `chert report` and
-    `chert status` cover awareness. Blocks nothing.
-17. Visibility, license and fleet membership. Proposed: public on GitHub
-    from the first push, MIT, a fleet member with CI rendered by actlith,
-    like the other fleet tools. Blocks the first push.
+14. Mining signals in version 1. Closed by decision 23.
+15. IDE coverage in version 1. Closed by decision 24.
+16. Viewer. Closed by decision 25.
+17. Visibility, license and fleet membership. Closed by decision 26.
