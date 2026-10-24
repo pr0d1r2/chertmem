@@ -50,7 +50,7 @@ T4|x|`no-core-worktree`, RED → GREEN → gate row|V4,V6
 T5|x|`lock-graph`, RED → GREEN → gate row|V5,V6
 T6|x|`rust-mirror`, RED → GREEN → gate row|V7,V6
 T7|x|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
-T8|.|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
+T8|x|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
 
 ## §B BUGS
 
