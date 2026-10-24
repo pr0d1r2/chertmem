@@ -64,3 +64,19 @@ R2|Rust agent-memory 2026-10-24|leteo 4★ · engram-mcp 18★ · opencode-memor
 R3|rekall 3235597|candidate = `{id, src, text, at}` in `.rekall/ledger.toml`; only rekall's classifier mints (rekall `src/catch` rule 44); ⊥ 2nd candidate store (rekall `src/catch` rule 45); `catch` reads transcript roots, dialect per agent (rekall `src/catch` rule 47)|`github.com/pr0d1r2/rekall` `src/ledger/mod.rs`, `src/catch/SPEC.md`
 R4|names 2026-10-24|`chertmem` free on crates.io & npm, 0 GitHub repos; `chert` crate = `jesopo/chert` 0.2.1 (2024-02-06); ⊥ Homebrew formula `chert`|`curl https://crates.io/api/v1/crates/<name>`; `gh search repos chertmem`; `brew info --formula chert`
 R5|SQLite limits|`ATTACH` default max 10 dbs (`SQLITE_MAX_ATTACHED`) ∴ 1 connection per partition, ⊥ attach-all. WAL: readers ⊥ block writer, 1 writer at a time, multi-process|`https://sqlite.org/limits.html`; `https://sqlite.org/wal.html`
+
+## §V INVARIANTS
+
+V1: ∀ query: cached answer ≡ uncached answer — same rows, same order, same scores (D8). ∵ cache = accelerator ⊥ second truth.
+V2: ∀ accepted event → in partition | in spool, ⊥ lost; spool replayed next run (D13). ∵ hook ⊥ retry.
+V3: write idempotent: same (session, event, payload) twice → 1 row (D13). ∵ IDEs resend events.
+V4: planner routes by `catalog.db` bounds, ⊥ by current config ∴ config change ⊥ misroutes read (D12).
+V5: ref `chert:<id>` resolves to 1 observation ∀ its life, across repartition & compaction; gone → `dropped`, ⊥ other row (D28).
+V6: ⊥ network unless `embedding.provider` opts in; ⊥ other egress at any flag (§C).
+V7: chert ⊥ writes under `.rekall/`; rekall reads chert's export (D27).
+V8: `<private>…</private>` stripped & `privacy.exclude` paths ⊥ read before any write ∴ ⊥ byte of either reaches store, cache, export.
+V9: compress, expand, mine, report deterministic: same input & version → same bytes (D22, D23).
+V10: §C latency targets measured by benchmark step on push; regression fails gate (D20).
+V11: cache estimate > `cache.max_bytes` → warning names estimate & limit (D7); warnings → MCP log, `status`, `doctor`, ⊥ agent context (D16).
+V12: ⊥ private repo named in committed text (`paradigm/V37`).
+V13: ∀ outward act (push, publish, issue in other repo) has owner approval on record.
