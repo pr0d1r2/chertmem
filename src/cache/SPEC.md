@@ -16,6 +16,7 @@ sib|src/grammar|caveman compress & expand, ported from cavemem 0.2.1
 sib|src/hook|hook intake: event JSON on stdin → redact → append
 sib|src/search|BM25 + vector ranking across partitions, one scoring path
 sib|src/mcp|MCP stdio server: 4 tools, hosts cache
+sib|src/cli|`chert` verbs via clap, exit codes
 
 ## §C CONSTRAINTS
 

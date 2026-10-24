@@ -14,6 +14,7 @@ hook|hook intake: event JSON on stdin → redact → append|IDE wiring (`install
 cache|in-memory recent window in `chert mcp`: load, fit, freshness|disk store (`store`), scoring (`search`)|-
 search|BM25 + vector ranking across partitions, one scoring path|row storage (`store`), MCP framing (`mcp`)|-
 mcp|MCP stdio server: 4 tools, hosts cache|ranking (`search`), cache internals (`cache`)|-
+cli|`chert` verbs via clap, exit codes|verb behaviour (owning modules)|-
 
 ## §N NAV
 
