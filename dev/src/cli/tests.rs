@@ -113,3 +113,31 @@ fn lock_graph_without_lock_is_unreadable_input() -> Res {
     assert_eq!(run(&args(&["lock-graph"]), &root), 2);
     Ok(())
 }
+
+#[test]
+fn rust_mirror_planted_module_without_mirror_is_a_finding() -> Res {
+    let root = scratch("mirror-planted")?;
+    git(&root, &["init", "-q"])?;
+    fs::write(root.join("Cargo.toml"), "")?;
+    fs::create_dir_all(root.join("src"))?;
+    fs::write(root.join("src/a.rs"), "pub fn f() {}\n")?;
+    git(&root, &["add", "-A"])?;
+    assert_eq!(run(&args(&["rust-mirror"]), &root), 1);
+    Ok(())
+}
+
+#[test]
+fn rust_mirror_clean_twin_holds() -> Res {
+    let root = scratch("mirror-clean")?;
+    git(&root, &["init", "-q"])?;
+    fs::write(root.join("Cargo.toml"), "")?;
+    fs::create_dir_all(root.join("src/a"))?;
+    fs::write(
+        root.join("src/a.rs"),
+        "#[cfg(test)]\nmod tests;\npub fn f() {}\n",
+    )?;
+    fs::write(root.join("src/a/tests.rs"), "")?;
+    git(&root, &["add", "-A"])?;
+    assert_eq!(run(&args(&["rust-mirror"]), &root), 0);
+    Ok(())
+}
