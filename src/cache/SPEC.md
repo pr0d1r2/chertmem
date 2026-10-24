@@ -33,6 +33,15 @@ sib|src/mine|behaviour findings & awareness report
 - fn: `Cache::start(store, cfg) -> Handle`; `Handle::query(q) -> Rows`; `Handle::plan() -> Plan{estimate, limit, days_kept}`.
 - cmd: `chert cache plan` prints `Plan`.
 
+## §R RESEARCH
+
+id|topic|finding|src
+R1|fit, wave 3|row = body + 640 B: `Observation` 200 inline, `(ts, id)` key 32, 8 heap strings ~200, B-tree slack, rounded up; bucket share ∝ its elapsed part; mo = 31d; `warn` logs ∀ load, `shrink` once|`fit.rs`
+R2|memory, lead|Linux `MemAvailable`; macOS total `hw.memsize` (⊥ cheap available figure); else ⊥ check; `Env.memory` injected|`memory.rs`
+R3|query, lead|`q` = `store::Filter` → rows in store `(ts, id)` order (§G "by id" → reconcile); memory answers only same project & `since` ≥ window start|`window.rs`
+R4|tests, lead|V1: test binary re-invoked as 2nd writer process. V3: ⊥ store `drop` on base ∴ raw SQL edit + `generation` bump|`window/tests.rs`
+R5|later, lead|keyword index & embedding matrix → `src/search`; cache holds rows only. `chert cache plan` verb → `src/cli`|-
+
 ## §V INVARIANTS
 
 V1: ∀ query: result via cache ≡ result via `store` alone (`.:V1`); property test w/ concurrent writer process.
@@ -43,10 +52,10 @@ V4: estimate > `max_bytes` → warning names estimate & limit (`.:V11`); ⊥ tex
 ## §T TASKS
 
 id|status|task|cites
-T1|.|load window from partitions, background warm|V1
-T2|.|data_version + seq tail|V2
-T3|.|generation reload|V3
-T4|.|estimate, overflow policies, memory check, `cache plan`|V4
+T1|x|load window from partitions, background warm|V1
+T2|x|data_version + seq tail|V2
+T3|x|generation reload|V3
+T4|x|estimate, overflow policies, memory check, `cache plan`|V4
 
 ## §B BUGS
 
