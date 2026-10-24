@@ -268,6 +268,21 @@ question 13 stays open.
     `max_bytes` exceeds about 25% of available memory. Warnings go to the
     MCP log, `chert status` and `chert doctor`, never into the agent's
     context. Closes open question 6. Local.
+17. Ranking across partitions: global term statistics kept in the catalog
+    (from `fts5vocab`), so BM25 compares across partitions, and one
+    scoring path for cached and uncached rows, so a result ranks the same
+    wherever it came from. Closes open question 7. Local.
+18. Embeddings: off by default; the ollama provider ships in version 1;
+    local models come later, through `candle` (pure Rust) or `fastembed`
+    (needs ONNX Runtime, a native library). Closes open question 12.
+    Local.
+19. Defaults: `partition.time_bucket = "7d"`, `cache.window = "28d"`,
+    `cache.max_bytes = "256MiB"`, `partition.shards = 1`, to be checked
+    against a real month of history. Closes open question 8. Local.
+20. Responsiveness targets, measured by benchmarks: hook write under
+    5 ms, search of the recent window under 10 ms, `get_observations`
+    under 2 ms, semantic re-rank under 20 ms. A benchmark step in the
+    push gate fails on a regression. Closes open question 9. Local.
 
 # Non-goals
 
@@ -322,17 +337,9 @@ decision or drops it.
 4. Cache host. Closed by decision 14.
 5. Cache freshness. Closed by decision 15.
 6. Cache fit. Closed by decision 16.
-7. Ranking across partitions. Proposed: global term statistics kept in
-   the catalog (from `fts5vocab`), so BM25 compares across partitions,
-   and one scoring path for cached and uncached rows, so a result ranks
-   the same wherever it came from. Blocks the search node.
-8. Defaults. Proposed: `time_bucket = "7d"`, `cache.window = "28d"`,
-   `cache.max_bytes = "256MiB"`, `shards = 1`. To be checked against a
-   real month of history. Blocks the config node.
-9. Responsiveness targets, to measure with benchmarks: hook write under
-   5 ms; search of the recent window under 10 ms; `get_observations`
-   under 2 ms; semantic re-rank under 20 ms. Proposed: a benchmark
-   step in the push gate that fails on a regression. Blocks the gate.
+7. Ranking across partitions. Closed by decision 17.
+8. Defaults. Closed by decision 19.
+9. Responsiveness targets. Closed by decision 20.
 10. cavemem compatibility. Proposed: chert keeps its own data directory
     and imports cavemem's database with `chert import --from cavemem`;
     it does not share cavemem's live files. MCP tool names and result
@@ -342,10 +349,7 @@ decision or drops it.
     that run cavemem's JavaScript as the oracle over a corpus. cavemem is
     MIT, so its copyright notice ships with the port. Blocks the
     compression node.
-12. Embeddings in version 1. Proposed: off by default, with the ollama
-    provider in version 1; local models later, through `candle` (pure
-    Rust) or `fastembed` (needs ONNX Runtime, a native library). Blocks
-    the search node.
+12. Embeddings in version 1. Closed by decision 18.
 13. Mining hand-off to rekall. Either chert writes candidates straight
     into `.rekall/ledger.toml` `candidates`, or it exports its own format
     for rekall to import. Needs rekall's candidate schema. Blocks the
