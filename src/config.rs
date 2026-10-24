@@ -22,6 +22,8 @@ const KEYS: &[&str] = &[
     "cache.on_overflow",
     "compression.grammar",
     "compression.zstd",
+    "compression.zstd.level",
+    "compression.zstd.dictionary",
     "search.alpha",
     "search.default_limit",
     "embedding.provider",
@@ -42,6 +44,13 @@ const BOOL: &str = "true or false";
 const ALPHA: &str = "a number from 0 to 1";
 const PATH: &str = "a path string";
 const PATHS: &str = "an array of path strings";
+const ZSTD_FORMS: &str = "a table { level = <1 to 22>, dictionary = <true \
+    or false> }, each key optional";
+const LEVEL: &str = "an integer from 1 to 22";
+
+/// Keys whose value is a table of keys of their own, each merged and
+/// defaulted on its own (root C `compression.zstd`).
+const TABLES: &[&str] = &["compression.zstd"];
 
 /// Why `chert.toml` could not be loaded; each names the file (src/config
 /// V3, root C `chert: <what> (<fix>)`).
@@ -519,11 +528,28 @@ fn flatten(table: Table) -> Vec<(String, Value)> {
     let pairs = table.into_iter().flat_map(|(section, value)| match value {
         Value::Table(inner) => inner
             .into_iter()
-            .map(|(key, v)| (format!("{section}.{key}"), v))
+            .flat_map(|(key, v)| nest(format!("{section}.{key}"), v))
             .collect(),
         other => vec![(section, other)],
     });
     pairs.collect()
+}
+
+/// A table under a key in [`TABLES`] spreads into `key.sub` pairs; any
+/// other value stays whole.
+fn nest(key: String, value: Value) -> Vec<(String, Value)> {
+    match value {
+        Value::Table(inner) if TABLES.contains(&key.as_str()) => inner
+            .into_iter()
+            .map(|(sub, v)| (format!("{key}.{sub}"), v))
+            .collect(),
+        other => vec![(key, other)],
+    }
+}
+
+fn level(value: &Value) -> Option<i32> {
+    let n = i32::try_from(value.as_integer()?).ok()?;
+    (1..=22).contains(&n).then_some(n)
 }
 
 fn name<T: Copy>(value: &Value, names: &[(&str, T)]) -> Option<T> {
@@ -639,13 +665,23 @@ impl Cache {
 impl Compression {
     fn build(src: &Source) -> Result<Self, Error> {
         let grammar = src.pick("compression.grammar", GRAMMARS)?;
-        let zstd = Zstd {
-            level: 0,
-            dictionary: false,
-        };
         Ok(Self {
-            grammar: grammar.unwrap_or(Grammar::Off),
-            zstd,
+            grammar: grammar.unwrap_or(Grammar::Full),
+            zstd: Zstd::build(src)?,
+        })
+    }
+}
+
+impl Zstd {
+    /// A `compression.zstd` that is not a table is invalid; inside the
+    /// table each key defaults on its own (V1, V3).
+    fn build(src: &Source) -> Result<Self, Error> {
+        src.get("compression.zstd", ZSTD_FORMS, |_| None::<()>)?;
+        let level = src.get("compression.zstd.level", LEVEL, level)?;
+        let dict = src.get("compression.zstd.dictionary", BOOL, Value::as_bool);
+        Ok(Self {
+            level: level.unwrap_or(3),
+            dictionary: dict?.unwrap_or(true),
         })
     }
 }
@@ -655,8 +691,8 @@ impl Search {
         let alpha = src.get("search.alpha", ALPHA, alpha)?;
         let limit = src.get("search.default_limit", POSITIVE, positive)?;
         Ok(Self {
-            alpha: alpha.unwrap_or(0.0),
-            default_limit: limit.unwrap_or(1),
+            alpha: alpha.unwrap_or(0.5),
+            default_limit: limit.unwrap_or(10),
         })
     }
 }
@@ -684,8 +720,8 @@ impl Mining {
         let min = src.get("mining.min_occurrences", POSITIVE, positive)?;
         let enabled = src.get("mining.enabled", BOOL, Value::as_bool)?;
         Ok(Self {
-            enabled: enabled.unwrap_or(false),
-            min_occurrences: min.unwrap_or(1),
+            enabled: enabled.unwrap_or(true),
+            min_occurrences: min.unwrap_or(3),
         })
     }
 }
