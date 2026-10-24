@@ -1,0 +1,62 @@
+//! Behaviour findings with evidence refs (src/mine G): repeated command
+//! sequences and hot files, mined from the `post-tool-use` observations
+//! `src/hook` stores. Mining only reads the store; it changes nothing
+//! by itself (root C) and never writes under `.rekall/` (V3).
+
+#[cfg(test)]
+mod tests;
+
+mod signal;
+mod tool;
+
+use crate::store::{Observation, Ref};
+
+/// The findings of `rows`, the observations of 1 partition or of any
+/// span read at once (a hot partition is mined on demand, src/mine C):
+/// every pattern repeated at least `min` times, by count (most first),
+/// then kind, then id (V1, V2).
+#[must_use]
+pub fn findings(rows: &[Observation], min: u32) -> Vec<Finding> {
+    signal::findings(rows, min)
+}
+
+/// What a finding is a repeat of (src/mine G).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Kind {
+    /// 1 Bash command right after another in 1 session.
+    Sequence,
+    /// 1 path a tool read or wrote.
+    HotFile,
+}
+
+const KINDS: [(Kind, &str); 2] =
+    [(Kind::Sequence, "sequence"), (Kind::HotFile, "hot_file")];
+
+impl Kind {
+    /// The spelling in a report and in the finding store.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        KINDS
+            .iter()
+            .find(|&&(k, _)| k == self)
+            .map_or("sequence", |&(_, name)| name)
+    }
+
+    /// `sequence` or `hot_file`.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        KINDS.iter().find(|(_, n)| *n == text).map(|&(k, _)| k)
+    }
+}
+
+/// 1 behaviour finding (src/mine I): `id` is the hash of its pattern, so
+/// the same pattern has the same id in every run (V1); `count` is the
+/// number of `refs`, 1 per occurrence (V2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Finding {
+    pub id: String,
+    pub kind: Kind,
+    pub count: usize,
+    pub refs: Vec<Ref>,
+    pub summary: String,
+}
