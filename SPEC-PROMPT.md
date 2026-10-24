@@ -194,3 +194,35 @@ chert completions <shell> · chert man
 - Exit codes: 0 ok, 1 finding, 2 usage or unreadable input.
 - MCP tools keep cavemem's names and result shapes: `search`, `timeline`,
   `get_observations`, `list_sessions`.
+
+# Decisions (2026-10-24)
+
+Round 1, from the owner's conversation. Mechanisms the agent proposed but
+the owner has not decided are open questions below, not decisions.
+
+1. Rewrite cavemem in Rust to remove its Node dependencies from the
+   stack: one binary, no Node at run time, no native addon tied to a
+   runtime ABI.
+2. Name: crate and repository `chertmem` (Naming).
+3. Focus, in this order when they conflict: correctness, then
+   responsiveness. Speed, partitionability and targeted retrieval serve
+   both; nothing trades a correct answer for a faster one.
+4. Storage is partitioned like a TimescaleDB hypertable: data split by
+   dimensions (project and time bucket first), queries skip partitions
+   that cannot match, and each partition is managed on its own (seal,
+   compact, move, replicate, drop).
+5. Partitioning is configurable: the dimensions, the time bucket and a
+   shard count. The time bucket can match the cache window or divide it,
+   so the window is whole partitions; reads gain parallelism from more,
+   smaller partitions, and a sharded layout is managed shard by shard.
+6. An in-memory cache holds a recent window for the fastest retrieval.
+   The window is configurable, not fixed at 30 days.
+7. The cache size is configurable. When the configured window does not
+   fit in it, chert warns, naming the estimate and the limit.
+8. A cached answer equals the uncached answer: the store on disk is the
+   source of truth and the cache never serves stale or missing rows.
+9. The package is also about awareness and optimization: it reports what
+   agents do and mines the history into candidate rules, scripts and
+   tools, the way rekall turns prose rules into executable checks.
+10. Process: the paradigm lifecycle in full, from fda10ea. Atomic commits,
+    one topic each, from this prompt on.
