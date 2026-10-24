@@ -14,6 +14,7 @@ sib|src/config|`chert.toml` scopes, merge, defaults, validation
 sib|src/store|`catalog.db`, partition files, writes, spool, tiers, refs
 sib|src/grammar|caveman compress & expand, ported from cavemem 0.2.1
 sib|src/hook|hook intake: event JSON on stdin → redact → append
+sib|src/search|BM25 + vector ranking across partitions, one scoring path
 
 ## §C CONSTRAINTS
 

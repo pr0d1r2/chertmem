@@ -12,6 +12,7 @@ store|`catalog.db`, partition files, writes, spool, tiers, refs|ranking (`search
 grammar|caveman compress & expand, ported from cavemem 0.2.1|zstd & storage tiers (`store`)|-
 hook|hook intake: event JSON on stdin → redact → append|IDE wiring (`install`), storage (`store`)|-
 cache|in-memory recent window in `chert mcp`: load, fit, freshness|disk store (`store`), scoring (`search`)|-
+search|BM25 + vector ranking across partitions, one scoring path|row storage (`store`), MCP framing (`mcp`)|-
 
 ## §N NAV
 
