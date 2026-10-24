@@ -39,22 +39,37 @@ fn new_in(last: &Mutex<Last>, ts: u64) -> Result<String, Error> {
     Ok(next(&mut held, ts)?.to_string())
 }
 
-/// The id after the last one at `ts` (its random part + 1, as
-/// `ulid::Generator` does), or a fresh one; the earliest timestamp goes
-/// once more than [`KEPT`] are held. A random part already at its
-/// maximum is [`Error::NoId`]: moving to the next ms would leave the
-/// event's own time (src/store V1).
+/// The largest random part: 80 bits.
+const MAX_RANDOM: u128 = 0xFFFF_FFFF_FFFF_FFFF_FFFF;
+/// A fresh random part's mask: below 2^78, so >= 768 steps fit.
+const FRESH: u128 = 0x3FFF_FFFF_FFFF_FFFF_FFFF;
+/// A step's mask: a step is 1 + this masked, in [1, 2^70].
+const STEP: u128 = 0x3F_FFFF_FFFF_FFFF_FFFF;
+
+/// The id after the last one at `ts`, or a fresh one; the earliest
+/// timestamp goes once more than [`KEPT`] are held.
 fn next(last: &mut Last, ts: u64) -> Result<Ulid, Error> {
-    let id = match last.get(&ts) {
-        Some(prev) => prev.increment().map_err(|_| Error::NoId {
-            ts,
-            reason: "all 2^80 ids of this ms are minted".to_owned(),
-        })?,
-        None => Ulid::from_parts(ts, Ulid::generate().random()),
+    let random = match last.get(&ts) {
+        Some(prev) => after(prev.random(), ts)?,
+        None => Ulid::generate().random() & FRESH,
     };
+    let id = Ulid::from_parts(ts, random);
     last.insert(ts, id);
     if last.len() > KEPT {
         last.pop_first();
     }
     Ok(id)
+}
+
+/// The random part after `prev`: a random step in [1, 2^70], not +1,
+/// so consecutive ids differ near char 13 and their refs stay short
+/// (root D28). Past 80 bits is [`Error::NoId`]: moving to the next ms
+/// would leave the event's own time (src/store V1).
+fn after(prev: u128, ts: u64) -> Result<u128, Error> {
+    let step = (Ulid::generate().random() & STEP).saturating_add(1);
+    let random = prev.checked_add(step).filter(|r| *r <= MAX_RANDOM);
+    random.ok_or_else(|| Error::NoId {
+        ts,
+        reason: "the ids of this ms ran out".to_owned(),
+    })
 }
