@@ -28,6 +28,8 @@ const KEYS: &[&str] = &[
     "privacy.exclude",
     "mining.enabled",
     "mining.min_occurrences",
+    "inject.max_tokens",
+    "inject.on_prompt",
 ];
 
 const SPAN_FORMS: &str = "<n>d, <n>h or <n>mo with n >= 1";
@@ -35,6 +37,7 @@ const SIZE_FORMS: &str = "<n>KiB, <n>MiB or <n>GiB with n >= 1";
 const BY_FORMS: &str =
     "an array of distinct \"project\", \"time\", \"ide\" holding \"time\"";
 const POSITIVE: &str = "an integer >= 1";
+const COUNT: &str = "an integer >= 0";
 const BOOL: &str = "true or false";
 const ALPHA: &str = "a number from 0 to 1";
 const PATH: &str = "a path string";
@@ -313,8 +316,18 @@ impl Inject {
     /// Set `inject.on_prompt`; the speed disclaimer comes back only when
     /// this turns it on, so a caller prints it once (src/config V4).
     pub fn set_on_prompt(&mut self, on: bool) -> Option<&'static str> {
-        self.on_prompt = !on;
-        None
+        let turned_on = on && !self.on_prompt;
+        self.on_prompt = on;
+        turned_on.then_some(ON_PROMPT_DISCLAIMER)
+    }
+
+    fn build(src: &Source) -> Result<Self, Error> {
+        let max = src.get("inject.max_tokens", COUNT, count)?;
+        let on = src.get("inject.on_prompt", BOOL, Value::as_bool)?;
+        Ok(Self {
+            max_tokens: max.unwrap_or(300),
+            on_prompt: on.unwrap_or(false),
+        })
     }
 }
 
@@ -518,9 +531,12 @@ fn size(value: &Value) -> Option<u64> {
     value.as_str().and_then(parse_size)
 }
 
+fn count(value: &Value) -> Option<u32> {
+    u32::try_from(value.as_integer()?).ok()
+}
+
 fn positive(value: &Value) -> Option<u32> {
-    let n = u32::try_from(value.as_integer()?).ok()?;
-    (n > 0).then_some(n)
+    count(value).filter(|n| *n > 0)
 }
 
 fn alpha(value: &Value) -> Option<f64> {
@@ -559,10 +575,7 @@ impl Config {
             embedding: Embedding::build(src)?,
             privacy: Privacy::build(src)?,
             mining: Mining::build(src)?,
-            inject: Inject {
-                max_tokens: 0,
-                on_prompt: false,
-            },
+            inject: Inject::build(src)?,
         })
     }
 }
