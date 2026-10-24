@@ -6,11 +6,16 @@
 #[cfg(test)]
 mod tests;
 
+mod error;
+mod ledger;
 mod report;
+mod run;
 mod signal;
 mod tool;
 
+pub use error::Error;
 pub use report::{Format, report};
+pub use run::mine;
 
 use crate::store::{Observation, Ref};
 
