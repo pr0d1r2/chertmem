@@ -268,3 +268,84 @@ Proposed by the agent; each rejection stands until the owner reopens it.
 - Differentiator: cavemem's capture and compression, with a store
   partitioned for fast targeted reads, a bounded cache that is never
   stale, and mining that feeds rekall.
+
+# Open questions
+
+Each carries the agent's proposal. A gap round turns each one into a
+decision or drops it.
+
+1. Binary name. Proposed: `chert`, with the hook shims calling `exec chert
+   hook run <event>`. Blocks the CLI node.
+2. Storage engine and layout. Proposed: one SQLite file per partition
+   under `chunks/<project>/`, plus `catalog.db` that records each
+   partition's dimensions, bounds, row count, state and checksum. The
+   planner routes by the catalog, never by the current config, so a
+   config change cannot misroute a read; `chert partitions repartition`
+   rewrites old partitions. Partitions move from hot (writable, WAL) to
+   warm (sealed, read-only) to cold (`VACUUM INTO`, then zstd). Blocks
+   the store node.
+3. Write correctness. Proposed: ULID ids, unique across partitions and
+   sortable by time; an idempotency key hashed from session, event and
+   payload, written with `INSERT OR IGNORE`, because IDEs resend events;
+   each observation stored in the bucket of its own timestamp, so a
+   session can span buckets; on a lock timeout, the event goes to an
+   append-only spool that the next run replays, so no event is lost.
+   Blocks the store node.
+4. Cache host. Hooks exit within milliseconds and cannot hold a cache.
+   Proposed: the long-lived `chert mcp` process of each IDE session holds
+   it and warms it in a background thread, serving from disk until warm.
+   A shared daemon reached over a Unix socket is a later option, for when
+   one copy per session costs too much. Blocks the cache node.
+5. Cache freshness (decision 8). Proposed: `PRAGMA data_version` before
+   each query to detect commits from other processes; a tail read by an
+   `AUTOINCREMENT` sequence column, not by ULID, because two processes
+   writing in the same millisecond can commit out of ULID order; a
+   `generation` counter in the catalog, bumped by any delete, redaction
+   or rewrite, that forces a full reload. Blocks the cache node.
+6. Cache fit (decision 7). Proposed: estimate the window's size from
+   catalog statistics before loading; on overflow, `warn` keeps the
+   newest days that fit and says how many, `shrink` does the same
+   silently after one warning, `fail` serves from disk only. Also warn
+   when `max_bytes` exceeds about 25% of available memory. Warnings go to
+   the MCP log, `chert status` and `chert doctor`, never into the agent's
+   context. Blocks the cache node.
+7. Ranking across partitions. Proposed: global term statistics kept in
+   the catalog (from `fts5vocab`), so BM25 compares across partitions,
+   and one scoring path for cached and uncached rows, so a result ranks
+   the same wherever it came from. Blocks the search node.
+8. Defaults. Proposed: `time_bucket = "7d"`, `cache.window = "28d"`,
+   `cache.max_bytes = "256MiB"`, `shards = 1`. To be checked against a
+   real month of history. Blocks the config node.
+9. Responsiveness targets, to measure with benchmarks: hook write under
+   5 ms; search of the recent window under 10 ms; `get_observations`
+   under 2 ms; semantic re-rank under 20 ms. Proposed: a benchmark
+   step in the push gate that fails on a regression. Blocks the gate.
+10. cavemem compatibility. Proposed: chert keeps its own data directory
+    and imports cavemem's database with `chert import --from cavemem`;
+    it does not share cavemem's live files. MCP tool names and result
+    shapes stay compatible. Blocks the import node.
+11. Caveman grammar. Proposed: port cavemem's compress and expand at a
+    pinned cavemem version, byte for byte, proved by differential tests
+    that run cavemem's JavaScript as the oracle over a corpus. cavemem is
+    MIT, so its copyright notice ships with the port. Blocks the
+    compression node.
+12. Embeddings in version 1. Proposed: off by default, with the ollama
+    provider in version 1; local models later, through `candle` (pure
+    Rust) or `fastembed` (needs ONNX Runtime, a native library). Blocks
+    the search node.
+13. Mining hand-off to rekall. Either chert writes candidates straight
+    into `.rekall/ledger.toml` `candidates`, or it exports its own format
+    for rekall to import. Needs rekall's candidate schema. Blocks the
+    mining node.
+14. Mining signals in version 1. Proposed: repeated failing commands and
+    errors, repeated command sequences, user corrections, and hot files
+    and token sinks; candidates are deterministic, carry observation ids
+    as evidence, and stay rejected once rejected. Blocks the mining node.
+15. IDE coverage in version 1. Proposed: Claude Code first; Cursor,
+    Gemini CLI, OpenCode and Codex once each has recorded hook-payload
+    fixtures. Blocks the install node.
+16. Viewer. Proposed: no web viewer in version 1; `chert report` and
+    `chert status` cover awareness. Blocks nothing.
+17. Visibility, license and fleet membership. Proposed: public on GitHub
+    from the first push, MIT, a fleet member with CI rendered by actlith,
+    like the other fleet tools. Blocks the first push.
