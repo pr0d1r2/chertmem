@@ -10,6 +10,7 @@ rel|path|lens
 up|.|-
 up|src|crate `chertmem`: lib + bin `chert`, 1 node per module
 self|src/config|`chert.toml` scopes, merge, defaults, validation
+sib|src/store|`catalog.db`, partition files, writes, spool, tiers, refs
 
 ## §C CONSTRAINTS
 
