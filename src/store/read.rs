@@ -52,13 +52,21 @@ impl Store {
         refs.iter().map(|r| self.resolve(r)).collect()
     }
 
+    /// This project first, then every project; issued in more than 1
+    /// other project is an error naming them, never a guess (root V15).
     fn resolve(&mut self, reference: &Ref) -> Result<Lookup, Error> {
-        let project = Some(self.project.as_str());
-        let hits =
-            catalog::locate(self.reader()?, project, reference.as_str())?;
+        let (catalog, text) = (self.reader()?, reference.as_str());
+        let mut hits = catalog::locate(catalog, Some(&self.project), text)?;
+        if hits.is_empty() {
+            hits = catalog::locate(catalog, None, text)?;
+        }
         match hits.as_slice() {
+            [] => Ok(Lookup::Dropped(reference.clone())),
             [hit] => self.fetch(hit, reference),
-            _ => Ok(Lookup::Dropped(reference.clone())),
+            many => Err(Error::Ambiguous {
+                reference: reference.to_string(),
+                projects: many.iter().map(|h| h.project.clone()).collect(),
+            }),
         }
     }
 
