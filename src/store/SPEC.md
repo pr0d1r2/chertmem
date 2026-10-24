@@ -80,6 +80,7 @@ T12|x|`generation` from a monotonic source (e.g. max(stored, now ms)), survives 
 T13|x|drop tombstones under `chunks/<project>/`, read by `rebuild`|V12
 T14|x|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24); `src/hook` calls it|V10
 T15|x|ULIDs monotonic within 1 ms per process ∴ same-ms events keep insert order in `(ts, id)` order (wave 4 hook report)|V1
+T16|.|`Store::sessions(limit) -> Vec<Session{id, ide, cwd, started_at, ended_at}>` for the current project, newest first (`src/mcp` T2 list_sessions)|V1
 
 ## §B BUGS
 

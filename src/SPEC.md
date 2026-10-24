@@ -32,7 +32,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 
 - deps minimal & each justified in module node: `rusqlite` (`bundled`), `clap`, `serde`, `serde_json`, `toml`, `zstd`, `ulid`, MCP via `rmcp` | hand-rolled JSON-RPC (decided in `src/mcp`).
 - ⊥ async runtime unless a module node proves need; hooks stay sync.
-- module edges acyclic (as built, wave 5): `grammar` leaf; `config` → grammar (`Grammar::intensity`); `store` → config; `cache` → config, store; `search` → cache, config, store; `hook` → config, grammar, store; `import`, `mine` → config, grammar, hook, store; `mcp` → search, cache; `cli` top.
+- module edges acyclic (as built, wave 5): `grammar` leaf; `config` → grammar (`Grammar::intensity`); `store` → config; `cache` → config, store; `search` → cache, config, store; `hook` → config, grammar, store; `import`, `mine` → config, grammar, hook, store; `mcp` → cache, config, grammar, search, store; `cli` top.
 - errors: 1 crate error enum; user-facing message `chert: <what> (<fix>)`; exit codes per `.:§I`.
 
 ## §I INTERFACES

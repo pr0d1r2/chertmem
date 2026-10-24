@@ -63,6 +63,7 @@ T6|x|injection: session-start default, prompt opt-in, budget cut (R2 count), std
 T7|x|turn summary on stop, session roll-up on session-end|V6
 T8|x|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writing the store's dir (owner 2026-10-24)|V2
 T9|.|register Claude Code `PostToolUseFailure`: record its payload first (as T1), store failed tool calls as their own kind w/ the error text ∴ `src/mine` T1 sees failures|V3
+T10|.|store each session's `cwd`, `started_at` (session-start) & `ended_at` (session-end) for `src/store` T16|V3
 
 ## §B BUGS
 
