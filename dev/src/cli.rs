@@ -4,11 +4,11 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{lock_graph, name_guard, worktree};
+use crate::{lock_graph, mirror, name_guard, worktree};
 use std::path::Path;
 
-const USAGE: &str =
-    "usage: chertmem-dev name-guard [files...] | no-core-worktree | lock-graph";
+const USAGE: &str = "usage: chertmem-dev name-guard [files...] | \
+                     no-core-worktree | lock-graph | rust-mirror";
 
 /// Run one guard from `args` against the repository at `root`.
 #[must_use]
@@ -17,6 +17,7 @@ pub fn run(args: &[String], root: &Path) -> u8 {
         Some((verb, files)) if verb == "name-guard" => name(root, files),
         Some((verb, [])) if verb == "no-core-worktree" => shared_config(root),
         Some((verb, [])) if verb == "lock-graph" => lock(root),
+        Some((verb, [])) if verb == "rust-mirror" => mirror(root),
         _ => {
             eprintln!("{USAGE}");
             2
@@ -93,22 +94,66 @@ fn shared_config_text(root: &Path) -> Result<String, u8> {
     })
 }
 
-/// `git rev-parse --git-common-dir` in `root`, with the hook's `GIT_*`
-/// variables dropped, so only `root` decides the repository.
+/// `git rev-parse --git-common-dir` in `root`.
 fn git_common_dir(root: &Path) -> Option<std::path::PathBuf> {
+    let rel = git(root, &["rev-parse", "--git-common-dir"])?;
+    Some(root.join(rel.trim()))
+}
+
+/// `git <args>` in `root`, its stdout when it succeeds. The hook's
+/// `GIT_*` variables are dropped, so only `root` decides the repository
+/// (`paradigm/V15`).
+fn git(root: &Path, args: &[&str]) -> Option<String> {
     let mut cmd = std::process::Command::new("git");
     for (k, _) in std::env::vars_os() {
         if k.to_string_lossy().starts_with("GIT_") {
             cmd.env_remove(k);
         }
     }
-    let out = cmd
-        .current_dir(root)
-        .args(["rev-parse", "--git-common-dir"])
-        .output()
-        .ok()?;
-    let rel = String::from_utf8(out.stdout).ok()?;
-    out.status.success().then(|| root.join(rel.trim()))
+    let out = cmd.current_dir(root).args(args).output().ok()?;
+    let text = String::from_utf8(out.stdout).ok()?;
+    out.status.success().then_some(text)
+}
+
+/// `rust-mirror`: every tracked `.rs` file, read from the work tree.
+fn mirror(root: &Path) -> u8 {
+    let (Some(files), Some(manifests)) = (
+        git(root, &["ls-files", "*.rs"]),
+        git(root, &["ls-files", "Cargo.toml", "*/Cargo.toml"]),
+    ) else {
+        eprintln!("rust-mirror: not a git work tree; nothing was checked");
+        return 2;
+    };
+    let crates: Vec<String> = manifests
+        .lines()
+        .map(|m| m.strip_suffix("Cargo.toml").unwrap_or(m).to_owned())
+        .collect();
+    let rs = read_tree(root, &files);
+    report_lines("rust-mirror", &mirror::findings(&rs, &crates))
+}
+
+/// The work-tree text of each listed path. A tracked file deleted from
+/// the work tree reads as empty, so it defines no logic.
+fn read_tree(
+    root: &Path,
+    files: &str,
+) -> std::collections::BTreeMap<String, String> {
+    files
+        .lines()
+        .map(|f| {
+            let text =
+                std::fs::read_to_string(root.join(f)).unwrap_or_default();
+            (f.to_owned(), text)
+        })
+        .collect()
+}
+
+/// Print each finding under the guard's name; exit 1 when there is one.
+fn report_lines(guard: &str, found: &[String]) -> u8 {
+    for f in found {
+        eprintln!("{guard}: {f}");
+    }
+    u8::from(!found.is_empty())
 }
 
 /// `lock-graph`: the root flake.lock holds one nixpkgs and one pin node.
