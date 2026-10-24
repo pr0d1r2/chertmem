@@ -26,13 +26,11 @@ pub(super) fn rerank(
     };
     let (q, each) = embedded(embed, query, &rows)?;
     let keep = rows.len();
-    // RED: the blend is computed but the keyword order kept.
-    let blended = rows.clone().into_iter().zip(&each).map(|(s, v)| Scored {
+    let blended = rows.into_iter().zip(&each).map(|(s, v)| Scored {
         score: blend(s.score / best, cosine(&q, v), alpha),
         row: s.row,
     });
-    let _ = rank::top(blended.collect(), keep);
-    Ok(rows)
+    Ok(rank::top(blended.collect(), keep))
 }
 
 /// The query's vector and 1 per row, in order.

@@ -38,8 +38,7 @@ impl Ollama {
         }
         let bare = host.strip_prefix("http://").unwrap_or(host);
         let bare = bare.split('/').next().unwrap_or_default();
-        // RED: every host form reads as the default.
-        let addr = match bare.get(..0).unwrap_or_default() {
+        let addr = match bare {
             "" => format!("127.0.0.1:{PORT}"),
             b if b.rsplit_once(':').is_some_and(|(_, p)| !p.contains(']')) => {
                 b.to_owned()
