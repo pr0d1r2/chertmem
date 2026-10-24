@@ -225,3 +225,67 @@ pub(super) fn grammar_for(intensity: Intensity) -> Option<&'static Grammar> {
         Intensity::Ultra => Some(&ULTRA),
     }
 }
+
+const EXPANSIONS: Pairs = &[
+    ("impl", "implementation"),
+    ("config", "configuration"),
+    ("cfg", "configuration"),
+    ("docs", "documentation"),
+    ("repo", "repository"),
+    ("repos", "repositories"),
+    ("db", "database"),
+    ("dbs", "databases"),
+    ("app", "application"),
+    ("apps", "applications"),
+    ("env", "environment"),
+    ("envs", "environments"),
+    ("dep", "dependency"),
+    ("deps", "dependencies"),
+    ("dir", "directory"),
+    ("dirs", "directories"),
+    ("param", "parameter"),
+    ("params", "parameters"),
+    ("arg", "argument"),
+    ("args", "arguments"),
+    ("fn", "function"),
+    ("fns", "functions"),
+    ("var", "variable"),
+    ("vars", "variables"),
+    ("ref", "reference"),
+    ("refs", "references"),
+    ("auth", "authentication"),
+    ("authz", "authorization"),
+    ("mw", "middleware"),
+    ("req", "request"),
+    ("resp", "response"),
+    ("msg", "message"),
+    ("msgs", "messages"),
+    ("tx", "transaction"),
+    ("txs", "transactions"),
+    ("b/c", "because"),
+    ("w/", "with"),
+    ("w/o", "without"),
+    ("shld", "should"),
+    ("wld", "would"),
+    ("cld", "could"),
+    ("num", "number"),
+    ("btwn", "between"),
+    ("thru", "through"),
+    ("b4", "before"),
+    ("max", "maximum"),
+    ("min", "minimum"),
+];
+
+/// `expand`'s keys sorted longest first, each with its expansion.
+static EXPAND: LazyLock<(Vec<&'static str>, Vec<&'static str>)> =
+    LazyLock::new(|| {
+        let mut pairs = EXPANSIONS.to_vec();
+        pairs.sort_by_key(|(key, _)| Reverse(key.len()));
+        pairs.into_iter().unzip()
+    });
+
+/// The expansion keys, longest first, and their targets by index.
+pub(super) fn expansions() -> (&'static [&'static str], &'static [&'static str])
+{
+    (&EXPAND.0, &EXPAND.1)
+}

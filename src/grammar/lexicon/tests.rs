@@ -1,5 +1,5 @@
 use super::super::Intensity;
-use super::grammar_for;
+use super::{expansions, grammar_for};
 
 type Res = Result<(), Box<dyn std::error::Error>>;
 
@@ -51,4 +51,16 @@ fn ultra_abbreviates_configuration_harder() {
     assert_eq!(first(Intensity::Lite), Some(("configuration", "config")));
     assert_eq!(first(Intensity::Full), Some(("configuration", "config")));
     assert_eq!(first(Intensity::Ultra), Some(("configuration", "cfg")));
+}
+
+#[test]
+fn expansions_are_longest_first_and_paired() {
+    let (keys, targets) = expansions();
+    assert_eq!((keys.len(), targets.len()), (47, 47));
+    let sorted = keys
+        .windows(2)
+        .all(|w| matches!(w, [a, b] if a.len() >= b.len()));
+    assert!(sorted);
+    let pair = keys.iter().zip(targets).find(|(k, _)| **k == "w/o");
+    assert_eq!(pair, Some((&"w/o", &"without")));
 }

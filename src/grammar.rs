@@ -56,5 +56,19 @@ pub fn compress(text: &str, intensity: Intensity) -> String {
 /// `text` with every abbreviation `compress` makes written out again.
 #[must_use]
 pub fn expand(text: &str) -> String {
-    text.to_owned()
+    let (keys, targets) = lexicon::expansions();
+    let grow = |found: &str, k: usize| {
+        let target = targets.get(k).copied().unwrap_or(found);
+        words::match_case(found, target)
+    };
+    tokenize::tokenize(text)
+        .into_iter()
+        .map(|seg| {
+            if seg.kept {
+                seg.text.to_owned()
+            } else {
+                words::replace(seg.text, keys, grow)
+            }
+        })
+        .collect()
 }
