@@ -62,6 +62,7 @@ T5|x|measure: Claude Code resends? event id field per hook? → §R (`.:V16`). R
 T6|x|injection: session-start default, prompt opt-in, budget cut (R2 count), stdout shape|V4,V5
 T7|x|turn summary on stop, session roll-up on session-end|V6
 T8|x|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writing the store's dir (owner 2026-10-24)|V2
+T9|.|register Claude Code `PostToolUseFailure`: record its payload first (as T1), store failed tool calls as their own kind w/ the error text ∴ `src/mine` T1 sees failures|V3
 
 ## §B BUGS
 
