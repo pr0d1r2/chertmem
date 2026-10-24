@@ -118,9 +118,6 @@ pub(super) fn open(
 /// The schema, once: checked again under the write lock, so 2 processes
 /// opening a new file at once lay it once.
 fn lay(conn: &Connection, schema: &str) -> Result<(), Error> {
-    if !schema.is_empty() {
-        return Ok(()); // RED stub: the schema is not laid yet
-    }
     if version(conn)? == VERSION {
         return Ok(());
     }
