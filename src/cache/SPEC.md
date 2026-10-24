@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-hold recent `cache.window` of current project in memory inside `chert mcp` (D14): rows sorted by id, keyword index, embedding matrix. bounded by `cache.max_bytes`; never stale (D15, D16).
+hold recent `cache.window` of current project in memory inside `chert mcp` (D14): rows in the store's `(ts, id)` order (R1), keyword index, embedding matrix. bounded by `cache.max_bytes`; never stale (D15, D16).
 
 ## §N NAV
 
