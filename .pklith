@@ -17,10 +17,13 @@ pklith-check|gate|-|-|pklith check|-|-|a tracked file type has no row in .pklith
 # paradigm/V37, dev V3: no committed file holds a name from the local,
 # untracked .private/denylist; without one (CI) it holds.
 name-guard|gate|-|**/*|cargo run -q -p chertmem-dev -- name-guard {{files}}|-|-|a committed file holds a name from .private/denylist
+# paradigm/V15, dev V4: core.worktree in the shared .git/config redirects
+# every worktree; the step refuses it.
+no-core-worktree|gate|-|**/*|cargo run -q -p chertmem-dev -- no-core-worktree|-|-|core.worktree is set in the shared .git/config; unset it
 
 ## types
 type|checks|min|exempt
-*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard|-|-
+*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard, no-core-worktree|-|-
 editorconfig|-|-|written by pklith (seed or gen)
 gitattributes|-|-|written by pklith (seed or gen)
 md|markdownlint|-|-
