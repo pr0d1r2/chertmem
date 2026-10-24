@@ -172,7 +172,8 @@ fn each_recorded_tool_use_has_its_own_identity() -> Test {
     let scratch = Scratch::new("identity2")?;
     let kind = Kind::PostToolUse;
     scratch.run(kind, &fixture(kind)?);
-    scratch.run(kind, &fixture_2(kind)?);
+    // 1 ms later: rows of 1 ms are ordered by random ULID.
+    scratch.run_at(kind, &fixture_2(kind)?, NOW + 1);
     let found = scratch.observations()?;
     let ids: Vec<_> = found.iter().map(|o| o.identity.as_deref()).collect();
     assert_eq!(ids, [Some(TOOL_USE), Some(TOOL_USE_2)]);
