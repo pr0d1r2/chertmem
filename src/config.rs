@@ -263,19 +263,27 @@ pub struct Cache {
     pub on_overflow: Overflow,
 }
 
-/// `compression.*`; `None` = unset, no default in root C, so the owning
-/// module decides.
+/// `compression.zstd`, a table (root C).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Compression {
-    pub grammar: Option<Grammar>,
-    pub zstd: Option<bool>,
+pub struct Zstd {
+    /// zstd level, 1 to 22; default 3.
+    pub level: i32,
+    /// Train and use a dictionary per partition; default true.
+    pub dictionary: bool,
 }
 
-/// `search.*`; `None` = unset, the owning module decides.
+/// `compression.*`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Compression {
+    pub grammar: Grammar,
+    pub zstd: Zstd,
+}
+
+/// `search.*`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Search {
-    pub alpha: Option<f64>,
-    pub default_limit: Option<u32>,
+    pub alpha: f64,
+    pub default_limit: u32,
 }
 
 /// `embedding.*`.
@@ -290,11 +298,11 @@ pub struct Privacy {
     pub exclude: Vec<String>,
 }
 
-/// `mining.*`; `None` = unset, the owning module decides.
+/// `mining.*`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Mining {
-    pub enabled: Option<bool>,
-    pub min_occurrences: Option<u32>,
+    pub enabled: bool,
+    pub min_occurrences: u32,
 }
 
 /// Printed once when `inject.on_prompt` turns on (src/config V4).
@@ -630,22 +638,25 @@ impl Cache {
 
 impl Compression {
     fn build(src: &Source) -> Result<Self, Error> {
+        let grammar = src.pick("compression.grammar", GRAMMARS)?;
+        let zstd = Zstd {
+            level: 0,
+            dictionary: false,
+        };
         Ok(Self {
-            grammar: src.pick("compression.grammar", GRAMMARS)?,
-            zstd: src.get("compression.zstd", BOOL, Value::as_bool)?,
+            grammar: grammar.unwrap_or(Grammar::Off),
+            zstd,
         })
     }
 }
 
 impl Search {
     fn build(src: &Source) -> Result<Self, Error> {
+        let alpha = src.get("search.alpha", ALPHA, alpha)?;
+        let limit = src.get("search.default_limit", POSITIVE, positive)?;
         Ok(Self {
-            alpha: src.get("search.alpha", ALPHA, alpha)?,
-            default_limit: src.get(
-                "search.default_limit",
-                POSITIVE,
-                positive,
-            )?,
+            alpha: alpha.unwrap_or(0.0),
+            default_limit: limit.unwrap_or(1),
         })
     }
 }
@@ -671,9 +682,10 @@ impl Privacy {
 impl Mining {
     fn build(src: &Source) -> Result<Self, Error> {
         let min = src.get("mining.min_occurrences", POSITIVE, positive)?;
+        let enabled = src.get("mining.enabled", BOOL, Value::as_bool)?;
         Ok(Self {
-            enabled: src.get("mining.enabled", BOOL, Value::as_bool)?,
-            min_occurrences: min,
+            enabled: enabled.unwrap_or(false),
+            min_occurrences: min.unwrap_or(1),
         })
     }
 }

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use super::{
     Config, Dimension, Error as ConfigError, Grammar, Loaded,
-    ON_PROMPT_DISCLAIMER, Overflow, Provider, Span, Unit, load_from,
+    ON_PROMPT_DISCLAIMER, Overflow, Provider, Span, Unit, Zstd, load_from,
     parse_size, window_warning,
 };
 
@@ -115,13 +115,18 @@ fn no_files_give_root_c_defaults() -> Test {
     Ok(())
 }
 
+const ZSTD_DEFAULT: Zstd = Zstd {
+    level: 3,
+    dictionary: true,
+};
+
 #[test]
-fn keys_without_a_root_default_stay_unset() -> Test {
+fn remaining_keys_default_per_root_c() -> Test {
     let c = Scratch::new("unset")?.load()?.config;
     let (z, s, m) = (c.compression, c.search, c.mining);
-    assert_eq!((z.grammar, z.zstd), (None, None));
-    assert_eq!((s.alpha, s.default_limit), (None, None));
-    assert_eq!((m.enabled, m.min_occurrences), (None, None));
+    assert_eq!((z.grammar, z.zstd), (Grammar::Full, ZSTD_DEFAULT));
+    assert_eq!((s.alpha, s.default_limit), (0.5, 10));
+    assert_eq!((m.enabled, m.min_occurrences), (true, 3));
     Ok(())
 }
 
@@ -191,12 +196,17 @@ fn cache_keys_parse() -> Test {
 
 #[test]
 fn compression_and_search_keys_parse() -> Test {
-    let text = "compression.grammar = \"ultra\"\ncompression.zstd = false\n\
+    let text = "compression.grammar = \"ultra\"\n\
+        compression.zstd = { level = 19, dictionary = false }\n\
         search.alpha = 0.25\nsearch.default_limit = 20\n";
     let c = project_only("search", text)?;
     let (z, s) = (c.compression, c.search);
-    assert_eq!((z.grammar, z.zstd), (Some(Grammar::Ultra), Some(false)));
-    assert_eq!((s.alpha, s.default_limit), (Some(0.25), Some(20)));
+    let zstd = Zstd {
+        level: 19,
+        dictionary: false,
+    };
+    assert_eq!((z.grammar, z.zstd), (Grammar::Ultra, zstd));
+    assert_eq!((s.alpha, s.default_limit), (0.25, 20));
     Ok(())
 }
 
@@ -209,7 +219,7 @@ fn embedding_privacy_and_mining_keys_parse() -> Test {
     assert_eq!(c.embedding.provider, Provider::Openai);
     assert_eq!(c.privacy.exclude, vec![".env", "secrets/"]);
     let m = c.mining;
-    assert_eq!((m.enabled, m.min_occurrences), (Some(false), Some(5)));
+    assert_eq!((m.enabled, m.min_occurrences), (false, 5));
     Ok(())
 }
 
@@ -219,8 +229,8 @@ fn remaining_names_parse() -> Test {
         search.alpha = 1\n";
     let c = project_only("names", text)?;
     assert_eq!(c.cache.on_overflow, Overflow::Fail);
-    assert_eq!(c.compression.grammar, Some(Grammar::Off));
-    assert_eq!(c.search.alpha, Some(1.0));
+    assert_eq!(c.compression.grammar, Grammar::Off);
+    assert!(c.search.alpha.total_cmp(&1.0).is_eq());
     Ok(())
 }
 
@@ -316,6 +326,11 @@ const BAD: &[&str] = &[
     "cache.on_overflow = \"drop\"",
     "compression.grammar = \"max\"",
     "compression.zstd = \"yes\"",
+    "compression.zstd.level = 0",
+    "compression.zstd.level = 23",
+    "compression.zstd.level = \"3\"",
+    "compression.zstd = { level = 1.5 }",
+    "compression.zstd = { dictionary = 1 }",
     "search.alpha = 1.5",
     "search.alpha = -0.1",
     "search.default_limit = 0",
@@ -490,4 +505,78 @@ fn disclaimer_names_the_wait_and_the_cost() {
     assert!(text.contains("store read"), "{text}");
     assert!(text.contains("spool replay"), "{text}");
     assert!(text.contains("docs/BENCHMARKS.md"), "{text}");
+}
+
+const fn zstd(level: i32, dictionary: bool) -> Zstd {
+    Zstd { level, dictionary }
+}
+
+const ZSTD_TABLES: &[(&str, Zstd)] = &[
+    ("[compression.zstd]\nlevel = 7\n", zstd(7, true)),
+    (
+        "compression.zstd = { dictionary = false }\n",
+        zstd(3, false),
+    ),
+    ("compression.zstd = {}\n", ZSTD_DEFAULT),
+    ("compression.zstd = { level = 1 }\n", zstd(1, true)),
+    ("compression.zstd = { level = 22 }\n", zstd(22, true)),
+];
+
+#[test]
+fn zstd_table_keys_default_one_by_one() -> Test {
+    for (i, &(text, want)) in ZSTD_TABLES.iter().enumerate() {
+        let c = project_only(&format!("zstd{i}"), text)?;
+        assert_eq!(c.compression.zstd, want, "{text:?}");
+    }
+    Ok(())
+}
+
+#[test]
+fn zstd_table_merges_key_by_key() -> Test {
+    let s = Scratch::new("zstdmerge")?;
+    put(&s.user_file(), "compression.zstd = { level = 9 }\n")?;
+    put(
+        &s.project_file(),
+        "[compression.zstd]\ndictionary = false\n",
+    )?;
+    assert_eq!(s.load()?.config.compression.zstd, zstd(9, false));
+    Ok(())
+}
+
+#[test]
+fn zstd_not_a_table_is_invalid_naming_the_table_form() -> Test {
+    for (i, text) in ["true", "false", "3", "[1]"].iter().enumerate() {
+        let line = format!("compression.zstd = {text}\n");
+        let e = project_error(&format!("zstdshape{i}"), &line)?;
+        let ConfigError::Invalid { key, accepted, .. } = &e else {
+            return Err(format!("{line:?}: {e}").into());
+        };
+        assert_eq!(key, "compression.zstd", "{line:?}");
+        assert!(accepted.contains("level"), "{e}");
+        assert!(accepted.contains("dictionary"), "{e}");
+    }
+    Ok(())
+}
+
+#[test]
+fn zstd_level_out_of_range_names_the_range() -> Test {
+    let e = project_error("zstdrange", "compression.zstd = { level = 23 }\n")?;
+    let ConfigError::Invalid { key, accepted, .. } = &e else {
+        return Err(e.to_string().into());
+    };
+    assert_eq!(key, "compression.zstd.level");
+    assert!(accepted.contains("1 to 22"), "{e}");
+    Ok(())
+}
+
+#[test]
+fn unknown_zstd_key_is_an_unknown_key() -> Test {
+    let text = "compression.zstd = { window = 3 }\n";
+    let e = project_error("zstdunknown", text)?;
+    let want = ConfigError::UnknownKey {
+        file: e.file().to_path_buf(),
+        key: "compression.zstd.window".to_owned(),
+    };
+    assert_eq!(e, want);
+    Ok(())
 }
