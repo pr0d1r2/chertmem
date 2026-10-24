@@ -17,10 +17,23 @@ name = "chert"
 path = "src/main.rs"
 
 [dependencies]
+# SQLite with FTS5 compiled in (root C, src/store C). Default features
+# off: `cache` pulls hashlink and foldhash (Zlib), outside the MIT-only
+# deny.toml; the rest of the tree is MIT or MIT OR Apache-2.0.
+# `fallible_uint` binds u64 timestamps, refusing values past i64::MAX.
+rusqlite = { version = "0.41.0", default-features = false, features = [
+  "bundled",
+  "fallible_uint",
+] }
+# Spool lines (src/store I): MIT, no dependencies; serde_json is out, as
+# its ryu is Apache-2.0 OR BSL-1.0.
+tinyjson = "2.5.1"
 # `chert.toml` parsing (src/config C): every crate in its tree is MIT
 # or MIT OR Apache-2.0, and serde_core brings no proc macro, so the
 # MIT-only deny.toml holds.
 toml = "1.1.8"
+# Observation ids (src/store C): MIT; its rand tree is MIT OR Apache-2.0.
+ulid = "3.0.0"
 
 [lints.rust]
 # No FFI of our own; rusqlite carries SQLite's (SPEC.md C).
