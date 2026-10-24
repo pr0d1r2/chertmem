@@ -8,7 +8,7 @@ use super::{Found, pending, read};
 use crate::store::line::encode;
 use crate::store::tests::{Scratch, Test, chunk, event, stored};
 use crate::store::write::{Item, Row};
-use crate::store::{Appended, Error, Mode};
+use crate::store::{Appended, Error, Filter, Mode};
 
 fn row(identity: Option<&str>, body: &str) -> Item {
     Item::Observation(Row {
@@ -269,5 +269,50 @@ fn seal_replays_the_spool_first() -> Test {
     assert!(spooled(&s)?.is_empty());
     assert_eq!(count(&s, &path)?, 2);
     assert!(!s.data().join("spool/sealed").exists());
+    Ok(())
+}
+
+/// Every file in `dir`, sorted.
+fn listed(dir: &Path) -> Result<Vec<PathBuf>, Box<dyn StdError>> {
+    let entries = fs::read_dir(dir)?.map(|e| e.map(|e| e.path()));
+    let mut files = entries.collect::<Result<Vec<_>, _>>()?;
+    files.sort();
+    Ok(files)
+}
+
+/// A raw payload lands whole as `spool/unreadable/<ULID>.hook`.
+fn kept_raw(dir: &Path, file: &Path, bytes: &[u8]) -> Test {
+    assert_eq!(file.parent(), Some(dir));
+    assert!(file.extension().is_some_and(|x| x == "hook"));
+    let stem = file.file_stem().and_then(|x| x.to_str()).ok_or("name")?;
+    assert!(ulid::Ulid::from_string(stem).is_ok(), "{stem}");
+    assert_eq!(fs::read(file)?, bytes);
+    Ok(())
+}
+
+#[test]
+fn raw_payloads_wait_aside_in_both_modes_and_never_replay() -> Test {
+    let s = Scratch::new("spool-raw")?;
+    let dir = s.data().join("spool/unreadable");
+    let first = s.open(Mode::Write)?.spool_raw(b"{not json")?;
+    kept_raw(&dir, &first, b"{not json")?;
+    let mut store = s.open(Mode::Read)?;
+    let second = store.spool_raw(b"\xff\xfe")?;
+    kept_raw(&dir, &second, b"\xff\xfe")?;
+    store.replay()?;
+    let mut want = vec![first, second];
+    want.sort();
+    assert_eq!(listed(&dir)?, want);
+    assert!(store.observations(&Filter::default())?.is_empty());
+    Ok(())
+}
+
+#[test]
+fn a_raw_payload_with_nowhere_to_go_is_an_io_error() -> Test {
+    let s = Scratch::new("spool-raw-blocked")?;
+    fs::create_dir_all(s.data().join("spool"))?;
+    fs::write(s.data().join("spool/unreadable"), "a file, not a dir")?;
+    let e = s.open(Mode::Write)?.spool_raw(b"x").err();
+    assert!(matches!(e, Some(Error::Io { .. })), "{e:?}");
     Ok(())
 }

@@ -39,6 +39,7 @@ fn seal_makes_a_partition_warm_and_read_only() -> Test {
     let s = Scratch::new("tier-seal")?;
     let mut store = s.open(Mode::Read)?;
     let (refs, path) = fill(&mut store)?;
+    let was = store.generation()?;
     store.seal(&path)?;
     store.seal(&path)?;
     assert_eq!(state(&store, &path)?, Some(State::Warm));
@@ -48,7 +49,7 @@ fn seal_makes_a_partition_warm_and_read_only() -> Test {
     let refused = other.append(&event(9, None, "elsewhere"));
     assert_eq!(refused, Err(Error::ReadOnly { path }));
     assert_eq!(bodies(&mut store, &refs)?, some(&["a", "b", "c", "d"]));
-    assert_eq!(store.generation()?, 0);
+    assert_eq!(store.generation()?, was);
     Ok(())
 }
 
@@ -107,16 +108,17 @@ fn drop_answers_dropped_never_another_row() -> Test {
     let s = Scratch::new("tier-drop")?;
     let mut store = s.open(Mode::Read)?;
     let (refs, path) = fill(&mut store)?;
+    let was = store.generation()?;
     store.drop(&path)?;
     assert!(!s.data().join(&path).exists());
     assert_eq!(state(&store, &path)?, None);
     let c = Some("c".to_owned());
     assert_eq!(bodies(&mut store, &refs)?, [None, None, c, None]);
-    assert_eq!(store.generation()?, 1);
+    let once = store.generation()?;
     let again = store.append(&event(5, None, "same ms as a"));
     assert_eq!(again, Err(Error::ReadOnly { path: path.clone() }));
     store.drop(&path)?;
-    assert_eq!(store.generation()?, 1);
+    assert!(once > was && store.generation()? == once);
     Ok(())
 }
 
@@ -141,12 +143,13 @@ fn every_rewrite_bumps_generation_and_a_seal_does_not() -> Test {
     let s = Scratch::new("tier-generation")?;
     let mut store = s.open(Mode::Read)?;
     let (_, path) = fill(&mut store)?;
+    let was = store.generation()?;
     store.seal(&path)?;
-    assert_eq!(store.generation()?, 0);
+    assert_eq!(store.generation()?, was);
     store.compact(&path)?;
-    assert_eq!(store.generation()?, 1);
+    let once = store.generation()?;
     store.compact(&path)?;
-    assert_eq!(store.generation()?, 1);
+    assert!(once > was && store.generation()? == once);
     Ok(())
 }
 

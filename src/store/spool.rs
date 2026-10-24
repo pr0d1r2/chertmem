@@ -27,16 +27,29 @@ fn dir(root: &Path) -> PathBuf {
     root.join("spool")
 }
 
-/// Spool `item` as its own file.
-pub(super) fn put(root: &Path, item: &Item) -> Result<(), Error> {
-    let dir = dir(root);
-    std::fs::create_dir_all(&dir).map_err(|e| Error::io(&dir, &e))?;
+/// Write `bytes` whole as `<dir>/<ULID>.<ext>`: to `.<ULID>.tmp`
+/// first, then renamed into place; the file written.
+fn place(dir: &Path, ext: &str, bytes: &[u8]) -> Result<PathBuf, Error> {
+    std::fs::create_dir_all(dir).map_err(|e| Error::io(dir, &e))?;
     let name = ulid::Ulid::generate().to_string();
     let tmp = dir.join(format!(".{name}.tmp"));
+    std::fs::write(&tmp, bytes).map_err(|e| Error::io(&tmp, &e))?;
+    let done = dir.join(format!("{name}.{ext}"));
+    std::fs::rename(&tmp, &done).map_err(|e| Error::io(&done, &e))?;
+    Ok(done)
+}
+
+/// Spool `item` as its own file.
+pub(super) fn put(root: &Path, item: &Item) -> Result<(), Error> {
     let text = format!("{}\n", line::encode(item)?);
-    std::fs::write(&tmp, text).map_err(|e| Error::io(&tmp, &e))?;
-    let done = dir.join(format!("{name}.jsonl"));
-    std::fs::rename(&tmp, &done).map_err(|e| Error::io(&done, &e))
+    place(&dir(root), "jsonl", text.as_bytes()).map(|_| ())
+}
+
+/// Keep a hook payload that is no spool line, raw, as
+/// `spool/unreadable/<ULID>.hook`, the name `src/hook` writes; no
+/// replay lists that dir (src/store T14).
+pub(super) fn raw(root: &Path, bytes: &[u8]) -> Result<PathBuf, Error> {
+    place(&dir(root).join("unreadable"), "hook", bytes)
 }
 
 /// Every spool file, oldest first (ULID names sort by time).

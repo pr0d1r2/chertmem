@@ -9,6 +9,7 @@ mod catalog;
 mod cold;
 mod doctor;
 mod error;
+mod generation;
 mod layout;
 mod line;
 mod model;
@@ -17,11 +18,13 @@ mod prune;
 mod read;
 mod reference;
 mod repartition;
+mod restore;
 mod schema;
 mod spool;
 mod summary;
 mod tail;
 mod tier;
+mod tombstone;
 mod write;
 
 use std::path::{Path, PathBuf};
@@ -124,14 +127,14 @@ impl Store {
     pub fn replay(&mut self) -> Result<(), Error> {
         self.reading()?;
         for path in spool::pending(&self.root)? {
-            self.restore(&path)?;
+            self.replay_file(&path)?;
         }
         Ok(())
     }
 
     /// Replay 1 spool file, then drop it; an unreadable one is set
     /// aside, and one for a sealed partition held (src/store T10).
-    fn restore(&mut self, path: &Path) -> Result<(), Error> {
+    fn replay_file(&mut self, path: &Path) -> Result<(), Error> {
         let items = match spool::read(path)? {
             spool::Found::Items(items) => items,
             spool::Found::Unreadable => {
@@ -165,6 +168,18 @@ impl Store {
     #[must_use]
     pub fn project(&self) -> &str {
         &self.project
+    }
+
+    /// Keep a hook payload that could not be parsed, `bytes` as given,
+    /// in `spool/unreadable/<ULID>.hook` under the data dir, written to
+    /// a temp file and renamed into place: no replay reads, stores or
+    /// drops it, so it waits for a person or an importer (src/store
+    /// T14). Allowed in both modes; the file kept is returned.
+    ///
+    /// # Errors
+    /// [`Error::Io`] when the dir or the file cannot be written.
+    pub fn spool_raw(&self, bytes: &[u8]) -> Result<PathBuf, Error> {
+        spool::raw(&self.root, bytes)
     }
 
     /// Store `event` in the partition of its own timestamp (src/store
@@ -232,7 +247,8 @@ impl Store {
         })
     }
 
-    /// The catalog connection, laid on first use with the data dir.
+    /// The catalog connection, laid on first use with the data dir; a
+    /// new catalog's `generation` is seeded past every earlier one (V11).
     fn catalog(&mut self) -> Result<&Connection, Error> {
         if self.catalog.is_none() {
             for dir in ["chunks", "spool"] {
@@ -242,6 +258,7 @@ impl Store {
             }
             let path = self.root.join("catalog.db");
             let conn = schema::open(&path, self.mode.busy(), schema::CATALOG)?;
+            generation::seed(&conn, &self.root)?;
             self.catalog = Some(conn);
         }
         self.catalog.as_ref().ok_or(Error::NoDataDir)

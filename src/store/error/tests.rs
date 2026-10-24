@@ -25,9 +25,17 @@ fn all() -> [Error; 9] {
     ]
 }
 
+/// The variants added in wave 4.
+fn later() -> [Error; 1] {
+    [Error::RefTaken {
+        reference: "R".into(),
+        id: "I".into(),
+    }]
+}
+
 #[test]
 fn every_message_reads_what_then_fix() {
-    for e in all() {
+    for e in all().into_iter().chain(later()) {
         let text = e.to_string();
         assert!(text.starts_with("chert: "), "{text}");
         assert!(text.ends_with(')') && text.contains(" ("), "{text}");

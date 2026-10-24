@@ -15,8 +15,8 @@ use super::layout::{Place, Plan};
 use super::partition::{self, Chunks};
 use super::write::{self, Note, Row, immediate};
 use super::{
-    Error, Event, Filter, Observation, State, Store, catalog, cold, summary,
-    tail,
+    Error, Event, Filter, Observation, State, Store, catalog, cold, generation,
+    summary, tail,
 };
 
 /// A partition to rewrite: its path and tier.
@@ -42,7 +42,7 @@ struct Move<'a> {
 }
 
 /// A stored observation as the row it was appended as, and its ref.
-fn row(o: Observation) -> (Row, String) {
+pub(super) fn row(o: Observation) -> (Row, String) {
     let event = Event {
         ts: o.ts,
         session: o.session,
@@ -184,7 +184,7 @@ impl Store {
             from,
         }
         .run(&self.root)?;
-        catalog::bump(&tx)?;
+        generation::bump(&tx, &self.root)?;
         Ok(tx.commit()?)
     }
 }
