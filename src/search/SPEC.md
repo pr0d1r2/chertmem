@@ -30,8 +30,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn: `search::run(Query{text, limit, since, project, semantic}) -> Vec<Hit{ref, score, snippet, session, ts}>`.
-- fn: `search::timeline(session, around, limit)`.
+- fn (as built, wave 4): `Engine::open(cfg, project_root)`; `Engine::run(&Query, Option<&cache::Handle>) -> Vec<Hit{reference, score, snippet, session, ts}>`; `Query { text, limit, since, project, kind, session, semantic }`; `Engine::timeline(session, around: Option<&Ref>, limit) -> Vec<Entry{reference, kind, ts}>`.
 
 ## §R RESEARCH
 
@@ -44,7 +43,8 @@ R2|ranking, wave 4|BM25 k1 1.2 b 0.75, idf `ln(1+(N-df+.5)/(df+.5))`; ties ts de
 V1: same row → same score whether from cache or disk (`.:V1`).
 V2: merged ranking ≡ ranking over 1 unpartitioned table of same rows (property test).
 V3: `semantic = false` | provider off → ⊥ network (`.:V6`).
-V4: ties broken by ts desc then id ∴ order total & deterministic.
+V4: ties broken by ts desc then id desc ∴ order total & deterministic.
+V5: query text goes through the same grammar as stored bodies before scoring ∴ a word stored compressed (`middleware` → `mw`) is found by its plain form (B1).
 
 ## §T TASKS
 
@@ -53,7 +53,10 @@ T1|x|global term stats in catalog|V2
 T2|x|parallel per-partition query & merge|V2,V4
 T3|x|scoring fn shared w/ cache|V1
 T4|x|ollama provider, alpha blend|V3
+T5|.|compress query terms w/ `compression.grammar` before tokenizing; test plain word finds compressed body|V5
+T6|.|candidate rows via store FTS5 MATCH per partition (needs store API), ⊥ full scan per query ∴ `.:§C` search < 10 ms holds at 10^5 rows; benchmark it|V2
 
 ## §B BUGS
 
 id|date|cause|fix
+B1|2026-10-24|wave 4 report: query tokenized raw while stored bodies are caveman-compressed ∴ plain-word query misses compressed rows|V5
