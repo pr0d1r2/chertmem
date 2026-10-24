@@ -9,6 +9,7 @@ catalog: [
   catalog.microlith
   catalog.nixfmt
   catalog.ripsecrets
+  catalog.rustfmt
   catalog.shellcheck
   catalog.sherd
   catalog.statix
