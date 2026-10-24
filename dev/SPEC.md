@@ -2,7 +2,7 @@
 
 ## §G GOAL
 
-root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = `dev` crate (`publish = false`) for gate steps: `bench-gate`, target/suite parity, name guard input.
+root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = crate `chertmem-dev` (`publish = false`) for gate steps in Rust (owner 2026-10-24): `name-guard`, `no-core-worktree`, `lock-graph`, `bench-gate`, target/suite parity.
 
 ## §N NAV
 
@@ -22,18 +22,26 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 ## §I INTERFACES
 
 - cmd: `nix develop`; `.envrc` = `use flake`.
-- cmd: `cargo run -p dev -- bench-gate`.
+- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `bench-gate`. exit 0 hold · 1 finding (file:line & fix on stderr) · 2 usage | unreadable input.
+- file: `.private/denylist` — untracked, 1 name per line, `#` comments (`paradigm/V37`).
 
 ## §V INVARIANTS
 
 V1: ∀ hk step's tool on dev shell PATH.
 V2: Node ∈ dev shell only, ⊥ in `chert` closure (`.:§C`).
+V3: `name-guard`: ∀ given file ∋ denylist name (case-insensitive) → 1 finding naming file & line, ⊥ echoing the name into committed output; ⊥ denylist → hold (CI half = allowlist, later) (`.:V12`).
+V4: `no-core-worktree`: `core.worktree` set in shared `.git/config` → finding (`paradigm/V15`).
+V5: `lock-graph`: `flake.lock` holds exactly 1 nixpkgs node & ∀ input named `nixpkgs` | `nixpkgs-lock` follows root `nixpkgs-lock` → hold; else finding naming node.
+V6: ∀ guard proven by unit test rejecting planted violation & passing clean twin (`paradigm/V21`).
 
 ## §T TASKS
 
 id|status|task|cites
 T1|x|root `flake.nix` devShell + `.envrc`|V1,V2
 T2|.|`dev` crate w/ `bench-gate`|-
+T3|.|`name-guard`, RED → GREEN → gate row|V3,V6
+T4|.|`no-core-worktree`, RED → GREEN → gate row|V4,V6
+T5|.|`lock-graph`, RED → GREEN → gate row|V5,V6
 
 ## §B BUGS
 
