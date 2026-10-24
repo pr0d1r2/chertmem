@@ -31,11 +31,11 @@ fn a_command_of_another_tool_is_no_command() {
 #[test]
 fn every_path_key_is_read_once() {
     let input = r#"{"file_path":"src/lib.rs","path":"src/lib.rs",
-        "notebook_path":"a/b.ipynb"}"#
+        "notebook_path":"nb/b.ipynb"}"#
         .replace('\n', "");
     let tool = parse(&body("Edit", &input));
     let paths = tool.map(|t| t.paths).unwrap_or_default();
-    assert_eq!(paths, ["a/b.ipynb", "src/lib.rs"]);
+    assert_eq!(paths, ["nb/b.ipynb", "src/lib.rs"]);
 }
 
 #[test]

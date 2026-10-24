@@ -8,6 +8,16 @@
 #[cfg(test)]
 mod tests;
 
+use std::collections::BTreeSet;
+
+use serde_json::{Map, Value};
+
+/// The `tool_input` keys that name a path, as `src/hook` reads them.
+const PATH_KEYS: [&str; 3] = ["file_path", "path", "notebook_path"];
+
+/// The tool whose `command` is a shell command.
+const SHELL: &str = "Bash";
+
 /// What mining reads from 1 tool call.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(super) struct Tool {
@@ -21,9 +31,21 @@ pub(super) struct Tool {
 /// `body` as a tool call; `None` when its input line is not a JSON
 /// object.
 pub(super) fn parse(body: &str) -> Option<Tool> {
-    // RED stub: an empty call for every body.
-    (!body.is_empty()).then(|| Tool {
-        command: None,
-        paths: Vec::new(),
+    let mut lines = body.split('\n');
+    let name = lines.next()?;
+    let input: Value = serde_json::from_str(lines.next()?).ok()?;
+    let input = input.as_object()?;
+    let text = |key| input.get(key).and_then(Value::as_str);
+    let command = text("command").filter(|_| name == SHELL);
+    Some(Tool {
+        command: command.map(str::to_owned),
+        paths: paths(input),
     })
+}
+
+/// Every path `input` names, sorted, each once.
+fn paths(input: &Map<String, Value>) -> Vec<String> {
+    let found = PATH_KEYS.iter().filter_map(|k| input.get(*k));
+    let named = found.filter_map(Value::as_str).map(str::to_owned);
+    named.collect::<BTreeSet<_>>().into_iter().collect()
 }
