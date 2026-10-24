@@ -9,3 +9,7 @@ LINEAGE: `SPEC-PROMPT.md` (HISTORICAL after this run). where it & this spec diff
 ## §D DESCRIPTION
 
 Rust cargo workspace: crate `chertmem` (lib + bin `chert`, MIT, public) & `dev` (`publish = false`, gate steps). rewrite of cavemem 0.2.1 (npm, `JuliusBrussee/cavemem`, MIT): same capture idea & MCP tool names, own data dir, import path from cavemem. store = `catalog.db` + 1 SQLite file per partition; long-lived `chert mcp` holds bounded in-memory cache of recent window. hooks = short processes, write & exit. mining reports behaviour findings; rekall reads chert's JSONL export & alone mints candidates (D27). fleet member, full paradigm conformance (D10).
+
+## §F FEDERATION
+
+dir|owns|⊥owns|tokens
