@@ -103,6 +103,9 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v pklith >/dev/null 2>&1 || { echo 'gen-check: pklith is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; pklith gen --check || { echo 'gen-check: hk.pklith.pkl or nix/pklith.nix no longer matches .pklith; run pklith gen' >&2; exit 1; }"
     fix = "pklith gen"
   }
+  ["pklith-check"] {
+    check = "command -v pklith >/dev/null 2>&1 || { echo 'pklith-check: pklith is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; pklith check || { echo 'pklith-check: a tracked file type has no row in .pklith, a row matches nothing, or a claimed check never reaches its files' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
