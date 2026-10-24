@@ -5,4 +5,5 @@
 
 pub mod config;
 pub mod grammar;
+pub mod hook;
 pub mod store;
