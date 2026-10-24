@@ -7,6 +7,7 @@ crate `chertmem`: lib + bin `chert` (`[[bin]] name = "chert"`, D11). 1 node per 
 ## §F FEDERATION
 
 dir|owns|⊥owns|tokens
+config|`chert.toml` scopes, merge, defaults, validation|reading partitions (`store`), cache sizing (`cache`)|-
 
 ## §N NAV
 
