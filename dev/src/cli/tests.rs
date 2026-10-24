@@ -53,3 +53,34 @@ fn name_guard_clean_twin_holds() -> Res {
     assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 0);
     Ok(())
 }
+
+/// `git` in `dir`, with the hook's `GIT_*` variables dropped, so a test
+/// run inside a hook never reaches the outer repository (`paradigm/V15`).
+fn git(dir: &std::path::Path, list: &[&str]) -> Res {
+    let mut cmd = std::process::Command::new("git");
+    for (k, _) in std::env::vars_os() {
+        if k.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(k);
+        }
+    }
+    let ok = cmd.current_dir(dir).args(list).status()?.success();
+    assert!(ok, "git {list:?} failed");
+    Ok(())
+}
+
+#[test]
+fn no_core_worktree_planted_is_a_finding() -> Res {
+    let root = scratch("worktree-planted")?;
+    git(&root, &["init", "-q"])?;
+    git(&root, &["config", "core.worktree", "/tmp/elsewhere"])?;
+    assert_eq!(run(&args(&["no-core-worktree"]), &root), 1);
+    Ok(())
+}
+
+#[test]
+fn no_core_worktree_clean_twin_holds() -> Res {
+    let root = scratch("worktree-clean")?;
+    git(&root, &["init", "-q"])?;
+    assert_eq!(run(&args(&["no-core-worktree"]), &root), 0);
+    Ok(())
+}
