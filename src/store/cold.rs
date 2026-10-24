@@ -135,6 +135,12 @@ fn missing(file: &Path) -> Error {
     }
 }
 
+/// Make the directory `file` lands in.
+pub(super) fn dir_of(file: &Path) -> Result<(), Error> {
+    let dir = file.parent().unwrap_or(file);
+    std::fs::create_dir_all(dir).map_err(|e| Error::io(dir, &e))
+}
+
 /// The bytes of `file`; `None` when it does not exist.
 fn read(file: &Path) -> Result<Option<Vec<u8>>, Error> {
     match std::fs::read(file) {
@@ -146,9 +152,7 @@ fn read(file: &Path) -> Result<Option<Vec<u8>>, Error> {
 
 /// Write `bytes` to a temp file beside `file`, then rename it into place.
 fn write(file: &Path, bytes: &[u8]) -> Result<(), Error> {
-    if let Some(dir) = file.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| Error::io(dir, &e))?;
-    }
+    dir_of(file)?;
     let mut tmp = file.as_os_str().to_owned();
     tmp.push(format!(".{}.tmp", ulid::Ulid::generate()));
     let tmp = PathBuf::from(tmp);

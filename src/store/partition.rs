@@ -46,9 +46,7 @@ impl Chunks {
         file: &Path,
     ) -> Result<&Connection, Error> {
         if !self.open.contains_key(path) {
-            if let Some(dir) = file.parent() {
-                std::fs::create_dir_all(dir).map_err(|e| Error::io(dir, &e))?;
-            }
+            cold::dir_of(file)?;
             let conn = schema::open(file, self.busy, schema::PARTITION)?;
             self.open.insert(path.to_owned(), conn);
         }

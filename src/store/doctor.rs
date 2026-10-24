@@ -109,10 +109,8 @@ fn restore(
     path: &str,
     cold: bool,
 ) -> Result<(), Error> {
-    if catalog::find(tx, path)?.is_some() {
-        return Ok(());
-    }
-    let Some(conn) = chunks.existing(path)? else {
+    let tombstone = catalog::find(tx, path)?.is_some();
+    let Some(conn) = chunks.existing(path)?.filter(|_| !tombstone) else {
         return Ok(());
     };
     let found = conn.query_row(META, [], |r| meta(path, r)).optional()?;
