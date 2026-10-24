@@ -15,8 +15,11 @@ use std::path::Path;
 
 pub use error::Error;
 
+use serde_json::{Value, json};
+
 use crate::cache::Env;
 use crate::config::Config;
+use rpc::Frame;
 
 /// What [`serve`] reads besides stdin.
 #[derive(Clone)]
@@ -34,9 +37,39 @@ pub struct Ctx<'a> {
 /// # Errors
 /// The store or engine cannot be opened; stdin or stdout fails.
 pub fn serve(
-    _ctx: &Ctx<'_>,
-    _input: impl BufRead,
-    _output: impl Write,
+    ctx: &Ctx<'_>,
+    input: impl BufRead,
+    mut output: impl Write,
 ) -> Result<(), Error> {
+    let _ = ctx;
+    for line in input.lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Some(frame) = reply(&line) {
+            writeln!(output, "{frame}")?;
+            output.flush()?;
+        }
+    }
     Ok(())
+}
+
+/// The frame answering `line`, if any.
+fn reply(line: &str) -> Option<Value> {
+    match rpc::parse(line) {
+        Frame::Request { id, method, params } => {
+            Some(answer(id, &method, &params))
+        }
+        Frame::Bad(frame) => Some(frame),
+        Frame::Silent => None,
+    }
+}
+
+fn answer(id: Value, method: &str, params: &Value) -> Value {
+    match method {
+        "initialize" => rpc::ok(id, rpc::initialize(params)),
+        "ping" => rpc::ok(id, json!({})),
+        _ => rpc::fail(id, rpc::NO_METHOD, "Method not found"),
+    }
 }
