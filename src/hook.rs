@@ -10,6 +10,7 @@ mod tests;
 mod claude_code;
 mod exclude;
 mod kind;
+mod raw;
 mod redact;
 
 use std::path::Path;
@@ -76,21 +77,27 @@ impl Outcome {
     }
 }
 
-/// Handle hook `kind` on payload `stdin` (src/hook G).
+/// Handle hook `kind` on payload `stdin` (src/hook G); exit 0 whatever
+/// the payload, an unreadable one kept raw (V2).
 #[must_use]
 pub fn run(kind: Kind, stdin: &[u8], ctx: &Ctx<'_>) -> Outcome {
     let parsed = match ctx.ide {
         Ide::ClaudeCode => claude_code::parse(kind, stdin),
     };
     match parsed {
-        Some(payload) => handle(kind, &payload, ctx),
-        None => Outcome::done(None),
+        Some(payload) => handle(kind, &payload, stdin, ctx),
+        None => kept(stdin, ctx, "chert: unreadable hook payload"),
     }
 }
 
 /// Store a readable payload; one touching an excluded path stores
-/// nothing (V1).
-fn handle(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Outcome {
+/// nothing (V1); one the store refuses is kept raw (V2).
+fn handle(
+    kind: Kind,
+    payload: &Payload,
+    stdin: &[u8],
+    ctx: &Ctx<'_>,
+) -> Outcome {
     let globs = &ctx.config.privacy.exclude;
     if exclude::excluded(globs, ctx.root, &payload.paths) {
         return Outcome::done(None);
@@ -100,8 +107,16 @@ fn handle(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Outcome {
         .and_then(|mut store| store.append(&event));
     match stored {
         Ok(_) => Outcome::done(None),
-        Err(e) => Outcome::noted(e.to_string()),
+        Err(e) => kept(stdin, ctx, &e.to_string()),
     }
+}
+
+/// Keep `stdin` raw in the spool, noting `why` and where it went.
+fn kept(stdin: &[u8], ctx: &Ctx<'_>, why: &str) -> Outcome {
+    Outcome::noted(match raw::keep(ctx.config, stdin) {
+        Ok(path) => format!("{why}; kept raw in {}", path.display()),
+        Err(e) => format!("{why}; payload lost: {e}"),
+    })
 }
 
 /// The event `payload` stores, its body redacted and compressed.

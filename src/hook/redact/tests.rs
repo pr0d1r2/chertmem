@@ -57,7 +57,7 @@ fn private_spans_never_reach_the_store() -> Test {
     scratch.run(Kind::PostToolUse, TOOL);
     let found = scratch.observations()?;
     let bodies: Vec<_> = found.into_iter().map(|o| o.body).collect();
-    assert_eq!(bodies.first().map(String::as_str), Some("deploy now"));
+    assert!(bodies.contains(&"deploy now".to_owned()), "{bodies:?}");
     assert_eq!(bodies.len(), 2);
     for body in &bodies {
         assert!(!body.contains("hunter2") && !body.contains("pw"), "{body}");

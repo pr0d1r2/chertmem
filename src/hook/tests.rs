@@ -46,6 +46,10 @@ impl Scratch {
         self.dir.join("project")
     }
 
+    pub(super) fn data(&self) -> PathBuf {
+        self.dir.join("data")
+    }
+
     /// Run hook `kind` on `stdin` at `now`.
     pub(super) fn run_at(&self, kind: Kind, stdin: &[u8], now: u64) -> Outcome {
         let root = self.root();
