@@ -38,3 +38,20 @@ self|.|-
 - public on GitHub from first push, MIT; CI = GitHub Actions rendered by actlith (D26, `paradigm/V28`). systems per `paradigm/V28`.
 - dev shell per `paradigm/V20`; gate per `paradigm/V23`; atomic commits, 1 topic each, `Paradigm-Stage:` trailer (`paradigm/V36`, D10).
 - outward acts need owner approval: push, publish, issues in other repos (rekall `chert` dialect, D27).
+
+## §I INTERFACES
+
+- cmd: `chert hook run <event>` — event JSON on stdin → 1 write → exit. events: `session-start` `user-prompt-submit` `post-tool-use` `stop` `session-end`.
+- cmd: `chert mcp` — MCP server on stdio; hosts cache (D14).
+- mcp: `search(query, limit?)` → `[{ref, score, snippet, session_id, ts}]`; `timeline(session_id, around?, limit?)` → `[{ref, kind, ts}]`; `get_observations(refs[], expand?)` → bodies, compressed unless `expand`; `list_sessions(limit?)` → `[{id, ide, cwd, started_at, ended_at}]`. names & shapes kept from cavemem (D21); `id` field carries ref.
+- ref: `chert:<id>` — shortest ULID prefix unique within project, ≥ 8 chars (D28). gone observation → answer `dropped`, ⊥ other row.
+- cmd: `chert search <query> [--limit N] [--since T] [--project P] [--no-semantic]`; `chert timeline <session> [--around REF]`; `chert get <ref>...`.
+- cmd: `chert install|uninstall [--ide NAME]`; `chert status`; `chert doctor`; `chert config show|get|set|path`.
+- cmd: `chert partitions [list|seal|compact|drop|repartition]`; `chert cache [plan]`.
+- cmd: `chert mine [--since T] [--format text|json]`; `chert report [--format text|json|md]`.
+- cmd: `chert compress <file>`; `chert expand <file>`; `chert export <out.jsonl> [--for rekall]`; `chert import <in.jsonl> [--from cavemem]`; `chert completions <shell>`; `chert man`.
+- exit: 0 ok · 1 finding · 2 usage | unreadable input.
+- file: `chert.toml` — user & project scope (§C).
+- dir: data dir (default `~/.local/share/chert`): `catalog.db`, `chunks/<project>/<bucket>[.<shard>].db[.zst]`, `spool/`.
+- export: JSONL, 1 observation per line, `ref` field; read by rekall `catch` via `chert` dialect (D27).
+- env: `OLLAMA_HOST` | provider key, only when `embedding.provider` opts in.
