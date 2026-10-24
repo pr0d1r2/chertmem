@@ -32,7 +32,7 @@ V2: Node ∈ dev shell only, ⊥ in `chert` closure (`.:§C`).
 ## §T TASKS
 
 id|status|task|cites
-T1|.|root `flake.nix` devShell + `.envrc`|V1,V2
+T1|x|root `flake.nix` devShell + `.envrc`|V1,V2
 T2|.|`dev` crate w/ `bench-gate`|-
 
 ## §B BUGS
