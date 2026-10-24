@@ -182,3 +182,58 @@ fn only_fences_and_inline_code_are_code() {
         .collect();
     assert_eq!(code, CODE_SPANS);
 }
+
+/// Only paths count as paths (src/grammar V5 (c)); chert's own flag.
+#[test]
+fn only_paths_are_paths() {
+    let paths: Vec<&str> = tokenize(CODE_TEXT)
+        .iter()
+        .filter(|s| s.path)
+        .map(|s| s.text)
+        .collect();
+    assert_eq!(paths, ["/p"]);
+}
+
+/// Inline code right after a fence is code (src/grammar V5 (b)); cavemem
+/// takes `` ` ` `` from the fence's last tick, so `c` is prose there.
+#[test]
+fn inline_code_after_a_fence_is_code() {
+    let want = [
+        ("x ", false),
+        ("```b```", true),
+        (" ", false),
+        ("`c`", true),
+        (" ", false),
+        ("`d`", true),
+    ];
+    assert_eq!(segs("x ```b``` `c` `d`"), want);
+}
+
+/// Inline code after a fence that runs into a later fence wins over it,
+/// as after prose; cavemem keeps `` ```the c``` `` as the fence.
+#[test]
+fn inline_code_after_a_fence_beats_a_later_fence() {
+    let want = [
+        ("```a```", true),
+        (" ", false),
+        ("`b `", true),
+        ("`", false),
+        ("`the c`", true),
+        ("``", false),
+    ];
+    assert_eq!(segs("```a``` `b ```the c```"), want);
+}
+
+/// A fence that lost to earlier inline code cuts no inline code: the
+/// segments stay cavemem's.
+#[test]
+fn a_lost_fence_cuts_no_inline_code() {
+    let want = [
+        ("`a `", true),
+        ("`", false),
+        ("`b`", true),
+        ("`", false),
+        ("`c`", true),
+    ];
+    assert_eq!(segs("`a ```b```c`"), want);
+}

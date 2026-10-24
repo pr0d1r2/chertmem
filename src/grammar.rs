@@ -6,8 +6,9 @@
 //! Brussee, MIT License, <https://github.com/JuliusBrussee/cavemem>; the
 //! notice is in `THIRD-PARTY-NOTICES.md`. Output is byte for byte the
 //! output of the original, checked against golden files in
-//! `tests/grammar/oracle/`, except that blanks before a mark inside code
-//! are kept (V4).
+//! `tests/grammar/oracle/`, except three deliberate deviations (V5):
+//! blanks before a mark inside code are kept, inline code right after a
+//! fence is code, and the blank before a path is kept.
 
 #[cfg(test)]
 mod tests;
@@ -42,10 +43,11 @@ pub enum Intensity {
 /// headings, dates, versions, numbers and identifiers are kept.
 ///
 /// cavemem's last pass, blanks before `.,;:!?` dropped, runs over each
-/// stretch between fenced and inline code, never inside it (V4). A code
-/// span starts and ends with a backtick or tilde, neither a blank nor a
-/// mark, so no match of the pass crosses its edge: outside code the
-/// bytes stay the oracle's.
+/// stretch between fenced code, inline code and paths, never inside
+/// code (V5 (a)) nor across into a path that starts with `.` (V5 (c)).
+/// Code starts and ends with a backtick or tilde and a path holds no
+/// blank, so no other match of the pass crosses their edges: elsewhere
+/// the bytes stay the oracle's.
 #[must_use]
 pub fn compress(text: &str, intensity: Intensity) -> String {
     let Some(grammar) = lexicon::grammar_for(intensity) else {
@@ -54,7 +56,7 @@ pub fn compress(text: &str, intensity: Intensity) -> String {
     let mut out = String::with_capacity(text.len());
     let mut run = String::new();
     for seg in tokenize::tokenize(text) {
-        if seg.code {
+        if seg.code || seg.path {
             out.push_str(&prose::tighten(&std::mem::take(&mut run)));
             out.push_str(seg.text);
         } else {
