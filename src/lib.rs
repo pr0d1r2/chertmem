@@ -2,3 +2,5 @@
 //!
 //! A stub until the waves (root T8): the module nodes under `src/` land
 //! one per worker, test first.
+
+pub mod grammar;
