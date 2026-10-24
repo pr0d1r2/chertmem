@@ -1,7 +1,7 @@
-DRAFT INPUT. This file is the prompt for the first ck:spec run. When that
-run lands SPEC.md, mark this file HISTORICAL INPUT in its own commit; from
-then on SPEC.md and the node specs it federates are the law, and where they
-differ from this file, they win. Drafted 2026-10-24 by an agent from the
+HISTORICAL INPUT. This file was the prompt for the first ck:spec run,
+which landed SPEC.md and its node specs on 2026-10-24. SPEC.md and the
+node specs it federates are the law; where they differ from this file,
+they win. Drafted 2026-10-24 by an agent from the
 owner's conversation; what the owner decided is marked as a decision, and
 what the agent only proposed is an open question.
 
