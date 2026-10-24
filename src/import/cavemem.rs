@@ -13,6 +13,8 @@
 #[cfg(test)]
 mod tests;
 
+mod summary;
+
 use std::path::Path;
 
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Row};
@@ -49,15 +51,17 @@ pub fn cavemem(
     db: &Path,
     grammar: Grammar,
 ) -> Result<Imported, Error> {
-    let conn = open(db)?;
-    let events = observations(&conn, intensity(grammar))?;
+    let (conn, level) = (open(db)?, intensity(grammar));
+    let events = observations(&conn, level)?;
+    let notes = summary::read(&conn, level)?;
     drop(conn);
     for event in &events {
         store.append(event)?;
     }
+    summary::put(store, &notes)?;
     Ok(Imported {
         observations: events.len(),
-        summaries: 0,
+        summaries: notes.len(),
     })
 }
 
