@@ -57,6 +57,11 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*.sh", "**/*.bash", ".envrc")
     check = "command -v shellcheck >/dev/null 2>&1 || { echo 'shellcheck: shellcheck is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; shellcheck {{files}} || { echo 'shellcheck: shell script finding' >&2; exit 1; }"
   }
+  ["statix"] {
+    glob = List("**/*.nix")
+    check = #"command -v statix >/dev/null 2>&1 || { echo 'statix: statix is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; (for f in {{files}}; do statix check "$f" || exit 1; done) || { echo 'statix: nix anti-pattern; statix names the lint and its fix' >&2; exit 1; }"#
+    fix = #"(for f in {{files}}; do statix fix "$f" || exit 1; done)"#
+  }
   ["editorconfig-checker"] {
     glob = List("**/*")
     check = "command -v editorconfig-checker >/dev/null 2>&1 || { echo 'editorconfig-checker: editorconfig-checker is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; editorconfig-checker {{files}} || { echo 'editorconfig-checker: file breaks its .editorconfig (indent, line ends, final newline)' >&2; exit 1; }"
