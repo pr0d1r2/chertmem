@@ -43,6 +43,7 @@ id|status|task|cites
 T1|.|JSONL export & import|V1
 T2|.|cavemem 0.2.1 import from fixture DB|V2,V3
 T3|.|`--for rekall` shape, agreed via rekall issue (`.:T14`)|-
+T4|.|import cavemem `summaries` (turn & session scope) w/ their sessions|V1,V2
 
 ## §B BUGS
 
