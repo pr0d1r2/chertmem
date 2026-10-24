@@ -40,6 +40,7 @@ V9: ∀ gate step running `cargo run` depends on step `build` (`cargo build -q -
 V10: ∀ gate step running `cargo run` | `cargo build` is hk `exclusive` ∵ cargo re-links `target/debug/<bin>` (new inode) on every run & build, even w/o rebuild ∴ 2 such steps at once race; `test` waits for them (B3).
 V11: `commit-msg`: subject `type(scope)?: claim`, type ∈ feat fix docs test chore refactor perf build ci, ≤ 72 chars; ≥ 1 body line before trailers; final paragraph carries `Paradigm-Stage: <stage>` from `paradigm` §I vocabulary (`paradigm/V36`, `paradigm/V43`); git's own Merge, Revert, fixup!, squash! subjects pass. `name-guard` reads the message too (B4).
 V12: `commit-msg` reads strictly (wave 1, as built): ∀ line of final paragraph = `Key: value` (key letters, digits, `-`; indented continuation ok) ∴ trailer beside prose = finding; trailer right under subject w/o blank = body; stage `<n>` positive, ⊥ leading zero; key match case-sensitive `Paradigm-Stage:`; scope chars lowercase, digits, `/ . _ -`; Merge, Revert, fixup!, squash! subjects skip ∀ rule.
+V13: `.coverage` floor = `sherd coverage --record` result − 0.10, rounded down to 0.01 ∴ a worker's worktree, which measured 0.02 lower than the main tree at one commit, passes on equal code; spread > 0.10 = a finding to chase. ratchet still only rises (`paradigm/V25`) (B5).
 
 ## §T TASKS
 
@@ -60,3 +61,4 @@ B1|2026-10-24|workspace stub (`src:T1`) laid by hand w/ bodiless `lib.rs` & `mai
 B2|2026-10-24|`name-guard` failed w/o denylist & w/o output in pre-commit while clippy, rustdoc & doctest rebuilt `chertmem-dev` beside it: a cargo step relinked the binary another was executing (lablith & actlith B9)|V9
 B3|2026-10-24|after B2's fix `no-core-worktree` failed "could not execute process `target/debug/chertmem-dev` (never executed)": measured, ∀ `cargo run` & `cargo build` replaces the binary's hard link (inode 12182331 → 12182334 → 12182340 → 12182342) even when up to date ∴ parallel `cargo run` steps race each other, ⊥ only the build|V10
 B4|2026-10-24|16 subjects over 72 chars & 1 citing wrong id landed in guardrails stage, found only by hand twice: ⊥ step read commit messages|V11
+B5|2026-10-24|wave 6: at ec3324d the main tree measured 98.22%, a worker worktree 98.20%, so the floor set at the exact measurement failed that worker's pre-push on equal code; cause ⊥ found yet (checkout path in tests?)|V13
