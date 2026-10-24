@@ -25,8 +25,13 @@ rusqlite = { version = "0.41.0", default-features = false, features = [
   "bundled",
   "fallible_uint",
 ] }
-# Spool lines (src/store I): MIT, no dependencies; serde_json is out, as
-# its ryu is Apache-2.0 OR BSL-1.0.
+# Hook payloads (src/hook C, src C): MIT OR Apache-2.0; from 1.0.154 its
+# float printer is zmij (MIT), no longer ryu; itoa and memchr are MIT OR
+# Apache-2.0. Default features: Map is a BTreeMap, so re-serialised tool
+# input has sorted keys and the same bytes every run (src/hook V3).
+serde_json = "1.0.154"
+# Spool lines (src/store I): MIT, no dependencies; chosen before
+# serde_json was allowed (owner 2026-10-24).
 tinyjson = "2.5.1"
 # `chert.toml` parsing (src/config C): every crate in its tree is MIT
 # or MIT OR Apache-2.0, and serde_core brings no proc macro, so the

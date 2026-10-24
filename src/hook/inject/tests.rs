@@ -1,0 +1,230 @@
+use serde_json::Value;
+
+use super::{HEADER, budget, cut, tokens_at_most};
+use crate::hook::tests::{NOW, Res, Scratch, Test, fixture};
+use crate::hook::{Kind, Payload};
+use crate::store::{Scope, Summary};
+
+fn json(text: &serde_json::Value) -> Vec<u8> {
+    text.to_string().into_bytes()
+}
+
+/// Session `session` at `at`: 1 turn saying `said`, then its end.
+fn past(scratch: &Scratch, session: &str, at: u64, said: &str) {
+    let stop = serde_json::json!({
+        "session_id": session, "last_assistant_message": said});
+    scratch.run_at(Kind::Stop, &json(&stop), at);
+    let end = serde_json::json!({"session_id": session, "reason": "other"});
+    scratch.run_at(Kind::SessionEnd, &json(&end), at.saturating_add(1));
+}
+
+/// `count` past sessions `p0`, `p1`, ... 10 ms apart, oldest first.
+fn history(scratch: &Scratch, count: u64, said: &str) {
+    for n in 0..count {
+        let at = NOW.saturating_add(n.saturating_mul(10));
+        past(scratch, &format!("p{n}"), at, &format!("{said} {n}"));
+    }
+}
+
+fn start(source: &str) -> Vec<u8> {
+    json(&serde_json::json!({"session_id": "now", "source": source}))
+}
+
+/// The context hook `kind` printed, checked to be the only output.
+fn context(out: Option<String>, kind: Kind) -> Res<String> {
+    let value: Value = serde_json::from_str(&out.ok_or("no stdout")?)?;
+    let object = value.as_object().ok_or("not an object")?;
+    assert_eq!(object.keys().collect::<Vec<_>>(), ["hookSpecificOutput"]);
+    let inner = object.get("hookSpecificOutput").ok_or("no output")?;
+    let inner = inner.as_object().ok_or("not an object")?;
+    let keys: Vec<_> = inner.keys().collect();
+    assert_eq!(keys, ["additionalContext", "hookEventName"]);
+    let name = inner.get("hookEventName").and_then(Value::as_str);
+    assert_eq!(name, Some(kind.event_name()));
+    let text = inner.get("additionalContext").and_then(Value::as_str);
+    Ok(text.ok_or("no context")?.to_owned())
+}
+
+fn at_start(scratch: &Scratch, source: &str) -> Option<String> {
+    let at = NOW.saturating_add(1_000);
+    scratch
+        .run_at(Kind::SessionStart, &start(source), at)
+        .stdout
+}
+
+#[test]
+fn startup_injects_the_last_3_other_sessions_newest_first() -> Test {
+    let mut scratch = Scratch::new("inject")?;
+    scratch.config.inject.max_tokens = 10_000;
+    history(&scratch, 5, "Fixed the parser");
+    past(&scratch, "now", NOW.saturating_add(500), "this session");
+    let text = context(at_start(&scratch, "startup"), Kind::SessionStart)?;
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.first(), Some(&HEADER));
+    assert_eq!(lines.len(), 4, "{text}");
+    for (line, n) in lines.iter().skip(1).zip([4, 3, 2]) {
+        assert!(line.starts_with("- chert:"), "{line}");
+        assert!(line.ends_with(&format!("parser {n}")), "{line}");
+    }
+    assert!(!text.contains("this session"));
+    Ok(())
+}
+
+#[test]
+fn each_ref_resolves_to_its_sessions_end() -> Test {
+    let mut scratch = Scratch::new("injectref")?;
+    scratch.config.inject.max_tokens = 10_000;
+    history(&scratch, 1, "Done");
+    let text = context(at_start(&scratch, "startup"), Kind::SessionStart)?;
+    let word = text.lines().nth(1).and_then(|l| l.split(' ').nth(1));
+    let reference = crate::store::Ref::parse(word.ok_or("no ref")?)?;
+    let found = scratch.store()?.get(&[reference])?;
+    let crate::store::Lookup::Found(obs) = found.first().ok_or("none")? else {
+        return Err("dropped".into());
+    };
+    assert_eq!(
+        (obs.session.as_str(), obs.kind.as_str()),
+        ("p0", "session-end")
+    );
+    Ok(())
+}
+
+#[test]
+fn a_summary_without_its_end_is_injected_without_a_ref() -> Test {
+    let mut scratch = Scratch::new("injectnoref")?;
+    scratch.config.inject.max_tokens = 10_000;
+    let summary = Summary {
+        ts: NOW,
+        session: "imported".to_owned(),
+        scope: Scope::Session,
+        ide: "claude-code".to_owned(),
+        body: "Moved the build to nix".to_owned(),
+    };
+    scratch.store()?.append_summary(&summary)?;
+    let text = context(at_start(&scratch, "startup"), Kind::SessionStart)?;
+    assert_eq!(text, format!("{HEADER}\n- Moved the build to nix"));
+    Ok(())
+}
+
+#[test]
+fn only_the_first_line_of_a_summary_is_injected() -> Test {
+    let mut scratch = Scratch::new("injectgist")?;
+    scratch.config.inject.max_tokens = 10_000;
+    for (n, said) in ["First turn here", "Second turn body"].iter().enumerate()
+    {
+        let stop = serde_json::json!({
+            "session_id": "p", "last_assistant_message": said});
+        let at = NOW.saturating_add(u64::try_from(n)?);
+        scratch.run_at(Kind::Stop, &json(&stop), at);
+    }
+    let end = json(&serde_json::json!({"session_id": "p"}));
+    scratch.run_at(Kind::SessionEnd, &end, NOW.saturating_add(2));
+    let text = context(at_start(&scratch, "startup"), Kind::SessionStart)?;
+    assert!(text.contains("First turn here") && !text.contains("Second"));
+    Ok(())
+}
+
+#[test]
+fn resume_compact_and_clear_inject_nothing() -> Test {
+    let scratch = Scratch::new("injectresume")?;
+    history(&scratch, 2, "Work");
+    for source in ["resume", "compact", "clear", ""] {
+        assert_eq!(at_start(&scratch, source), None, "{source}");
+    }
+    let bare = br#"{"session_id":"now"}"#;
+    assert_eq!(scratch.run(Kind::SessionStart, bare).stdout, None);
+    Ok(())
+}
+
+#[test]
+fn no_other_session_injects_nothing() -> Test {
+    let scratch = Scratch::new("injectempty")?;
+    let out = scratch.run(Kind::SessionStart, &fixture(Kind::SessionStart)?);
+    assert_eq!((out.stdout, out.note), (None, None));
+    Ok(())
+}
+
+#[test]
+fn prompts_inject_only_when_on_prompt_is_set() -> Test {
+    let mut scratch = Scratch::new("injectprompt")?;
+    history(&scratch, 2, "Work");
+    let prompt = fixture(Kind::UserPromptSubmit)?;
+    let at = NOW.saturating_add(1_000);
+    assert_eq!(
+        scratch.run_at(Kind::UserPromptSubmit, &prompt, at).stdout,
+        None
+    );
+    scratch.config.inject.on_prompt = true;
+    let out = scratch.run_at(Kind::UserPromptSubmit, &prompt, at);
+    let text = context(out.stdout, Kind::UserPromptSubmit)?;
+    assert!(text.starts_with(HEADER));
+    Ok(())
+}
+
+/// A payload whose session started for `source`.
+fn from(source: &str) -> Payload {
+    Payload {
+        session: "s".to_owned(),
+        identity: None,
+        body: String::new(),
+        paths: Vec::new(),
+        source: Some(source.to_owned()),
+    }
+}
+
+#[test]
+fn only_startup_and_opted_in_prompts_have_a_budget() -> Test {
+    let scratch = Scratch::new("budget")?;
+    let mut config = scratch.config.clone();
+    let start = from("startup");
+    assert_eq!(budget(Kind::SessionStart, &start, &config), Some(300));
+    let resume = from("resume");
+    assert_eq!(budget(Kind::SessionStart, &resume, &config), None);
+    assert_eq!(budget(Kind::UserPromptSubmit, &start, &config), None);
+    for kind in [Kind::PostToolUse, Kind::Stop, Kind::SessionEnd] {
+        assert_eq!(budget(kind, &start, &config), None, "{kind:?}");
+    }
+    config.inject.on_prompt = true;
+    assert_eq!(budget(Kind::UserPromptSubmit, &start, &config), Some(300));
+    Ok(())
+}
+
+#[test]
+fn injected_text_stays_within_budget_at_every_size() -> Test {
+    let long = "Refactored the store and the hook. ".repeat(40);
+    for (n, count) in [0, 1, 3, 6].into_iter().enumerate() {
+        let mut scratch = Scratch::new(&format!("injectsize-{n}"))?;
+        history(&scratch, count, &long);
+        for max in [0, 10, 60, 100, 300, 1_000, 5_000] {
+            scratch.config.inject.max_tokens = max;
+            let Some(out) = at_start(&scratch, "startup") else {
+                continue;
+            };
+            let text = context(Some(out), Kind::SessionStart)?;
+            let bound = usize::try_from(max)?;
+            assert!(tokens_at_most(&text) <= bound, "{max}: {text}");
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn cut_keeps_whole_lines_until_one_does_not_fit() {
+    let lines = ["- a".to_owned(), "- bbbb".to_owned(), "- c".to_owned()];
+    let room = |extra: usize| u32::try_from(HEADER.len().saturating_add(extra));
+    assert_eq!(
+        cut(&lines, room(4).unwrap_or(0)),
+        Some(format!("{HEADER}\n- a"))
+    );
+    let all = format!("{HEADER}\n- a\n- bbbb\n- c");
+    assert_eq!(cut(&lines, u32::MAX), Some(all));
+    assert_eq!(cut(&lines, room(3).unwrap_or(0)), None);
+    assert_eq!(cut(&[], u32::MAX), None);
+}
+
+#[test]
+fn the_token_bound_is_never_below_the_bytes() {
+    assert_eq!(tokens_at_most(""), 0);
+    assert_eq!(tokens_at_most("chert"), 5);
+    assert_eq!(tokens_at_most("\u{e9}"), 2);
+}
