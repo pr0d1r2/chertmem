@@ -43,9 +43,9 @@ V4: setting `inject.on_prompt = true` via `chert config set` prints speed discla
 ## §T TASKS
 
 id|status|task|cites
-T1|.|`Config` type, parse & merge|V1,V3
-T2|.|window/bucket multiple warning|V2
-T3|.|`inject.*` keys & on_prompt disclaimer|V4
+T1|x|`Config` type, parse & merge|V1,V3
+T2|x|window/bucket multiple warning|V2
+T3|x|`inject.*` keys & on_prompt disclaimer|V4
 
 ## §B BUGS
 
