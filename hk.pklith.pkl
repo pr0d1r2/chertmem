@@ -128,6 +128,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'no-core-worktree: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- no-core-worktree || { echo 'no-core-worktree: core.worktree is set in the shared .git/config; unset it' >&2; exit 1; }"
   }
+  ["lock-graph"] {
+    glob = List("flake.lock", "flake.nix")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'lock-graph: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- lock-graph || { echo 'lock-graph: flake.lock holds more than one nixpkgs or nixpkgs-lock node' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {

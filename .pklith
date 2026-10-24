@@ -20,6 +20,9 @@ name-guard|gate|-|**/*|cargo run -q -p chertmem-dev -- name-guard {{files}}|-|-|
 # paradigm/V15, dev V4: core.worktree in the shared .git/config redirects
 # every worktree; the step refuses it.
 no-core-worktree|gate|-|**/*|cargo run -q -p chertmem-dev -- no-core-worktree|-|-|core.worktree is set in the shared .git/config; unset it
+# dev V5: flake.lock holds one nixpkgs and one nixpkgs-lock node, so every
+# input follows the fleet pin (paradigm/V20).
+lock-graph|gate|-|flake.lock, flake.nix|cargo run -q -p chertmem-dev -- lock-graph|-|-|flake.lock holds more than one nixpkgs or nixpkgs-lock node
 
 ## types
 type|checks|min|exempt
@@ -36,7 +39,7 @@ pre-commit|-|-|written by pklith (seed or gen)
 pre-push|-|-|written by pklith (seed or gen)
 envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
-path:flake.lock|-|-|written by `nix flake lock`; hygiene steps only
+path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
 rs|rustfmt, clippy|-|-
 toml|taplo|-|-
