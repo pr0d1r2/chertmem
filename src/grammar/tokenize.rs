@@ -26,11 +26,16 @@ const RULES: [(u8, Rule); 9] = [
     (20, identifier),
 ];
 
-/// One piece of the text: kept as it is, or prose to rewrite.
+/// The lowest priority of a code rule: fence and inline code.
+const CODE: u8 = 90;
+
+/// One piece of the text: kept as it is, or prose to rewrite. `code`
+/// marks a kept fence or inline code span (src/grammar V4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Segment<'a> {
     pub(super) text: &'a str,
     pub(super) kept: bool,
+    pub(super) code: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -78,15 +83,15 @@ fn resolve(s: &str) -> Vec<Span> {
 pub(super) fn tokenize(text: &str) -> Vec<Segment<'_>> {
     let mut out = Vec::new();
     let mut pos = 0;
-    let mut push = |from: usize, to: usize, kept: bool| {
+    let mut push = |from: usize, to: usize, kept: bool, code: bool| {
         let piece = text.get(from..to).filter(|t| !t.is_empty());
-        out.extend(piece.map(|t| Segment { text: t, kept }));
+        out.extend(piece.map(|text| Segment { text, kept, code }));
     };
     for span in resolve(text) {
-        push(pos, span.start, false);
-        push(span.start, span.end, true);
+        push(pos, span.start, false, false);
+        push(span.start, span.end, true, span.priority >= CODE);
         pos = span.end;
     }
-    push(pos, text.len(), false);
+    push(pos, text.len(), false, false);
     out
 }
