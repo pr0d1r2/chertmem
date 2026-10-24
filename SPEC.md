@@ -13,3 +13,9 @@ Rust cargo workspace: crate `chertmem` (lib + bin `chert`, MIT, public) & `dev` 
 ## §F FEDERATION
 
 dir|owns|⊥owns|tokens
+
+## §N NAV
+
+rel|path|lens
+up|-|-
+self|.|-
