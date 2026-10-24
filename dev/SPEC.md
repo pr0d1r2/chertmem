@@ -39,6 +39,7 @@ V8: `tdd-order` (same port, Rust rule only, ⊥ shell scripts here): ∀ commit 
 V9: ∀ gate step running `cargo run` depends on step `build` (`cargo build -q --workspace --bins`, after clippy); `test` waits for ∀ such step ∴ ⊥ step relinks a binary another is executing (B2). [superseded by V10]
 V10: ∀ gate step running `cargo run` | `cargo build` is hk `exclusive` ∵ cargo re-links `target/debug/<bin>` (new inode) on every run & build, even w/o rebuild ∴ 2 such steps at once race; `test` waits for them (B3).
 V11: `commit-msg`: subject `type(scope)?: claim`, type ∈ feat fix docs test chore refactor perf build ci, ≤ 72 chars; ≥ 1 body line before trailers; final paragraph carries `Paradigm-Stage: <stage>` from `paradigm` §I vocabulary (`paradigm/V36`, `paradigm/V43`); git's own Merge, Revert, fixup!, squash! subjects pass. `name-guard` reads the message too (B4).
+V12: `commit-msg` reads strictly (wave 1, as built): ∀ line of final paragraph = `Key: value` (key letters, digits, `-`; indented continuation ok) ∴ trailer beside prose = finding; trailer right under subject w/o blank = body; stage `<n>` positive, ⊥ leading zero; key match case-sensitive `Paradigm-Stage:`; scope chars lowercase, digits, `/ . _ -`; Merge, Revert, fixup!, squash! subjects skip ∀ rule.
 
 ## §T TASKS
 
