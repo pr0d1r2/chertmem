@@ -3,12 +3,14 @@ format 1
 # Seeded by `pklith seed --init` from the fragments this repository's
 # files switch on (`pklith detect`). It is yours now: pklith never rewrites it.
 #
-# No built-in check reads these types yet, so `pklith check` names them
-# until each gets checks or an exempt reason: envrc, gitignore, lock.
+# itok leaves the `*` row: `.context-limits` holds sherd's per-chain
+# ceilings (paradigm/V12, root T4); itok reads the same file as per-file
+# ceilings with another tokenizer, so the two disagree on every row, as
+# nix-codebuff and nix-orca found. sherd-budget gates the ceilings.
 
 ## types
 type|checks|min|exempt
-*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, itok|-|-
+*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths|-|-
 editorconfig|-|-|written by pklith (seed or gen)
 gitattributes|-|-|written by pklith (seed or gen)
 md|markdownlint|-|-
@@ -19,3 +21,6 @@ pklith|-|-|written by pklith (seed or gen)
 pkl|-|-|written by pklith (seed or gen)
 pre-commit|-|-|written by pklith (seed or gen)
 pre-push|-|-|written by pklith (seed or gen)
+envrc|shellcheck|-|-
+gitignore|-|-|git configuration; no linter reads ignore patterns
+path:flake.lock|-|-|written by `nix flake lock`; hygiene steps only
