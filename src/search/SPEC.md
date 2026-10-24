@@ -56,6 +56,7 @@ T3|x|scoring fn shared w/ cache|V1
 T4|x|ollama provider, alpha blend|V3
 T5|x|compress query terms w/ `compression.grammar` before tokenizing; test plain word finds compressed body|V5
 T6|.|candidate rows via store FTS5 MATCH per partition (needs store API), ⊥ full scan per query ∴ `.:§C` search < 10 ms holds at 10^5 rows; benchmark it|V2
+T7|.|query both the plain & the compressed form of each term ∴ a word kept long inside an identifier, inline code, path or compound (`src/middleware.rs`) is found again (R3); semantic re-rank embeds the same text it scores|V5
 
 ## §B BUGS
 
