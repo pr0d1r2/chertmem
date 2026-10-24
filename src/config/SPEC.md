@@ -31,19 +31,21 @@ sib|src/mine|behaviour findings & awareness report
 ## §I INTERFACES
 
 - fn: `config::load(project_root) -> Result<Config>`.
-- file: `~/.config/chert/chert.toml`, `<project>/chert.toml`; keys: `storage.data_dir`, `partition.{by,time_bucket,shards}`, `cache.{window,max_bytes,on_overflow}`, `compression.{grammar,zstd}`, `search.{alpha,default_limit}`, `embedding.provider`, `privacy.exclude`, `mining.{enabled,min_occurrences}`.
+- file: `~/.config/chert/chert.toml`, `<project>/chert.toml`; keys: `storage.data_dir`, `partition.{by,time_bucket,shards}`, `cache.{window,max_bytes,on_overflow}`, `compression.{grammar,zstd}`, `search.{alpha,default_limit}`, `embedding.provider`, `privacy.exclude`, `mining.{enabled,min_occurrences}`, `inject.{max_tokens,on_prompt}` (default 300, false).
 
 ## §V INVARIANTS
 
 V1: project value overrides user value per key; absent key → default from `.:§C`.
 V2: `cache.window` ⊥ whole multiple of `partition.time_bucket` → warning naming both values; load still succeeds (D5).
 V3: invalid value → error w/ file, key, value & accepted forms; ⊥ silent default.
+V4: setting `inject.on_prompt = true` via `chert config set` prints speed disclaimer once: ∀ prompt then waits for a store read & spool replay; cost per `docs/BENCHMARKS.md`.
 
 ## §T TASKS
 
 id|status|task|cites
 T1|.|`Config` type, parse & merge|V1,V3
 T2|.|window/bucket multiple warning|V2
+T3|.|`inject.*` keys & on_prompt disclaimer|V4
 
 ## §B BUGS
 
