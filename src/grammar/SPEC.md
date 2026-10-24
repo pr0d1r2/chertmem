@@ -44,11 +44,12 @@ R6|(d) rule & corpus 2026-10-24|path span = article word at `\b`, any case, + `/
 
 ## §V INVARIANTS
 
-V1: ∀ corpus text & intensity: `compress` ≡ oracle bytes; `expand(compress(x))` ≡ oracle expand bytes. [superseded by V5]
+V1: ∀ corpus text & intensity: `compress` ≡ oracle bytes; `expand(compress(x))` ≡ oracle expand bytes. [superseded by V6]
 V2: fenced code, inline code, URLs, paths, identifiers, version numbers survive `compress` byte for byte.
 V3: deterministic: same input → same bytes (`.:V9`).
-V4: ∀ corpus text & intensity: `compress` ≡ oracle bytes & `expand(compress(x))` ≡ oracle expand bytes, except 1 deliberate deviation (owner 2026-10-24, R1): final pass `[ \t]+([.,;:!?])` → `$1` skips fenced & inline code ∴ V2 holds ∀ span. golden files stay as cavemem wrote them; ∀ case the deviation changes is listed in a test w/ its expected bytes. [superseded by V5]
-V5: as V4, w/ 3 deliberate deviations from cavemem 0.2.1 (owner 2026-10-24), each listed in a test w/ its expected bytes: (a) final punctuation pass skips fenced & inline code (R1); (b) inline code right after a fence = code too, ⊥ swallowed by the fence's last tick (R4); (c) blank before a path kept: `in ./config/chert.toml` ⊥ → `in./config/chert.toml`. golden files stay as cavemem wrote them.
+V4: ∀ corpus text & intensity: `compress` ≡ oracle bytes & `expand(compress(x))` ≡ oracle expand bytes, except 1 deliberate deviation (owner 2026-10-24, R1): final pass `[ \t]+([.,;:!?])` → `$1` skips fenced & inline code ∴ V2 holds ∀ span. golden files stay as cavemem wrote them; ∀ case the deviation changes is listed in a test w/ its expected bytes. [superseded by V6]
+V5: as V4, w/ 3 deliberate deviations from cavemem 0.2.1 (owner 2026-10-24), each listed in a test w/ its expected bytes: (a) final punctuation pass skips fenced & inline code (R1); (b) inline code right after a fence = code too, ⊥ swallowed by the fence's last tick (R4); (c) blank before a path kept: `in ./config/chert.toml` ⊥ → `in./config/chert.toml`. golden files stay as cavemem wrote them. [superseded by V6]
+V6: as V5 w/ a 4th deviation: (d) a path or file name whose first part is an article word stays whole (`a.txt`, `a/b.ipynb`; R6, B1).
 
 ## §T TASKS
 
