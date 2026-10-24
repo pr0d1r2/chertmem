@@ -6,7 +6,7 @@
 # deepest src/store 3456 tok.
 SPEC.md                        2800
 benches                        3400
-dev                            3200
+dev                            4000
 docs                           3400
 src                            3300
 src/cache                      3800
