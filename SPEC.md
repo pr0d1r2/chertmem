@@ -14,6 +14,7 @@ Rust cargo workspace: crate `chertmem` (lib + bin `chert`, MIT, public) & `dev` 
 
 dir|owns|⊥owns|tokens
 src|crate `chertmem`: lib + bin `chert`, 1 node per module|gate steps (`dev`), benchmarks (`benches`), human pages (`docs`)|-
+benches|benchmarks: fixtures, suites, baseline, regression gate|product code (`src`), the human page (`docs`)|-
 
 ## §N NAV
 

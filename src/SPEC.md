@@ -24,6 +24,7 @@ mine|behaviour findings & awareness report|candidates & rules (rekall), export (
 rel|path|lens
 up|.|-
 self|src|crate `chertmem`: lib + bin `chert`, 1 node per module
+sib|benches|benchmarks: fixtures, suites, baseline, regression gate
 
 ## §C CONSTRAINTS
 
