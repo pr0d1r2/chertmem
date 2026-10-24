@@ -22,6 +22,12 @@ fn every_message_names_what_and_fix() {
 }
 
 #[test]
+fn an_sqlite_error_is_a_cavemem_error() {
+    let e: Error = rusqlite::Error::QueryReturnedNoRows.into();
+    assert!(matches!(e, Error::Cavemem { .. }));
+}
+
+#[test]
 fn a_store_error_converts() {
     let e: Error = store::Error::NoDataDir.into();
     assert_eq!(e, Error::Store(store::Error::NoDataDir));

@@ -48,6 +48,16 @@ impl Error {
     }
 }
 
+/// Only the cavemem file is read through a raw connection; the store
+/// reports its own `SQLite` failures as [`store::Error`].
+impl From<rusqlite::Error> for Error {
+    fn from(e: rusqlite::Error) -> Self {
+        Self::Cavemem {
+            reason: e.to_string(),
+        }
+    }
+}
+
 impl From<store::Error> for Error {
     fn from(e: store::Error) -> Self {
         Self::Store(e)
