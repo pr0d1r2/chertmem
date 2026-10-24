@@ -9,8 +9,12 @@ local all = (generated.steps) { ...generated.push }
 
 hooks {
   ["pre-commit"] {
-    fix = true
-    stash = "git"
+    // Check only, never stash (paradigm/V15): the git stash is shared by
+    // every worktree, and `sherd wave` (root T8) runs parallel workers in
+    // worktrees, so one hook could pop another checkout's files. Without a
+    // stash a fixer would rewrite unstaged edits, so fixing stays `hk fix`.
+    fix = false
+    stash = "none"
     steps = generated.steps
   }
   ["pre-push"] {
@@ -21,6 +25,8 @@ hooks {
   }
   ["fix"] {
     fix = true
+    // hk 2.x stages fixes only in pre-commit unless a hook asks for it.
+    stage = true
     steps = all
   }
 }
