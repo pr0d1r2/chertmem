@@ -81,7 +81,17 @@ pub(super) fn done(path: &Path) -> Result<(), Error> {
 
 /// Move an unreadable file to `spool/unreadable/`, out of every replay.
 pub(super) fn set_aside(root: &Path, path: &Path) -> Result<(), Error> {
-    let aside = dir(root).join("unreadable");
+    move_to(root, path, "unreadable")
+}
+
+/// Move a file holding an item for a sealed partition to
+/// `spool/sealed/`, kept whole and out of every replay (src/store T10).
+pub(super) fn hold(root: &Path, path: &Path) -> Result<(), Error> {
+    move_to(root, path, "sealed")
+}
+
+fn move_to(root: &Path, path: &Path, under: &str) -> Result<(), Error> {
+    let aside = dir(root).join(under);
     std::fs::create_dir_all(&aside).map_err(|e| Error::io(&aside, &e))?;
     let to = aside.join(path.file_name().unwrap_or_default());
     match std::fs::rename(path, &to) {

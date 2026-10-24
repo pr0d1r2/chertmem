@@ -70,11 +70,14 @@ impl Store {
 
     /// Seal the partition at `path`: warm, so every append into it is
     /// refused with [`Error::ReadOnly`] (src/store V7). A warm or cold
-    /// one stays as it is.
+    /// one stays as it is. The spool is replayed first, so what waits
+    /// there lands before the seal; what a hook spools during it is held
+    /// in `spool/sealed/` (T10).
     ///
     /// # Errors
     /// [`Error::WriteOnly`] on a write-only store; no such partition.
     pub fn seal(&mut self, path: &str) -> Result<(), Error> {
+        self.replay()?;
         let mut w = self.work()?;
         if w.state(path)? == Some(State::Hot) {
             w.mark(path, State::Warm)?;
