@@ -237,6 +237,19 @@ question 13 stays open.
 11. Binary: `chert`. The crate stays `chertmem` and sets the command with
     `[[bin]] name = "chert"`; hook shims call `exec chert hook run
     <event>`. Closes open question 1. Local.
+12. Storage: one SQLite file per partition under `chunks/<project>/`,
+    plus `catalog.db` recording each partition's dimensions, bounds, row
+    count, state and checksum. The planner routes by the catalog, never
+    by the current config, so a config change cannot misroute a read;
+    `chert partitions repartition` rewrites old partitions. A partition
+    moves from hot (writable, WAL) to warm (sealed, read-only) to cold
+    (`VACUUM INTO`, then zstd). Closes open question 2. Local.
+13. Writes: ULID ids, unique across partitions and sortable by time; an
+    idempotency key hashed from session, event and payload, written with
+    `INSERT OR IGNORE`, because IDEs resend events; each observation goes
+    to the bucket of its own timestamp, so a session can span buckets; on
+    a lock timeout the event goes to an append-only spool that the next
+    run replays, so no event is lost. Closes open question 3. Local.
 
 # Non-goals
 
@@ -286,21 +299,8 @@ Each carries the agent's proposal. A gap round turns each one into a
 decision or drops it.
 
 1. Binary name. Closed by decision 11.
-2. Storage engine and layout. Proposed: one SQLite file per partition
-   under `chunks/<project>/`, plus `catalog.db` that records each
-   partition's dimensions, bounds, row count, state and checksum. The
-   planner routes by the catalog, never by the current config, so a
-   config change cannot misroute a read; `chert partitions repartition`
-   rewrites old partitions. Partitions move from hot (writable, WAL) to
-   warm (sealed, read-only) to cold (`VACUUM INTO`, then zstd). Blocks
-   the store node.
-3. Write correctness. Proposed: ULID ids, unique across partitions and
-   sortable by time; an idempotency key hashed from session, event and
-   payload, written with `INSERT OR IGNORE`, because IDEs resend events;
-   each observation stored in the bucket of its own timestamp, so a
-   session can span buckets; on a lock timeout, the event goes to an
-   append-only spool that the next run replays, so no event is lost.
-   Blocks the store node.
+2. Storage engine and layout. Closed by decision 12.
+3. Write correctness. Closed by decision 13.
 4. Cache host. Hooks exit within milliseconds and cannot hold a cache.
    Proposed: the long-lived `chert mcp` process of each IDE session holds
    it and warms it in a background thread, serving from disk until warm.
