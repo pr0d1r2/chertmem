@@ -13,6 +13,7 @@ Rust cargo workspace: crate `chertmem` (lib + bin `chert`, MIT, public) & `dev` 
 ## §F FEDERATION
 
 dir|owns|⊥owns|tokens
+src|crate `chertmem`: lib + bin `chert`, 1 node per module|gate steps (`dev`), benchmarks (`benches`), human pages (`docs`)|-
 
 ## §N NAV
 

@@ -1,0 +1,42 @@
+# SPEC
+
+## §G GOAL
+
+crate `chertmem`: lib + bin `chert` (`[[bin]] name = "chert"`, D11). 1 node per module dir; this node holds crate-wide wiring only: `lib.rs`, `main.rs`, error type, module edges.
+
+## §F FEDERATION
+
+dir|owns|⊥owns|tokens
+
+## §N NAV
+
+rel|path|lens
+up|.|-
+self|src|crate `chertmem`: lib + bin `chert`, 1 node per module
+
+## §C CONSTRAINTS
+
+- deps minimal & each justified in module node: `rusqlite` (`bundled`), `clap`, `serde`, `serde_json`, `toml`, `zstd`, `ulid`, MCP via `rmcp` | hand-rolled JSON-RPC (decided in `src/mcp`).
+- ⊥ async runtime unless a module node proves need; hooks stay sync.
+- module edges acyclic: `config` ← `store` ← `cache` ← `search` ← `mcp`; `grammar` leaf; `hook` → `store`; `cli` top.
+- errors: 1 crate error enum; user-facing message `chert: <what> (<fix>)`; exit codes per `.:§I`.
+
+## §I INTERFACES
+
+- lib: `chertmem::{config, store, grammar, hook, cache, search, mcp, cli, install, import, mine}`.
+- bin: `chert` → `cli::run`.
+
+## §V INVARIANTS
+
+V1: module graph acyclic, matches §C edge list; test asserts it from `use` paths.
+V2: `main.rs` only calls `cli::run` & maps its result to exit code.
+
+## §T TASKS
+
+id|status|task|cites
+T1|.|`Cargo.toml` workspace + crate skeleton, `lib.rs` module list, `main.rs`|V2
+T2|.|module-edge test|V1
+
+## §B BUGS
+
+id|date|cause|fix
