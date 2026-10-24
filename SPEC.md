@@ -90,9 +90,9 @@ V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 b
 
 id|status|task|cites
 T1|x|vendor `FORMAT.md` & `FORMAT-EXTENSIONS.md` from paradigm `fda10ea`|-
-T2|~|spec run: root sections & ∀ node, 1 per commit, trailer `spec-run`|-
-T3|.|freeze `SPEC-PROMPT.md`: line 1 → `HISTORICAL INPUT`, own commit|-
-T4|.|`.context-limits` from `sherd budget` + 12–20%|-
+T2|x|spec run: root sections & ∀ node, 1 per commit, trailer `spec-run`|-
+T3|x|freeze `SPEC-PROMPT.md`: line 1 → `HISTORICAL INPUT`, own commit|-
+T4|x|`.context-limits` from `sherd budget` + 12–20%|-
 T5|x|`.gitignore`: `.claude/`, `.direnv/`, `/target`, `result*`, `.envrc.local`, `.private/` (first commit)|V12
 T6|.|dev shell (`dev`): pinned toolchain, `mth` `sherd` `itok` on PATH; ask human to reload|-
 T7|.|guardrails via `.pklith`, 1 check per commit, planted violation each; ask human to reload|V10,V12
