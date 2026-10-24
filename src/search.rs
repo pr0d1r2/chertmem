@@ -21,7 +21,7 @@ pub use error::Error;
 pub use timeline::Entry;
 
 use crate::cache::Handle;
-use crate::config::{Config, Provider};
+use crate::config::{Config, Grammar, Provider};
 use crate::grammar;
 use crate::store::{self, Filter, Mode, Ref, Store};
 use ollama::Ollama;
@@ -119,29 +119,29 @@ impl Engine {
         cache: Option<&Handle>,
     ) -> Result<Vec<Hit>, Error> {
         let embedder = self.embedder(q.semantic)?;
-        let Some(rater) = self.rater(q, embedder.is_some())? else {
+        let asked = Asked::new(&q.text, self.cfg.compression.grammar);
+        let Some(rater) = self.rater(q, asked.terms, embedder.is_some())?
+        else {
             return Ok(Vec::new());
         };
         let best = self.candidates(&filter(q), cache, &rater)?;
+        let alpha = self.cfg.search.alpha;
         let ranked = match embedder {
-            Some(e) => blend::rerank(&e, &q.text, best, self.cfg.search.alpha)?,
+            Some(e) => blend::rerank(&e, &asked.text, best, alpha)?,
             None => best,
         };
         let hits = ranked.into_iter().take(self.limit(q.limit));
         Ok(hits.map(|s| hit(s, &rater.terms)).collect())
     }
 
-    /// The query's rater under fresh global stats; `None` when the text
-    /// holds no term. The text is compressed at `compression.grammar`
-    /// first, as hook and import store bodies, so a plain word meets
-    /// its stored form (V5).
+    /// The query's rater for `terms` under fresh global stats; `None`
+    /// when there is no term.
     fn rater(
         &mut self,
         q: &Query,
+        terms: Vec<String>,
         rerank: bool,
     ) -> Result<Option<Rater>, Error> {
-        let grammar = self.cfg.compression.grammar.intensity();
-        let terms = token::terms(&grammar::compress(&q.text, grammar));
         if terms.is_empty() {
             return Ok(None);
         }
@@ -193,6 +193,36 @@ impl Engine {
     fn limit(&self, limit: Option<u32>) -> usize {
         let n = limit.unwrap_or(self.cfg.search.default_limit);
         usize::try_from(n).unwrap_or(usize::MAX)
+    }
+}
+
+/// What a query text asks, as scored and as embedded (src/search R3).
+struct Asked {
+    /// The text the re-rank embeds: the compressed query, like the
+    /// stored bodies it is compared with; the raw text when that holds
+    /// no term.
+    text: String,
+    /// The compressed text's terms and the plain form of every word
+    /// the grammar keeps on its own, distinct and sorted: a word kept
+    /// long inside a path or code is found too (T7), and a term alike
+    /// in both forms counts once.
+    terms: Vec<String>,
+}
+
+impl Asked {
+    fn new(text: &str, grammar: Grammar) -> Self {
+        let intensity = grammar.intensity();
+        let compressed = grammar::compress(text, intensity);
+        let mut terms = token::terms(&compressed);
+        let shown = if terms.is_empty() { text } else { &compressed };
+        let shown = shown.to_owned();
+        let kept = token::tokens(text).into_iter().filter(|t| {
+            !token::tokens(&grammar::compress(t, intensity)).is_empty()
+        });
+        terms.extend(kept);
+        terms.sort_unstable();
+        terms.dedup();
+        Self { text: shown, terms }
     }
 }
 

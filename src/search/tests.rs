@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 
 use serde_json::Value;
 
-use super::{Engine, Hit, Query, token};
+use super::{Asked, Engine, Hit, Query, token};
 use crate::config::{Config, Grammar, load_from};
 use crate::grammar::{Intensity, compress};
 use crate::hook::{self, Ctx, Ide, Kind};
@@ -443,4 +443,16 @@ fn a_term_alike_in_both_forms_scores_as_at_grammar_off() -> Test {
     assert_eq!(scores.first(), scores.get(1));
     assert_eq!(scores.first().map(Vec::len), Some(1));
     Ok(())
+}
+
+#[test]
+fn asked_holds_both_forms_and_embeds_the_raw_text_only_when_dropped() {
+    let text = "fix the middleware now";
+    let mw = Asked::new(text, Grammar::Full);
+    assert_eq!(mw.text, compress(text, Intensity::Full));
+    assert_eq!(mw.terms, ["fix", "middleware", "mw", "now"]);
+    let dropped = Asked::new("i think that", Grammar::Full);
+    assert_eq!(dropped.text, "i think that");
+    assert_eq!(dropped.terms, ["i", "that", "think"]);
+    assert!(Asked::new("the a", Grammar::Full).terms.is_empty());
 }
