@@ -47,7 +47,7 @@ self|.|-
 
 - cmd: `chert hook run <event>` — event JSON on stdin → 1 write → exit. events: `session-start` `user-prompt-submit` `post-tool-use` `stop` `session-end`.
 - cmd: `chert mcp` — MCP server on stdio; hosts cache (D14).
-- mcp: `search(query, limit?)` → `[{ref, score, snippet, session_id, ts}]`; `timeline(session_id, around?, limit?)` → `[{ref, kind, ts}]`; `get_observations(refs[], expand?)` → bodies, compressed unless `expand`; `list_sessions(limit?)` → `[{id, ide, cwd, started_at, ended_at}]`. names & shapes kept from cavemem (D21); `id` field carries ref.
+- mcp: `search(query, limit?)` → `[{id, score, snippet, session_id, ts}]`; `timeline(session_id, around_id?, limit?)` → `[{id, kind, ts}]`; `get_observations(ids[], expand?)` → bodies; `list_sessions(limit?)` → `[{id, ide, cwd, started_at, ended_at}]`. tool, param & field names ≡ cavemem 0.2.1 (D21); observation `id` value = ref `chert:<ref>`. 1 deliberate deviation: `expand` defaults false (compressed body, fewest tokens, D28); cavemem defaults true.
 - ref: `chert:<ref>` — issued once at insert & stored: shortest ULID prefix ≥ 8 chars equal to ⊥ issued ref in project (D28); resolved by exact match, ⊥ prefix search (V15). gone observation → answer `dropped`, ⊥ other row.
 - cmd: `chert search <query> [--limit N] [--since T] [--project P] [--no-semantic]`; `chert timeline <session> [--around REF]`; `chert get <ref>...`.
 - cmd: `chert install|uninstall [--ide NAME]`; `chert status`; `chert doctor`; `chert config show|get|set|path`.

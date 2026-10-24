@@ -24,7 +24,7 @@ sib|src/mine|behaviour findings & awareness report
 ## §C CONSTRAINTS
 
 - transport stdio JSON-RPC. lib choice (`rmcp` vs hand-rolled) decided by T1 w/ §R row: binary size, deps, sync fit.
-- results compressed unless `expand: true`; `id` field carries ref (`.:§I`).
+- results compressed unless `expand: true` (deviation from cavemem, stated in `.:§I`); observation `id` value = ref.
 - logs → stderr only; ⊥ stdout noise.
 
 ## §I INTERFACES
