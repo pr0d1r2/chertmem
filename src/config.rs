@@ -132,6 +132,16 @@ impl Span {
         let (amount, unit) = split_unit(text, SPAN_UNITS)?;
         Some(Self { amount, unit })
     }
+
+    /// The span in hours; `None` for months.
+    fn hours(self) -> Option<u64> {
+        let amount = u64::from(self.amount);
+        match self.unit {
+            Unit::Hours => Some(amount),
+            Unit::Days => amount.checked_mul(24),
+            Unit::Months => None,
+        }
+    }
 }
 
 impl fmt::Display for Span {
@@ -331,8 +341,25 @@ pub fn load_from(
 
 /// A warning when `window` is not a whole multiple of `bucket`
 /// (src/config V2); the load still succeeds.
-fn window_warning(_window: Span, _bucket: Span) -> Option<String> {
-    None
+fn window_warning(window: Span, bucket: Span) -> Option<String> {
+    if whole_multiple(window, bucket) {
+        return None;
+    }
+    Some(format!(
+        "chert: cache.window = \"{window}\" is not a whole multiple of \
+         partition.time_bucket = \"{bucket}\" (make the window a whole \
+         number of buckets)"
+    ))
+}
+
+/// Hours and days compare in hours; months only against months, as a
+/// month has no fixed length in days.
+fn whole_multiple(window: Span, bucket: Span) -> bool {
+    match (window.hours(), bucket.hours()) {
+        (Some(w), Some(b)) => w.checked_rem(b) == Some(0),
+        (None, None) => window.amount.checked_rem(bucket.amount) == Some(0),
+        _ => false,
+    }
 }
 
 /// The user file (when there is a home), then the project file: the
