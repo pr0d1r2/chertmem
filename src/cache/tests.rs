@@ -7,6 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use rusqlite::{Connection, params};
+
 use super::{Cache, Env, Handle, Source};
 use crate::config::{Config, load_from};
 use crate::store::{Event, Filter, Mode, Store};
@@ -44,6 +46,18 @@ impl Scratch {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("project"))?;
         Ok(Self(dir))
+    }
+
+    pub(super) fn base(&self) -> &Path {
+        &self.0
+    }
+
+    /// A raw connection to `path` under the data dir.
+    pub(super) fn sql(
+        &self,
+        path: &str,
+    ) -> Result<Connection, Box<dyn StdError>> {
+        Ok(Connection::open(self.0.join("data").join(path))?)
     }
 
     pub(super) fn config(&self) -> Result<Config, Box<dyn StdError>> {
@@ -231,5 +245,27 @@ fn start_runs_on_the_system_clock() -> Test {
     let mut truth = s.open(Mode::Read)?;
     let q = from(&truth, 0);
     assert_eq!(same(&handle, &mut truth, &q)?, Source::Store);
+    Ok(())
+}
+
+const BROKEN: &str = "INSERT INTO partitions
+  (path, dims, project, ide, t0, t1, checksum, spec)
+  VALUES (?1, 'project,time', ?2, '', ?3, ?4, '0', '')";
+
+#[test]
+fn a_failed_refresh_drops_the_window_and_logs_why() -> Test {
+    let s = Scratch::new("broken")?;
+    seed(&s)?;
+    let cold = s.cold(&s.config()?)?;
+    cold.handle.warm()?;
+    let truth = s.open(Mode::Read)?;
+    // A catalog row naming a file that is not SQLite.
+    let path = format!("chunks/{}/broken.db", truth.project());
+    fs::write(s.base().join("data").join(&path), "not a database")?;
+    let args = params![path, truth.project(), NOW - DAY, NOW + DAY];
+    s.sql("catalog.db")?.execute(BROKEN, args)?;
+    assert!(cold.handle.query(&from(&truth, START)).is_err());
+    assert!(!cold.handle.is_warm()?);
+    assert!(!logged(&cold.logs)?.is_empty());
     Ok(())
 }

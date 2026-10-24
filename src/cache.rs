@@ -88,6 +88,23 @@ struct Inner {
     state: State,
 }
 
+impl Inner {
+    /// Bring a warm window up to date before a query (V2). A failure
+    /// drops it, logged, and answers `true`: warm afresh; the store
+    /// answers meanwhile.
+    fn refresh(&mut self, env: &Env) -> bool {
+        let State::Warm(window) = &mut self.state else {
+            return false;
+        };
+        let Err(e) = window.refresh(&mut self.store) else {
+            return false;
+        };
+        (env.log)(&e.to_string());
+        self.state = State::Cold;
+        true
+    }
+}
+
 /// A started cache; clones share it.
 #[derive(Clone)]
 pub struct Handle {
@@ -132,6 +149,9 @@ impl Handle {
 
     fn answer(&self, q: &Filter) -> Result<(Vec<Observation>, Source), Error> {
         let mut inner = lock(&self.inner)?;
+        if inner.refresh(&self.env) {
+            self.spawn();
+        }
         if let State::Warm(window) = &inner.state
             && let Some(rows) = window.answer(q)
         {

@@ -14,6 +14,8 @@ pub(super) struct Window {
     /// The project and `since`: what every tail asks for.
     filter: Filter,
     since: u64,
+    /// The catalog's `data_version` when its partitions were listed.
+    catalog: u64,
     parts: BTreeSet<String>,
     rows: BTreeMap<(u64, String), Observation>,
 }
@@ -30,6 +32,7 @@ impl Window {
         let mut window = Self {
             filter,
             since,
+            catalog: store.catalog_version()?,
             parts: BTreeSet::new(),
             rows: BTreeMap::new(),
         };
@@ -48,6 +51,13 @@ impl Window {
     /// The partition paths, by path.
     pub(super) fn paths(&self) -> Vec<String> {
         self.parts.iter().cloned().collect()
+    }
+
+    /// Catch up before a query (D15).
+    pub(super) fn refresh(&mut self, store: &mut Store) -> Result<(), Error> {
+        // RED stub: the catalog version is read, nothing new is tailed.
+        self.catalog = store.catalog_version()?;
+        Ok(())
     }
 
     /// Load the partition at `path`, in seq order (src/store tail).
