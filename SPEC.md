@@ -48,7 +48,7 @@ self|.|-
 - cmd: `chert hook run <event>` — event JSON on stdin → 1 write → exit. events: `session-start` `user-prompt-submit` `post-tool-use` `stop` `session-end`.
 - cmd: `chert mcp` — MCP server on stdio; hosts cache (D14).
 - mcp: `search(query, limit?)` → `[{ref, score, snippet, session_id, ts}]`; `timeline(session_id, around?, limit?)` → `[{ref, kind, ts}]`; `get_observations(refs[], expand?)` → bodies, compressed unless `expand`; `list_sessions(limit?)` → `[{id, ide, cwd, started_at, ended_at}]`. names & shapes kept from cavemem (D21); `id` field carries ref.
-- ref: `chert:<id>` — shortest ULID prefix unique within project, ≥ 8 chars (D28). gone observation → answer `dropped`, ⊥ other row.
+- ref: `chert:<ref>` — issued once at insert & stored: shortest ULID prefix ≥ 8 chars equal to ⊥ issued ref in project (D28); resolved by exact match, ⊥ prefix search (V15). gone observation → answer `dropped`, ⊥ other row.
 - cmd: `chert search <query> [--limit N] [--since T] [--project P] [--no-semantic]`; `chert timeline <session> [--around REF]`; `chert get <ref>...`.
 - cmd: `chert install|uninstall [--ide NAME]`; `chert status`; `chert doctor`; `chert config show|get|set|path`.
 - cmd: `chert partitions [list|seal|compact|drop|repartition]`; `chert cache [plan]`.
@@ -85,6 +85,7 @@ V11: cache estimate > `cache.max_bytes` → warning names estimate & limit (D7);
 V12: ⊥ private repo named in committed text (`paradigm/V37`).
 V13: ∀ outward act (push, publish, issue in other repo) has owner approval on record.
 V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 benchmark on generated fixtures of stated size; `docs/BENCHMARKS.md` explains run, read, targets & why, & ∀ measured number w/ date, machine, recount command (D29, `paradigm/V4`).
+V15: ref resolution = exact match on stored issued ref, ⊥ prefix match ∴ later rows ⊥ make old ref ambiguous. lookup: current project first, then all; ∃ in > 1 project → error naming projects, ⊥ guess (B1).
 
 ## §T TASKS
 
@@ -109,3 +110,4 @@ T16|.|`docs/BENCHMARKS.md`: human page on benchmarks, first measured numbers|V14
 ## §B BUGS
 
 id|date|cause|fix
+B1|2026-10-24|drift round 1: D28 ref = shortest unique ULID prefix at read time; ULID first 10 chars = ms timestamp ∴ rows within ~1 s share 8 chars & later row makes issued ref ambiguous, breaking V5|V15

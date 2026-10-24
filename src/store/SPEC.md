@@ -33,7 +33,7 @@ sib|src/mine|behaviour findings & awareness report
 ## §I INTERFACES
 
 - fn: `Store::open(cfg)`; `append(event) -> Ref`; `get(&[Ref]) -> Vec<Found|Dropped>`; `partitions(filter) -> Vec<Partition>`; `seal`, `compact`, `drop`, `repartition`.
-- fn: `Ref::parse("chert:<prefix>")`; `Ref::short(id, project)` → shortest unique prefix ≥ 8.
+- fn: `Ref::parse("chert:<ref>")`; ref issued in `append`: shortest ULID prefix ≥ 8 ⊥ equal to issued ref in project, stored in unique column `ref`; `get` matches stored ref exactly (`.:V15`).
 - dir: `spool/` append-only JSONL, replayed at next `open`.
 
 ## §V INVARIANTS
@@ -45,6 +45,7 @@ V4: read path picks partitions from catalog bounds only (`.:V4`); test: change c
 V5: ref resolves ∀ tier & after `repartition`; dropped partition → `Dropped` (`.:V5`).
 V6: catalog write after partition write; `doctor` rebuilds catalog from files & equals pre-crash catalog.
 V7: warm & cold partitions read-only; write into them ⊥.
+V8: ∀ issued ref stays exact-match unique: insert 10⁵ rows in 1 s → ∀ earlier ref still resolves to own row (`.:V15`, `.:B1`).
 
 ## §T TASKS
 
@@ -56,6 +57,7 @@ T4|.|pruning by catalog bounds|V4
 T5|.|refs: parse, shortest prefix, resolve, dropped|V5
 T6|.|seal → warm, compact → cold (`VACUUM INTO` + zstd dict), drop, repartition|V5,V7
 T7|.|catalog rebuild for `doctor`|V6
+T8|.|ref column & exact-match resolution, cross-project lookup|V5,V8
 
 ## §B BUGS
 
