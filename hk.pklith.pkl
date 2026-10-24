@@ -90,6 +90,13 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v editorconfig-checker >/dev/null 2>&1 || { echo 'editorconfig-checker: editorconfig-checker is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; editorconfig-checker {{files}} || { echo 'editorconfig-checker: file breaks its .editorconfig (indent, line ends, final newline)' >&2; exit 1; }"
   }
+  ["rustdoc"] {
+    glob = List("**/*.rs", "Cargo.toml")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'rustdoc: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo doc --workspace --no-deps --document-private-items -q || { echo 'rustdoc: docs do not build cleanly' >&2; exit 1; }"
+    env {
+      ["RUSTDOCFLAGS"] = "-D warnings"
+    }
+  }
   ["mth-fmt"] {
     glob = List("**/SPEC.md")
     check = #"command -v mth >/dev/null 2>&1 || { echo 'mth-fmt: mth is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; (for f in {{files}}; do mth fmt --check "$f" || exit 1; done) || { echo 'mth-fmt: SPEC.md is hard-wrapped or over the line cap' >&2; exit 1; }"#
