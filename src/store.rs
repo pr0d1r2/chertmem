@@ -17,6 +17,7 @@ mod reference;
 mod schema;
 mod spool;
 mod summary;
+mod tail;
 mod write;
 
 use std::path::{Path, PathBuf};
@@ -28,7 +29,7 @@ pub use error::Error;
 pub use layout::project_id;
 pub use model::{
     Appended, Event, Filter, Lookup, Observation, Partition, Scope, State,
-    Stats, Summary, Written,
+    Stats, Summary, Tailed, Written,
 };
 pub use reference::Ref;
 
