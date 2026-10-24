@@ -14,7 +14,9 @@ use std::path::Path;
 
 pub use kind::{Ide, Kind};
 
-use crate::config::Config;
+use crate::config::{Config, Grammar};
+use crate::grammar::{self, Intensity};
+use crate::store::{Event, Mode, Store};
 
 /// What [`run`] reads besides stdin.
 #[derive(Debug, Clone, Copy)]
@@ -53,13 +55,66 @@ struct Payload {
     source: Option<String>,
 }
 
+impl Outcome {
+    /// Done: exit 0, `stdout` printed if any.
+    fn done(stdout: Option<String>) -> Self {
+        Self {
+            stdout,
+            exit: 0,
+            note: None,
+        }
+    }
+
+    /// Done all the same (V2), with `why` for stderr.
+    fn noted(why: String) -> Self {
+        Self {
+            note: Some(why),
+            ..Self::done(None)
+        }
+    }
+}
+
 /// Handle hook `kind` on payload `stdin` (src/hook G).
 #[must_use]
 pub fn run(kind: Kind, stdin: &[u8], ctx: &Ctx<'_>) -> Outcome {
-    let _ = (kind, stdin, ctx, claude_code::parse);
-    Outcome {
-        stdout: None,
-        exit: 0,
-        note: None,
+    let parsed = match ctx.ide {
+        Ide::ClaudeCode => claude_code::parse(kind, stdin),
+    };
+    match parsed {
+        Some(payload) => handle(kind, &payload, ctx),
+        None => Outcome::done(None),
+    }
+}
+
+/// Store a readable payload.
+fn handle(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Outcome {
+    let body = prepare(&payload.body, ctx.config);
+    let event = Event {
+        ts: ctx.now,
+        session: payload.session.clone(),
+        kind: kind.as_str().to_owned(),
+        ide: ctx.ide.as_str().to_owned(),
+        identity: payload.identity.clone(),
+        body,
+    };
+    let stored = Store::open(ctx.config, ctx.root, Mode::Write)
+        .and_then(|mut store| store.append(&event));
+    match stored {
+        Ok(_) => Outcome::done(None),
+        Err(e) => Outcome::noted(e.to_string()),
+    }
+}
+
+/// `text` as stored: compressed at `compression.grammar`.
+fn prepare(text: &str, config: &Config) -> String {
+    grammar::compress(text, intensity(config.compression.grammar))
+}
+
+fn intensity(grammar: Grammar) -> Intensity {
+    match grammar {
+        Grammar::Off => Intensity::Off,
+        Grammar::Lite => Intensity::Lite,
+        Grammar::Full => Intensity::Full,
+        Grammar::Ultra => Intensity::Ultra,
     }
 }
