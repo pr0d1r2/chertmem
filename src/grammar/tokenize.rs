@@ -1,8 +1,9 @@
 //! cavemem's `tokenize.ts`: every rule scans the whole text as a global
 //! regex, the spans are sorted by start, then priority, then length,
-//! overlaps are dropped first come, and the gaps are prose. One change
-//! (src/grammar V5 (b)): inline code is scanned again with each kept
-//! fence's end as a cut, so the fence's last tick opens no inline code.
+//! overlaps are dropped first come, and the gaps are prose. Two changes:
+//! inline code is scanned again with each kept fence's end as a cut, so
+//! the fence's last tick opens no inline code (src/grammar V5 (b)), and
+//! an article word that starts a path or file name is a path (V5 (d)).
 
 #[cfg(test)]
 mod tests;
@@ -11,17 +12,19 @@ use std::cmp::Reverse;
 
 use super::ident::identifier;
 use super::numeric::{date, number, version};
-use super::rules::{fence, heading, inline, path, url};
+use super::rules::{article_path, fence, heading, inline, path, url};
 
 type Rule = fn(&str, usize) -> Option<usize>;
 
-/// The rules with their priorities, as in `RULES`.
-const RULES: [(u8, Rule); 9] = [
+/// The rules with their priorities, as in `RULES`, and chert's article
+/// path as a path (V5 (d)): it starts where no other rule's span does.
+const RULES: [(u8, Rule); 10] = [
     (100, fence),
     (90, inline),
     (80, url),
     (70, heading),
     (60, path),
+    (60, article_path),
     (50, date),
     (40, version),
     (30, number),

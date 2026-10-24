@@ -6,9 +6,10 @@
 //! Brussee, MIT License, <https://github.com/JuliusBrussee/cavemem>; the
 //! notice is in `THIRD-PARTY-NOTICES.md`. Output is byte for byte the
 //! output of the original, checked against golden files in
-//! `tests/grammar/oracle/`, except three deliberate deviations (V5):
+//! `tests/grammar/oracle/`, except four deliberate deviations (V5):
 //! blanks before a mark inside code are kept, inline code right after a
-//! fence is code, and the blank before a path is kept.
+//! fence is code, the blank before a path is kept, and a path or file
+//! name that starts with an article word (`a.txt`) stays whole.
 
 #[cfg(test)]
 mod tests;

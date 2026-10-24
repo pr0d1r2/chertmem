@@ -1,10 +1,12 @@
 //! The protected-span rules of cavemem's `tokenize.ts` that are not
-//! numbers or identifiers: fence, inline code, URL, heading, path. Each
-//! is the regex tried at one byte index, giving the match end.
+//! numbers or identifiers: fence, inline code, URL, heading, path, and
+//! chert's own article path (src/grammar V5 (d)). Each is the regex
+//! tried at one byte index, giving the match end.
 
 #[cfg(test)]
 mod tests;
 
+use super::lexicon::ARTICLES;
 use super::scan::{at, boundary, char_at, eat, js_space, line_start, run};
 
 /// ```` ```[\s\S]*?```|~~~[\s\S]*?~~~ ````: the shortest closed fence.
@@ -88,4 +90,28 @@ fn windows(b: &[u8], p: usize) -> Option<usize> {
 pub(super) fn path(s: &str, p: usize) -> Option<usize> {
     let b = s.as_bytes();
     unix(b, p).or_else(|| home(b, p)).or_else(|| windows(b, p))
+}
+
+/// `/` then a path byte, or `.` then a letter or digit, at `q`.
+fn starts_name(b: &[u8], q: usize) -> bool {
+    let next = q.checked_add(1).and_then(|i| at(b, i));
+    match at(b, q) {
+        Some(b'/') => next.is_some_and(unix_part),
+        Some(b'.') => next.is_some_and(|c| c.is_ascii_alphanumeric()),
+        _ => false,
+    }
+}
+
+/// chert's own rule (src/grammar V5 (d)): an article word at a `\b`, any
+/// case, that starts a path or file name (`a/b.ipynb`, `the.md`), with
+/// the whole `[A-Za-z0-9._\-/]` run after it. cavemem has no such rule,
+/// so its article filter splits the word off.
+pub(super) fn article_path(s: &str, p: usize) -> Option<usize> {
+    let b = s.as_bytes();
+    boundary(b, p).then_some(())?;
+    ARTICLES.iter().find_map(|word| {
+        let q = p.checked_add(word.len())?;
+        let found = b.get(p..q)?.eq_ignore_ascii_case(word.as_bytes());
+        (found && starts_name(b, q)).then(|| run(b, q, unix_part))
+    })
 }

@@ -1,4 +1,4 @@
-use super::{fence, heading, inline, path, url};
+use super::{article_path, fence, heading, inline, path, url};
 
 #[test]
 fn fences_close_with_their_own_mark() {
@@ -53,4 +53,25 @@ fn paths_take_their_class() {
     for (text, want) in PATHS {
         assert_eq!(path(text, 0), want, "{text:?}");
     }
+}
+
+/// Article paths tried at byte 0, with chert's match end (V5 (d)).
+const ARTICLE_PATHS: [(&str, Option<usize>); 9] = [
+    ("a/b.ipynb x", Some(9)),
+    ("an.txt.", Some(7)),
+    ("THE.md", Some(6)),
+    ("a//", Some(3)),
+    ("a/ b", None),
+    ("a. b", None),
+    ("a.", None),
+    ("ab.txt", None),
+    ("a-b.txt", None),
+];
+
+#[test]
+fn article_paths_start_a_name() {
+    for (text, want) in ARTICLE_PATHS {
+        assert_eq!(article_path(text, 0), want, "{text:?}");
+    }
+    assert_eq!(article_path("xa.txt", 1), None);
 }

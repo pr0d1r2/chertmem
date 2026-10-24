@@ -75,7 +75,7 @@ const FILLERS_ULTRA: &[&str] = &[
     "typically",
     "usually",
 ];
-const ARTICLES: &[&str] = &["the", "a", "an"];
+pub(super) const ARTICLES: &[&str] = &["the", "a", "an"];
 const HEDGES_FULL: &[&str] = &[
     "i would recommend",
     "we should probably",
