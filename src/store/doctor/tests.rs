@@ -120,6 +120,24 @@ fn a_sealed_file_refuses_writes_even_when_the_catalog_forgot() -> Test {
 }
 
 #[test]
+fn a_dropped_row_wins_over_a_stray_file_at_its_path() -> Test {
+    let s = Scratch::new("doctor-stray")?;
+    let mut store = s.open(Mode::Read)?;
+    let a = stored(store.append(&event(5, None, "a"))?)?;
+    store.append(&event(WEEK + 1, None, "b"))?;
+    let week0 = chunk(&store, "19700101-7d");
+    let week1 = chunk(&store, "19700108-7d");
+    store.drop(&week0)?;
+    drop(store);
+    fs::copy(s.data().join(&week1), s.data().join(&week0))?;
+    let mut store = s.open(Mode::Read)?;
+    store.rebuild()?;
+    let found = store.get(std::slice::from_ref(&a))?;
+    assert_eq!(found, [Lookup::Dropped(a)]);
+    Ok(())
+}
+
+#[test]
 fn a_write_only_store_rebuilds_nothing() -> Test {
     let s = Scratch::new("doctor-write-only")?;
     let mut hook = s.open(Mode::Write)?;

@@ -82,6 +82,20 @@ fn a_tiny_file_compresses_without_a_dictionary() -> Test {
 }
 
 #[test]
+fn a_corrupt_or_unreadable_cold_file_is_an_io_error() -> Test {
+    let root = root("corrupt")?;
+    fs::write(zst(&root, PATH), "not a zstd frame")?;
+    let e = thaw(&root, PATH).err();
+    assert!(matches!(e, Some(crate::store::Error::Io { .. })), "{e:?}");
+    fs::remove_file(zst(&root, PATH))?;
+    fs::create_dir_all(zst(&root, PATH))?;
+    let e = thaw(&root, PATH).err();
+    assert!(matches!(e, Some(crate::store::Error::Io { .. })), "{e:?}");
+    fs::remove_dir_all(&root)?;
+    Ok(())
+}
+
+#[test]
 fn thawing_nothing_is_an_io_error() -> Test {
     let root = root("missing")?;
     let e = thaw(&root, PATH).err();
