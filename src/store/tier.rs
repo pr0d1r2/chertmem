@@ -11,7 +11,7 @@ use rusqlite::{Connection, Transaction};
 
 use super::partition::{self, Chunks};
 use super::write::immediate;
-use super::{Error, State, Store, catalog, cold};
+use super::{Error, State, Store, catalog, cold, generation};
 use crate::config::Zstd;
 
 /// What a tier move reaches, under the catalog's write lock.
@@ -97,7 +97,7 @@ impl Store {
         if w.state(path)? == Some(State::Warm) {
             w.freeze(path)?;
             catalog::set_state(&w.tx, path, State::Cold)?;
-            catalog::bump(&w.tx)?;
+            generation::bump(&w.tx, w.root)?;
         }
         Ok(w.tx.commit()?)
     }
@@ -114,7 +114,7 @@ impl Store {
             w.chunks.close(path);
             cold::remove(w.root, path)?;
             catalog::mark_dropped(&w.tx, path)?;
-            catalog::bump(&w.tx)?;
+            generation::bump(&w.tx, w.root)?;
         }
         Ok(w.tx.commit()?)
     }

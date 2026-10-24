@@ -92,13 +92,6 @@ pub(super) fn mark_dropped(conn: &Connection, path: &str) -> Result<(), Error> {
     Ok(())
 }
 
-/// Bump `generation`: rows were deleted, redacted or rewritten (D15).
-pub(super) fn bump(conn: &Connection) -> Result<(), Error> {
-    let sql = "UPDATE meta SET value = value + 1 WHERE key = 'generation'";
-    conn.execute(sql, [])?;
-    Ok(())
-}
-
 /// The ref already issued to this row's id or its identity (root V16).
 pub(super) fn existing(
     conn: &Connection,

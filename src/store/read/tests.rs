@@ -207,8 +207,9 @@ fn every_ref_of_a_burst_resolves_to_its_own_row() -> Test {
 fn generation_reads_the_catalog_counter() -> Test {
     let s = Scratch::new("generation")?;
     let mut store = s.open(Mode::Read)?;
+    let was = store.generation()?;
     store.append(&event(5, None, "appends leave it"))?;
-    assert_eq!(store.generation()?, 0);
+    assert_eq!(store.generation()?, was);
     let sql = "UPDATE meta SET value = 3 WHERE key = 'generation'";
     s.sql("catalog.db")?.execute(sql, [])?;
     assert_eq!(store.generation()?, 3);

@@ -9,6 +9,7 @@ mod catalog;
 mod cold;
 mod doctor;
 mod error;
+mod generation;
 mod layout;
 mod line;
 mod model;
@@ -232,7 +233,8 @@ impl Store {
         })
     }
 
-    /// The catalog connection, laid on first use with the data dir.
+    /// The catalog connection, laid on first use with the data dir; a
+    /// new catalog's `generation` is seeded past every earlier one (V11).
     fn catalog(&mut self) -> Result<&Connection, Error> {
         if self.catalog.is_none() {
             for dir in ["chunks", "spool"] {
@@ -242,6 +244,7 @@ impl Store {
             }
             let path = self.root.join("catalog.db");
             let conn = schema::open(&path, self.mode.busy(), schema::CATALOG)?;
+            generation::seed(&conn, &self.root)?;
             self.catalog = Some(conn);
         }
         self.catalog.as_ref().ok_or(Error::NoDataDir)

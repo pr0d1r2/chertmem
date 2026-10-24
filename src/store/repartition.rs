@@ -15,8 +15,8 @@ use super::layout::{Place, Plan};
 use super::partition::{self, Chunks};
 use super::write::{self, Note, Row, immediate};
 use super::{
-    Error, Event, Filter, Observation, State, Store, catalog, cold, summary,
-    tail,
+    Error, Event, Filter, Observation, State, Store, catalog, cold, generation,
+    summary, tail,
 };
 
 /// A partition to rewrite: its path and tier.
@@ -184,7 +184,7 @@ impl Store {
             from,
         }
         .run(&self.root)?;
-        catalog::bump(&tx)?;
+        generation::bump(&tx, &self.root)?;
         Ok(tx.commit()?)
     }
 }

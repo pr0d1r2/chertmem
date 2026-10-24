@@ -15,7 +15,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 
 use super::partition::{self, Chunks};
 use super::write::immediate;
-use super::{Error, State, Stats, Store, catalog};
+use super::{Error, State, Stats, Store, catalog, generation};
 
 /// A file's own catalog row, its `chunk` table, under its path.
 struct Meta {
@@ -169,7 +169,7 @@ impl Store {
         for (path, cold) in &files {
             restore(&tx, &mut self.chunks, path, *cold)?;
         }
-        catalog::bump(&tx)?;
+        generation::bump(&tx, &self.root)?;
         Ok(tx.commit()?)
     }
 }

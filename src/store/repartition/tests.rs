@@ -213,7 +213,8 @@ fn nothing_to_rewrite_leaves_generation_alone() -> Test {
     let s = Scratch::new("repart-noop")?;
     before(&s)?;
     let mut store = s.open(Mode::Read)?;
+    let was = store.generation()?;
     store.repartition()?;
-    assert_eq!(store.generation()?, 0);
+    assert_eq!(store.generation()?, was);
     Ok(())
 }
