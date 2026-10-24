@@ -4,12 +4,12 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{lock_graph, mirror, name_guard, tdd_order, worktree};
+use crate::{lock_graph, message, mirror, name_guard, tdd_order, worktree};
 use std::path::Path;
 
 const USAGE: &str = "usage: chertmem-dev name-guard [files...] | \
                      no-core-worktree | lock-graph | rust-mirror | \
-                     tdd-order [RANGE]";
+                     tdd-order [RANGE] | commit-msg <file>";
 
 /// Run one guard from `args` against the repository at `root`.
 #[must_use]
@@ -24,8 +24,19 @@ pub fn run(args: &[String], root: &Path) -> u8 {
         ("rust-mirror", []) => mirror(root),
         ("tdd-order", []) => order(root, None),
         ("tdd-order", [range]) => order(root, Some(range)),
+        ("commit-msg", [file]) => commit_msg(root, file),
         _ => usage(),
     }
+}
+
+/// `commit-msg <file>`: the message git hands the hook (dev V11).
+fn commit_msg(root: &Path, file: &str) -> u8 {
+    let Ok(bytes) = std::fs::read(root.join(file)) else {
+        eprintln!("commit-msg: cannot read {file}");
+        return 2;
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    report_lines("commit-msg", &message::findings(&text))
 }
 
 fn usage() -> u8 {
