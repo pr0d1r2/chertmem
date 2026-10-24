@@ -40,6 +40,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v ripsecrets >/dev/null 2>&1 || { echo 'ripsecrets: ripsecrets is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; ripsecrets {{files}} || { echo 'ripsecrets: a token or credential is staged; a false positive goes in .secretsignore' >&2; exit 1; }"
   }
+  ["no-local-paths"] {
+    glob = List("**/*")
+    check = "command -v grep >/dev/null 2>&1 || { echo 'no-local-paths: grep is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; ! grep -nHE '/Users/[A-Za-z]|/home/|/root/' {{files}} /dev/null | grep -v nolocalpath || { echo 'no-local-paths: an absolute home path is staged; make it relative, or end the line with a nolocalpath comment' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
