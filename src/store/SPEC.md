@@ -43,6 +43,8 @@ id|topic|finding|src
 R1|layout, wave 2|project id = dir name + FNV-1a 64 of canonical path; dir = non-time dims, `by` order, `+`-joined; bucket `<t0>-<span>`, h & d from epoch, mo from 0000-01; shard FNV-1a(project, id); checksum FNV-1a 64 ∀ (id, body), insert order; bytes = Σ observation bodies|`layout.rs`, `calendar.rs`
 R2|spool, wave 2|busy 2 ms write-only, 1 s reading; 1 file per item, renamed into place; spooled append → `Spooled`, ref issued at replay; unreadable → `spool/unreadable/`|`spool.rs`
 R3|tiers, wave 3|file keeps own catalog row; cold `<path>.zst` + `.dict`, read via `thawed/<path>`; sealed spool item → `spool/sealed/`|`cold.rs`
+R4|generation, wave 4|bump = max(stored + 1, now ms, mark + 1); mark = file `generation` beside `catalog.db`, rewritten per bump; new catalog seeded so|`generation.rs`
+R5|tombstones, wave 4|`<path>.dropped`: JSON `{partition: [12 catalog cols], refs: [[project, ref, id, identity]]}`, before files go; rebuild restores before files; bad 1 → error. `spool_raw` → `spool/unreadable/<ULID>.hook`, as `src/hook` writes|`tombstone.rs`, `spool.rs`
 
 ## §V INVARIANTS
 
@@ -73,9 +75,9 @@ T8|x|ref column & exact-match resolution, cross-project lookup|V5,V8
 T9|x|summaries table, turn & session scopes|V1
 T10|x|w/ T6: spooled item whose partition got sealed ⊥ blocks replay forever|V7,V10
 T11|x|for `src/cache`: `tail` by seq, `data_version`, `catalog_version`|`src/cache:V2`
-T12|.|`generation` from a monotonic source (e.g. max(stored, now ms)), survives `rebuild`|V11
-T13|.|drop tombstones under `chunks/<project>/`, read by `rebuild`|V12
-T14|.|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24); `src/hook` calls it|V10
+T12|x|`generation` from a monotonic source (e.g. max(stored, now ms)), survives `rebuild`|V11
+T13|x|drop tombstones under `chunks/<project>/`, read by `rebuild`|V12
+T14|x|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24); `src/hook` calls it|V10
 
 ## §B BUGS
 
