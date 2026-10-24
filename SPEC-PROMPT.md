@@ -46,3 +46,33 @@ Goals:
 - awareness: report what agents do, where tokens and time go, and mine
   repeated patterns into candidate rules, scripts and tools, for rekall to
   turn into enforced checks
+
+# Naming
+
+- Crate and repository: `chertmem`. Chert is the fine-grained, layered
+  stone ancient toolmakers knapped into sharp edges: dense like compressed
+  storage, layered like partitions, and quick to cut. The `mem` suffix
+  says what it is and nods to cavemem.
+- Binary: `chert` is proposed (open question). The bare `chert` crate is
+  taken, so the crate keeps the suffix and `[[bin]] name` sets the command.
+- Availability checked 2026-10-24: `chertmem` free on crates.io (API
+  returns 404) and npm; no GitHub repository named `chertmem` (0 search
+  results), no `pr0d1r2/chertmem`; no Homebrew formula `chert`. Recount:
+  `curl https://crates.io/api/v1/crates/chertmem`, `gh search repos
+  chertmem`, `gh repo view pr0d1r2/chertmem`, `brew info --formula chert`.
+- `chert` on crates.io is `jesopo/chert` 0.2.1, an expression language,
+  unchanged since 2024-02-06. crates.io does not force transfers, so the
+  bare name needs its owner's consent.
+- Rejected alternatives (2026-10-24):
+  - `rustmem`: taken on crates.io (`Adaimade/R-Mem` 0.3.0); names the
+    language, not the tool.
+  - `memcore`: free on crates.io, taken on npm and PyPI; 62 GitHub
+    repositories, one of them an 85-star agent-memory project.
+  - `chunkmem`: free, but "chunk" reads as RAG text chunking.
+  - `blitzmem`: free; says speed only, close to the Blitzmemo app.
+  - `memraptor`: free everywhere; says speed, not compression or layers.
+  - `memoralis`: free; says nothing of speed or compression, misspelt as
+    `memorialis`.
+  - `flintknap`, `tallybone`, `petroglyph`: free, weaker fit than chert.
+  - `strata`, `midden`, `quipu`, `ochre`, `cairn`, `flint`, `chert`:
+    taken on crates.io.
