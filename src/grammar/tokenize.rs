@@ -1,6 +1,8 @@
 //! cavemem's `tokenize.ts`: every rule scans the whole text as a global
 //! regex, the spans are sorted by start, then priority, then length,
-//! overlaps are dropped first come, and the gaps are prose.
+//! overlaps are dropped first come, and the gaps are prose. One change
+//! (src/grammar V5 (b)): inline code is scanned again with each kept
+//! fence's end as a cut, so the fence's last tick opens no inline code.
 
 #[cfg(test)]
 mod tests;
@@ -26,8 +28,15 @@ const RULES: [(u8, Rule); 9] = [
     (20, identifier),
 ];
 
-/// The lowest priority of a code rule: fence and inline code.
+/// The lowest priority of a code rule: fence and inline code; it is
+/// inline code's own.
 const CODE: u8 = 90;
+
+/// The priority of the fence rule.
+const FENCE: u8 = 100;
+
+/// The priority of the path rule.
+const PATH: u8 = 60;
 
 /// One piece of the text: kept as it is, or prose to rewrite. `code`
 /// marks a kept fence or inline code span (src/grammar V4), `path` a
@@ -47,30 +56,43 @@ struct Span {
     priority: u8,
 }
 
-/// Every match of one rule, as `RegExp.exec` with `g` finds them.
-fn scan(s: &str, priority: u8, rule: Rule, out: &mut Vec<Span>) {
+/// Every match of one rule, as `RegExp.exec` with `g` finds them, but a
+/// match across a cut is dropped and the scan goes on from the cut.
+fn scan(s: &str, (priority, rule): (u8, Rule), cuts: &[usize]) -> Vec<Span> {
+    let mut out = Vec::new();
     let mut p = 0;
     while p < s.len() {
-        match rule(s, p).filter(|&end| end > p) {
-            Some(end) => {
-                out.push(Span {
-                    start: p,
-                    end,
-                    priority,
-                });
-                p = end;
-            }
-            None => p = p.saturating_add(1),
-        }
+        let found = rule(s, p).filter(|&end| end > p);
+        let cut = found.and_then(|end| crossing(cuts, p, end));
+        let span = found.map(|end| Span {
+            start: p,
+            end,
+            priority,
+        });
+        out.extend(span.filter(|_| cut.is_none()));
+        p = cut.or(found).unwrap_or_else(|| p.saturating_add(1));
     }
+    out
+}
+
+/// The first cut strictly inside `start..end`.
+fn crossing(cuts: &[usize], start: usize, end: usize) -> Option<usize> {
+    cuts.iter().copied().find(|&c| start < c && c < end)
+}
+
+/// Every rule's matches; inline code is cut at `cuts`.
+fn candidates(s: &str, cuts: &[usize]) -> Vec<Span> {
+    let cut_for = |priority| if priority == CODE { cuts } else { &[] };
+    RULES
+        .into_iter()
+        .flat_map(|(priority, rule)| {
+            scan(s, (priority, rule), cut_for(priority))
+        })
+        .collect()
 }
 
 /// The spans that survive overlap resolution, in text order.
-fn resolve(s: &str) -> Vec<Span> {
-    let mut spans = Vec::new();
-    for (priority, rule) in RULES {
-        scan(s, priority, rule, &mut spans);
-    }
+fn pick(mut spans: Vec<Span>) -> Vec<Span> {
     spans.sort_by_key(|x| (x.start, Reverse(x.priority), Reverse(x.end)));
     let mut cursor = 0;
     spans.retain(|x| {
@@ -81,13 +103,28 @@ fn resolve(s: &str) -> Vec<Span> {
     spans
 }
 
+/// cavemem's spans, then again with inline code cut at the end of each
+/// fence they keep (V5 (b)): with no fence kept, cavemem's spans.
+fn resolve(s: &str) -> Vec<Span> {
+    let first = pick(candidates(s, &[]));
+    let ends: Vec<usize> = first
+        .iter()
+        .filter(|x| x.priority == FENCE)
+        .map(|x| x.end)
+        .collect();
+    if ends.is_empty() {
+        return first;
+    }
+    pick(candidates(s, &ends))
+}
+
 /// One segment of `text`: prose, or a kept span of rule `priority`.
 fn segment(text: &str, priority: Option<u8>) -> Segment<'_> {
     Segment {
         text,
         kept: priority.is_some(),
         code: priority >= Some(CODE),
-        path: false,
+        path: priority == Some(PATH),
     }
 }
 
