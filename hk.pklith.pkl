@@ -98,6 +98,11 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/SPEC.md", ".context-limits")
     check = "command -v sherd >/dev/null 2>&1 || { echo 'sherd-budget: sherd is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; sherd budget || { echo 'sherd-budget: a spec chain is over its ceiling' >&2; exit 1; }"
   }
+  ["gen-check"] {
+    glob = List(".pklith", "hk.pklith.pkl", "nix/pklith.nix")
+    check = "command -v pklith >/dev/null 2>&1 || { echo 'gen-check: pklith is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; pklith gen --check || { echo 'gen-check: hk.pklith.pkl or nix/pklith.nix no longer matches .pklith; run pklith gen' >&2; exit 1; }"
+    fix = "pklith gen"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
