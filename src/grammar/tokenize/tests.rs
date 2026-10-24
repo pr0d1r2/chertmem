@@ -156,3 +156,29 @@ fn unicode_space_counts_as_js_white_space() {
 fn empty_text_has_no_segments() {
     assert!(segs("").is_empty());
 }
+
+/// Each kept span of `CODE_TEXT` and whether it is code.
+const CODE_SPANS: [(&str, bool); 8] = [
+    ("`g`", true),
+    ("```f```", true),
+    ("~~~h~~~", true),
+    ("/p", false),
+    ("https://u", false),
+    ("v1.2.3", false),
+    ("x_y", false),
+    ("7", false),
+];
+
+const CODE_TEXT: &str = "a `g` ```f``` ~~~h~~~ /p https://u v1.2.3 x_y 7";
+
+/// Only fences and inline code count as code (src/grammar V4); the
+/// expectation is chert's own, cavemem has no such flag.
+#[test]
+fn only_fences_and_inline_code_are_code() {
+    let code: Vec<(&str, bool)> = tokenize(CODE_TEXT)
+        .iter()
+        .filter(|s| s.kept)
+        .map(|s| (s.text, s.code))
+        .collect();
+    assert_eq!(code, CODE_SPANS);
+}

@@ -172,7 +172,7 @@ fn edge_cases_match_oracle_bytes() {
 /// Inputs where chert deliberately differs from cavemem 0.2.1 (src/grammar
 /// V4, R1): its last pass drops blanks before `.,;:!?` inside code too.
 /// Each is (text, intensity, cavemem's bytes, chert's bytes).
-const CODE_DEVIATIONS: [(&str, Intensity, &str, &str); 5] = [
+const CODE_DEVIATIONS: [(&str, Intensity, &str, &str); 6] = [
     (
         "`a .b` and x ;",
         Intensity::Full,
@@ -198,10 +198,19 @@ const CODE_DEVIATIONS: [(&str, Intensity, &str, &str); 5] = [
         "run `x ; y` then `p :q`.",
     ),
     (
+        "x `d \t,` c ```b ?``` e",
+        Intensity::Full,
+        "x `d,` c ```b?``` e",
+        "x `d \t,` c ```b ?``` e",
+    ),
+    // cavemem's tokenizer takes `` ` c ` `` (the fence's last tick) as
+    // inline code, which then loses to the fence, so `d \t,` is prose:
+    // only the fence keeps its blank.
+    (
         "x ```b ?``` c `d \t,` e",
         Intensity::Full,
         "x ```b?``` c `d,` e",
-        "x ```b ?``` c `d \t,` e",
+        "x ```b ?``` c `d,` e",
     ),
 ];
 
