@@ -250,6 +250,24 @@ question 13 stays open.
     to the bucket of its own timestamp, so a session can span buckets; on
     a lock timeout the event goes to an append-only spool that the next
     run replays, so no event is lost. Closes open question 3. Local.
+14. Cache host: the long-lived `chert mcp` process of each IDE session
+    holds the cache and warms it in a background thread, serving from
+    disk until warm. Hooks hold no cache. A shared daemon over a Unix
+    socket stays a later option, for when one copy per session costs too
+    much. Closes open question 4. Local.
+15. Cache freshness (decision 8): `PRAGMA data_version` before each query
+    detects commits from other processes; new rows are read by an
+    `AUTOINCREMENT` sequence column, not by ULID, because two processes
+    writing in the same millisecond can commit out of ULID order; a
+    `generation` counter in the catalog, bumped by any delete, redaction
+    or rewrite, forces a full reload. Closes open question 5. Local.
+16. Cache fit (decision 7): the window's size is estimated from catalog
+    statistics before loading. On overflow, `warn` keeps the newest days
+    that fit and says how many, `shrink` does the same silently after one
+    warning, and `fail` serves from disk only. chert also warns when
+    `max_bytes` exceeds about 25% of available memory. Warnings go to the
+    MCP log, `chert status` and `chert doctor`, never into the agent's
+    context. Closes open question 6. Local.
 
 # Non-goals
 
@@ -301,24 +319,9 @@ decision or drops it.
 1. Binary name. Closed by decision 11.
 2. Storage engine and layout. Closed by decision 12.
 3. Write correctness. Closed by decision 13.
-4. Cache host. Hooks exit within milliseconds and cannot hold a cache.
-   Proposed: the long-lived `chert mcp` process of each IDE session holds
-   it and warms it in a background thread, serving from disk until warm.
-   A shared daemon reached over a Unix socket is a later option, for when
-   one copy per session costs too much. Blocks the cache node.
-5. Cache freshness (decision 8). Proposed: `PRAGMA data_version` before
-   each query to detect commits from other processes; a tail read by an
-   `AUTOINCREMENT` sequence column, not by ULID, because two processes
-   writing in the same millisecond can commit out of ULID order; a
-   `generation` counter in the catalog, bumped by any delete, redaction
-   or rewrite, that forces a full reload. Blocks the cache node.
-6. Cache fit (decision 7). Proposed: estimate the window's size from
-   catalog statistics before loading; on overflow, `warn` keeps the
-   newest days that fit and says how many, `shrink` does the same
-   silently after one warning, `fail` serves from disk only. Also warn
-   when `max_bytes` exceeds about 25% of available memory. Warnings go to
-   the MCP log, `chert status` and `chert doctor`, never into the agent's
-   context. Blocks the cache node.
+4. Cache host. Closed by decision 14.
+5. Cache freshness. Closed by decision 15.
+6. Cache fit. Closed by decision 16.
 7. Ranking across partitions. Proposed: global term statistics kept in
    the catalog (from `fts5vocab`), so BM25 compares across partitions,
    and one scoring path for cached and uncached rows, so a result ranks
