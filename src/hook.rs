@@ -9,7 +9,7 @@ mod tests;
 
 mod claude_code;
 mod exclude;
-mod inject;
+pub(crate) mod inject;
 mod kind;
 mod raw;
 pub(crate) mod redact;
