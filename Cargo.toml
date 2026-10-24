@@ -17,6 +17,12 @@ name = "chert"
 path = "src/main.rs"
 
 [dependencies]
+# SQLite with FTS5 compiled in (root C, src/store C). Default features
+# off: `cache` pulls hashlink and foldhash (Zlib), outside the MIT-only
+# deny.toml; the rest of the tree is MIT or MIT OR Apache-2.0.
+rusqlite = { version = "0.41.0", default-features = false, features = [
+  "bundled",
+] }
 # `chert.toml` parsing (src/config C): every crate in its tree is MIT
 # or MIT OR Apache-2.0, and serde_core brings no proc macro, so the
 # MIT-only deny.toml holds.
