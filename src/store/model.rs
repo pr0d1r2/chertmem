@@ -80,6 +80,14 @@ pub struct Partition {
     pub spec: String,
 }
 
+/// What a ref resolves to (root V5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Lookup {
+    Found(Observation),
+    /// Gone: never another row in its place.
+    Dropped(Ref),
+}
+
 /// 1 stored observation (src/store C).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Observation {

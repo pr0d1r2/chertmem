@@ -7,7 +7,10 @@ mod tests;
 
 use rusqlite::Connection;
 
-use super::{Error, Filter, Observation, Partition, Store, partition, prune};
+use super::catalog::{self, Hit};
+use super::{
+    Error, Filter, Lookup, Observation, Partition, Ref, Store, partition, prune,
+};
 
 impl Store {
     /// The catalog rows of every partition that may hold a row `filter`
@@ -37,6 +40,36 @@ impl Store {
         }
         found.sort_by(|a, b| (a.ts, &a.id).cmp(&(b.ts, &b.id)));
         Ok(found)
+    }
+
+    /// Resolve each ref by exact match on the stored ref (root V15), in
+    /// order: [`Lookup::Found`] with its row, or [`Lookup::Dropped`]
+    /// when the row or its partition is gone, never another row (V5).
+    ///
+    /// # Errors
+    /// [`Error::WriteOnly`] on a write-only store; an unreadable file.
+    pub fn get(&mut self, refs: &[Ref]) -> Result<Vec<Lookup>, Error> {
+        refs.iter().map(|r| self.resolve(r)).collect()
+    }
+
+    fn resolve(&mut self, reference: &Ref) -> Result<Lookup, Error> {
+        let project = Some(self.project.as_str());
+        let hits =
+            catalog::locate(self.reader()?, project, reference.as_str())?;
+        match hits.as_slice() {
+            [hit] if hit.path.is_empty() => self.fetch(hit, reference), // RED stub
+            _ => Ok(Lookup::Dropped(reference.clone())),
+        }
+    }
+
+    /// The row behind `hit`; a missing file or row is [`Lookup::Dropped`].
+    fn fetch(&mut self, hit: &Hit, reference: &Ref) -> Result<Lookup, Error> {
+        let dropped = Lookup::Dropped(reference.clone());
+        let Some(conn) = self.chunks.existing(&hit.path)? else {
+            return Ok(dropped);
+        };
+        let row = partition::fetch(conn, &hit.project, reference.as_str())?;
+        Ok(row.map_or(dropped, Lookup::Found))
     }
 
     /// The catalog of a reading open (src/store V10).

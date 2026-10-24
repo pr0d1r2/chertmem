@@ -25,7 +25,7 @@ use rusqlite::Connection;
 pub use error::Error;
 pub use layout::project_id;
 pub use model::{
-    Appended, Event, Filter, Observation, Partition, State, Stats,
+    Appended, Event, Filter, Lookup, Observation, Partition, State, Stats,
 };
 pub use reference::Ref;
 

@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use super::schema;
 use super::write::Row;
@@ -73,6 +73,19 @@ pub(super) fn scan(
     let args = params![filter.project, filter.since, filter.until];
     let rows = stmt.query_map(args, observation)?;
     Ok(rows.collect::<Result<_, _>>()?)
+}
+
+const FETCH: &str = "SELECT ref, id, project, ts, session, ide, kind,
+  identity, body FROM observations WHERE project = ?1 AND ref = ?2";
+
+/// The row stored under exactly `reference` in `project`.
+pub(super) fn fetch(
+    conn: &Connection,
+    project: &str,
+    reference: &str,
+) -> Result<Option<Observation>, Error> {
+    let args = [project, reference];
+    Ok(conn.query_row(FETCH, args, observation).optional()?)
 }
 
 /// An observation from the columns `ref, id, project, ts, session, ide,

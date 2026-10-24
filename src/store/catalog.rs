@@ -71,6 +71,35 @@ pub(super) fn taken(
     Ok(hit.is_some())
 }
 
+/// Where a ref was issued: its project and its partition's file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Hit {
+    pub project: String,
+    pub path: String,
+}
+
+const LOCATE: &str = "SELECT r.project, p.path FROM refs r
+  JOIN partitions p ON p.id = r.partition
+  WHERE r.ref = ?1 AND (?2 IS NULL OR r.project = ?2)
+  ORDER BY r.project";
+
+/// Every partition holding the ref `reference` exactly, in `project` or
+/// in every project (root V15); never a prefix match.
+pub(super) fn locate(
+    conn: &Connection,
+    project: Option<&str>,
+    reference: &str,
+) -> Result<Vec<Hit>, Error> {
+    let mut stmt = conn.prepare(LOCATE)?;
+    let hits = stmt.query_map(params![reference, project], |r| {
+        Ok(Hit {
+            project: r.get(0)?,
+            path: r.get(1)?,
+        })
+    })?;
+    Ok(hits.collect::<Result<_, _>>()?)
+}
+
 /// Record a stored row: its ref, and the partition's rows, bytes and
 /// checksum (src/store R1).
 pub(super) fn record(
