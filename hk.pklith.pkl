@@ -2,6 +2,11 @@
 import "pkl/Config.pkl"
 
 steps: Mapping<String, Config.Step> = new {
+  ["trailing-whitespace"] {
+    glob = List("**/*")
+    check = "command -v hk >/dev/null 2>&1 || { echo 'trailing-whitespace: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util trailing-whitespace --diff {{files}} || { echo 'trailing-whitespace: trailing blanks; the pre-commit hook strips them' >&2; exit 1; }"
+    fix = "hk util trailing-whitespace --fix {{files}}"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
