@@ -12,6 +12,7 @@ mod exclude;
 mod kind;
 mod raw;
 mod redact;
+mod summary;
 
 use std::path::Path;
 
@@ -19,7 +20,7 @@ pub use kind::{Ide, Kind};
 
 use crate::config::{Config, Grammar};
 use crate::grammar::{self, Intensity};
-use crate::store::{Event, Mode, Store};
+use crate::store::{Error, Event, Mode, Store};
 
 /// What [`run`] reads besides stdin.
 #[derive(Debug, Clone, Copy)]
@@ -91,7 +92,9 @@ pub fn run(kind: Kind, stdin: &[u8], ctx: &Ctx<'_>) -> Outcome {
 }
 
 /// Store a readable payload; one touching an excluded path stores
-/// nothing (V1); one the store refuses is kept raw (V2).
+/// nothing (V1); one the store refuses is kept raw (V2). A failure
+/// after the event is stored only makes a note: keeping it raw too
+/// would store it twice.
 fn handle(
     kind: Kind,
     payload: &Payload,
@@ -103,11 +106,30 @@ fn handle(
         return Outcome::done(None);
     }
     let event = event(kind, payload, ctx);
-    let stored = Store::open(ctx.config, ctx.root, Mode::Write)
-        .and_then(|mut store| store.append(&event));
-    match stored {
-        Ok(_) => Outcome::done(None),
-        Err(e) => kept(stdin, ctx, &e.to_string()),
+    let mut store = match stored(kind, &event, ctx) {
+        Ok(store) => store,
+        Err(e) => return kept(stdin, ctx, &e.to_string()),
+    };
+    match summary::after(&mut store, kind, &event) {
+        Ok(()) => Outcome::done(None),
+        Err(e) => Outcome::noted(e.to_string()),
+    }
+}
+
+/// The store, opened as `kind` needs it, with `event` appended.
+fn stored(kind: Kind, event: &Event, ctx: &Ctx<'_>) -> Result<Store, Error> {
+    let mut store = Store::open(ctx.config, ctx.root, mode(kind))?;
+    store.append(event)?;
+    Ok(store)
+}
+
+/// Write-only unless the hook reads: `session-end` rolls up the
+/// session's turns, which a reading open sees with the spool replayed.
+fn mode(kind: Kind) -> Mode {
+    if kind == Kind::SessionEnd {
+        Mode::Read
+    } else {
+        Mode::Write
     }
 }
 
