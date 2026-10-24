@@ -104,7 +104,17 @@ pub(super) fn env() -> (Env, Logs) {
             all.push(text.to_owned());
         }
     });
-    (Env { now, log }, logs)
+    let env = Env {
+        now,
+        memory: plenty,
+        log,
+    };
+    (env, logs)
+}
+
+/// A memory figure no test config comes near: 1 TiB.
+fn plenty() -> Option<u64> {
+    1_u64.checked_shl(40)
 }
 
 /// Every warning logged so far.
