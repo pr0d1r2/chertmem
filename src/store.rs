@@ -12,6 +12,7 @@ mod model;
 mod partition;
 mod reference;
 mod schema;
+mod spool;
 mod write;
 
 use std::path::{Path, PathBuf};
@@ -85,8 +86,46 @@ impl Store {
         };
         if mode == Mode::Read {
             store.catalog()?;
+            store.replay()?;
         }
         Ok(store)
+    }
+
+    /// Replay the whole spool into its partitions, oldest first; a
+    /// reading open does this before its first read (src/store V10).
+    /// Each file is dropped once replayed; replaying it twice, as 2
+    /// readers at once may, stores its row once (its id is known).
+    ///
+    /// # Errors
+    /// [`Error::WriteOnly`] on a write-only store; a lock outlasting the
+    /// busy timeout leaves the rest of the spool for the next replay.
+    pub fn replay(&mut self) -> Result<(), Error> {
+        self.reading()?;
+        for path in spool::pending(&self.root)? {
+            self.restore(&path)?;
+        }
+        Ok(())
+    }
+
+    /// Replay 1 spool file, then drop it; an unreadable one is set aside.
+    fn restore(&mut self, path: &Path) -> Result<(), Error> {
+        let rows = match spool::read(path)? {
+            spool::Found::Rows(rows) => rows,
+            spool::Found::Unreadable => {
+                return spool::set_aside(&self.root, path);
+            }
+            spool::Found::Gone => return Ok(()),
+        };
+        let _ = rows.len(); // RED stub: the rows are dropped, not replayed
+        spool::done(path)
+    }
+
+    /// Refuse a read on a write-only store (src/store V10).
+    fn reading(&self) -> Result<(), Error> {
+        match self.mode {
+            Mode::Read => Ok(()),
+            Mode::Write => Err(Error::WriteOnly),
+        }
     }
 
     /// This store's project id ([`project_id`] of its root).
@@ -96,21 +135,36 @@ impl Store {
     }
 
     /// Store `event` in the partition of its own timestamp (src/store
-    /// V1); an identity seen before gives back its first ref (V9).
+    /// V1); an identity seen before gives back its first ref (V9). A
+    /// lock outlasting the busy timeout spools it instead and still
+    /// succeeds (V10).
     ///
     /// # Errors
     /// A timestamp past 48 bits, a sealed partition, an unusable file.
     pub fn append(&mut self, event: &Event) -> Result<Appended, Error> {
+        let row = self.row(event)?;
+        let stored = self
+            .ctx()
+            .and_then(|mut cx| write::observation(&mut cx, &row));
+        match stored {
+            Ok(reference) => Ok(Appended::Stored(reference)),
+            Err(Error::Busy { .. }) => {
+                spool::put(&self.root, &row).map(|()| Appended::Spooled)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// `event` under a new id in this project.
+    fn row(&self, event: &Event) -> Result<Row, Error> {
         if event.ts > MAX_TS {
             return Err(Error::BadTime { ts: event.ts });
         }
-        let row = Row {
+        Ok(Row {
             id: write::new_id(event.ts),
             project: self.project.clone(),
             event: event.clone(),
-        };
-        let reference = write::observation(&mut self.ctx()?, &row)?;
-        Ok(Appended::Stored(reference))
+        })
     }
 
     /// What a write reaches, the catalog opened first.

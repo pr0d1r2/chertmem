@@ -46,6 +46,7 @@ name = "chertmem"
 version = "0.0.0"
 dependencies = [
  "rusqlite",
+ "tinyjson",
  "toml",
  "ulid",
 ]
