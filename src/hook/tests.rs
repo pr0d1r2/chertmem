@@ -5,7 +5,7 @@ use std::error::Error as StdError;
 use std::fs;
 use std::path::PathBuf;
 
-use super::{Ctx, Ide, Kind, Outcome, run};
+use super::{Ctx, Ide, Kind, Outcome, mode, run};
 use crate::config::{Config, Grammar, load_from};
 use crate::grammar::{Intensity, compress};
 use crate::store::{Filter, Mode, Observation, Store};
@@ -163,4 +163,14 @@ fn bodies_are_compressed_at_the_configured_grammar() -> Test {
     let full = compress("Please just check the build", Intensity::Full);
     assert_eq!(bodies, ["Please just check the build".to_owned(), full]);
     Ok(())
+}
+
+#[test]
+fn only_reading_hooks_open_the_store_for_reading() {
+    for kind in Kind::ALL {
+        let reads = kind == Kind::SessionEnd;
+        let want = if reads { Mode::Read } else { Mode::Write };
+        assert_eq!(mode(kind, false), want, "{kind:?}");
+        assert_eq!(mode(kind, true), Mode::Read, "{kind:?}");
+    }
 }

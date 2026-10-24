@@ -9,6 +9,7 @@ mod tests;
 
 mod claude_code;
 mod exclude;
+mod inject;
 mod kind;
 mod raw;
 mod redact;
@@ -85,51 +86,73 @@ pub fn run(kind: Kind, stdin: &[u8], ctx: &Ctx<'_>) -> Outcome {
     let parsed = match ctx.ide {
         Ide::ClaudeCode => claude_code::parse(kind, stdin),
     };
+    let globs = &ctx.config.privacy.exclude;
     match parsed {
+        // An event touching an excluded path stores nothing (V1).
+        Some(p) if exclude::excluded(globs, ctx.root, &p.paths) => {
+            Outcome::done(None)
+        }
         Some(payload) => handle(kind, &payload, stdin, ctx),
         None => kept(stdin, ctx, "chert: unreadable hook payload"),
     }
 }
 
-/// Store a readable payload; one touching an excluded path stores
-/// nothing (V1); one the store refuses is kept raw (V2). A failure
-/// after the event is stored only makes a note: keeping it raw too
-/// would store it twice.
+/// Store a readable payload; one the store refuses is kept raw (V2). A
+/// failure after the event is stored only makes a note: keeping it raw
+/// too would store it twice.
 fn handle(
     kind: Kind,
     payload: &Payload,
     stdin: &[u8],
     ctx: &Ctx<'_>,
 ) -> Outcome {
-    let globs = &ctx.config.privacy.exclude;
-    if exclude::excluded(globs, ctx.root, &payload.paths) {
-        return Outcome::done(None);
-    }
     let event = event(kind, payload, ctx);
-    let mut store = match stored(kind, &event, ctx) {
+    let budget = inject::budget(kind, payload, ctx.config);
+    let mut store = match stored(kind, &event, budget.is_some(), ctx) {
         Ok(store) => store,
         Err(e) => return kept(stdin, ctx, &e.to_string()),
     };
-    match summary::after(&mut store, kind, &event) {
-        Ok(()) => Outcome::done(None),
+    match follow(&mut store, kind, &event, budget) {
+        Ok(stdout) => Outcome::done(stdout),
         Err(e) => Outcome::noted(e.to_string()),
     }
 }
 
 /// The store, opened as `kind` needs it, with `event` appended.
-fn stored(kind: Kind, event: &Event, ctx: &Ctx<'_>) -> Result<Store, Error> {
-    let mut store = Store::open(ctx.config, ctx.root, mode(kind))?;
+fn stored(
+    kind: Kind,
+    event: &Event,
+    injects: bool,
+    ctx: &Ctx<'_>,
+) -> Result<Store, Error> {
+    let mut store = Store::open(ctx.config, ctx.root, mode(kind, injects))?;
     store.append(event)?;
     Ok(store)
 }
 
 /// Write-only unless the hook reads: `session-end` rolls up the
-/// session's turns, which a reading open sees with the spool replayed.
-fn mode(kind: Kind) -> Mode {
-    if kind == Kind::SessionEnd {
+/// session's turns and an injecting hook reads summaries, both with the
+/// spool replayed by the reading open (src/store V10); a prompt without
+/// `inject.on_prompt` stays write-only (V4).
+fn mode(kind: Kind, injects: bool) -> Mode {
+    if injects || kind == Kind::SessionEnd {
         Mode::Read
     } else {
         Mode::Write
+    }
+}
+
+/// The summaries `kind` writes, then the context it prints, if any.
+fn follow(
+    store: &mut Store,
+    kind: Kind,
+    event: &Event,
+    budget: Option<u32>,
+) -> Result<Option<String>, Error> {
+    summary::after(store, kind, event)?;
+    match budget {
+        Some(max) => inject::context(store, kind, &event.session, max),
+        None => Ok(None),
     }
 }
 

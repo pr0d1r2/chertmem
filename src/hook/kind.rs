@@ -41,6 +41,17 @@ impl Kind {
     pub fn parse(text: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|k| k.as_str() == text)
     }
+
+    /// Claude Code's `hook_event_name`, which its output names again.
+    pub(super) fn event_name(self) -> &'static str {
+        match self {
+            Self::SessionStart => "SessionStart",
+            Self::UserPromptSubmit => "UserPromptSubmit",
+            Self::PostToolUse => "PostToolUse",
+            Self::Stop => "Stop",
+            Self::SessionEnd => "SessionEnd",
+        }
+    }
 }
 
 /// An IDE dialect (src/hook C): v1 reads Claude Code only (D24).
