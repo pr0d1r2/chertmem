@@ -11,7 +11,7 @@ docs                           3400
 src                            3300
 src/cache                      3800
 src/cli                        3500
-src/config                     3700
+src/config                     4600
 src/grammar                    3700
 src/hook                       4400
 src/import                     3700
