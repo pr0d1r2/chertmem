@@ -3,3 +3,4 @@
 
 pub mod cli;
 pub mod name_guard;
+pub mod worktree;
