@@ -2,5 +2,6 @@
 //! nobody (`publish = false`).
 
 pub mod cli;
+pub mod lock_graph;
 pub mod name_guard;
 pub mod worktree;
