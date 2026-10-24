@@ -14,10 +14,13 @@ id|category|nix|glob|check|fix|env|msg
 # steps match .pklith, and every tracked file type has a row.
 gen-check|gate|-|.pklith, hk.pklith.pkl, nix/pklith.nix|pklith gen --check|pklith gen|-|hk.pklith.pkl or nix/pklith.nix no longer matches .pklith; run pklith gen
 pklith-check|gate|-|-|pklith check|-|-|a tracked file type has no row in .pklith, a row matches nothing, or a claimed check never reaches its files
+# paradigm/V37, dev V3: no committed file holds a name from the local,
+# untracked .private/denylist; without one (CI) it holds.
+name-guard|gate|-|**/*|cargo run -q -p chertmem-dev -- name-guard {{files}}|-|-|a committed file holds a name from .private/denylist
 
 ## types
 type|checks|min|exempt
-*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths|-|-
+*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard|-|-
 editorconfig|-|-|written by pklith (seed or gen)
 gitattributes|-|-|written by pklith (seed or gen)
 md|markdownlint|-|-

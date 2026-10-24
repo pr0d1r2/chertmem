@@ -120,6 +120,10 @@ steps: Mapping<String, Config.Step> = new {
   ["pklith-check"] {
     check = "command -v pklith >/dev/null 2>&1 || { echo 'pklith-check: pklith is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; pklith check || { echo 'pklith-check: a tracked file type has no row in .pklith, a row matches nothing, or a claimed check never reaches its files' >&2; exit 1; }"
   }
+  ["name-guard"] {
+    glob = List("**/*")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'name-guard: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- name-guard {{files}} || { echo 'name-guard: a committed file holds a name from .private/denylist' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
