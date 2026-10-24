@@ -13,6 +13,7 @@ self|src/hook|hook intake: event JSON on stdin → redact → append
 sib|src/config|`chert.toml` scopes, merge, defaults, validation
 sib|src/store|`catalog.db`, partition files, writes, spool, tiers, refs
 sib|src/grammar|caveman compress & expand, ported from cavemem 0.2.1
+sib|src/cache|in-memory recent window in `chert mcp`: load, fit, freshness
 
 ## §C CONSTRAINTS
 

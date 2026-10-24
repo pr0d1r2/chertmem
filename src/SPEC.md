@@ -11,6 +11,7 @@ config|`chert.toml` scopes, merge, defaults, validation|reading partitions (`sto
 store|`catalog.db`, partition files, writes, spool, tiers, refs|ranking (`search`), in-memory rows (`cache`)|-
 grammar|caveman compress & expand, ported from cavemem 0.2.1|zstd & storage tiers (`store`)|-
 hook|hook intake: event JSON on stdin → redact → append|IDE wiring (`install`), storage (`store`)|-
+cache|in-memory recent window in `chert mcp`: load, fit, freshness|disk store (`store`), scoring (`search`)|-
 
 ## §N NAV
 
