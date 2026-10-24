@@ -16,6 +16,7 @@ search|BM25 + vector ranking across partitions, one scoring path|row storage (`s
 mcp|MCP stdio server: 4 tools, hosts cache|ranking (`search`), cache internals (`cache`)|-
 cli|`chert` verbs via clap, exit codes|verb behaviour (owning modules)|-
 install|IDE wiring: hooks & MCP registration, status, doctor|hook payloads (`hook`)|-
+import|JSONL export for rekall, import incl. cavemem DB|candidate minting (rekall), mining (`mine`)|-
 
 ## §N NAV
 

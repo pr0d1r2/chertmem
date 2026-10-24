@@ -18,6 +18,7 @@ sib|src/cache|in-memory recent window in `chert mcp`: load, fit, freshness
 sib|src/search|BM25 + vector ranking across partitions, one scoring path
 sib|src/mcp|MCP stdio server: 4 tools, hosts cache
 sib|src/cli|`chert` verbs via clap, exit codes
+sib|src/import|JSONL export for rekall, import incl. cavemem DB
 
 ## §C CONSTRAINTS
 
