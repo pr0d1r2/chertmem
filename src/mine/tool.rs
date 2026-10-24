@@ -21,6 +21,8 @@ const SHELL: &str = "Bash";
 /// What mining reads from 1 tool call.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(super) struct Tool {
+    /// The tool name, the 1st line of the body.
+    pub(super) name: String,
     /// `tool_input.command` of a `Bash` call.
     pub(super) command: Option<String>,
     /// The paths `tool_input` names, as `src/hook` checks them against
@@ -38,6 +40,7 @@ pub(super) fn parse(body: &str) -> Option<Tool> {
     let text = |key| input.get(key).and_then(Value::as_str);
     let command = text("command").filter(|_| name == SHELL);
     Some(Tool {
+        name: name.to_owned(),
         command: command.map(str::to_owned),
         paths: paths(input),
     })

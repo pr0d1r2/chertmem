@@ -128,7 +128,7 @@ pub(super) fn bash(n: u64, session: &str, command: &str) -> Res<Observation> {
 
 #[test]
 fn every_kind_round_trips_its_spelling() {
-    for kind in [Kind::Sequence, Kind::HotFile] {
+    for kind in [Kind::Sequence, Kind::HotFile, Kind::TokenSink] {
         assert_eq!(Kind::parse(kind.as_str()), Some(kind));
     }
     assert_eq!(Kind::parse("error"), None);
@@ -139,7 +139,8 @@ fn every_kind_round_trips_its_spelling() {
 fn findings_mines_rows_given_directly() -> Test {
     let rows = [bash(1, "s", "ls")?, bash(2, "s", "pwd")?];
     let found = super::findings(&rows, 1);
-    let kinds: Vec<_> = found.iter().map(|f| (f.kind, f.count)).collect();
+    let seqs = found.iter().filter(|f| f.kind == Kind::Sequence);
+    let kinds: Vec<_> = seqs.map(|f| (f.kind, f.count)).collect();
     assert_eq!(kinds, [(Kind::Sequence, 1)]);
     assert!(super::findings(&rows, 2).is_empty());
     Ok(())

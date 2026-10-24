@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use rusqlite::Connection;
 
-use super::{FILE, Key, Ledger};
+use super::{FILE, Key, Ledger, VERSION};
 use crate::mine::tests::{Res, Test, reference};
 use crate::mine::{Error, Finding, Kind};
 use crate::store::{Partition, State, Stats};
@@ -145,6 +145,13 @@ fn a_row_of_an_unknown_kind_is_an_error() -> Test {
     let got = Ledger::open(&dir.0)?.get(&key("c1"));
     assert!(matches!(got, Err(Error::Ledger { .. })), "{got:?}");
     Ok(())
+}
+
+/// Token sinks (src/mine T3) changed the signals, so findings kept by
+/// the miner before them are mined again.
+#[test]
+fn the_version_names_the_signals_with_token_sinks() {
+    assert!(VERSION.ends_with("/signals-2"), "{VERSION}");
 }
 
 #[test]
