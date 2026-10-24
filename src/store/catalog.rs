@@ -226,9 +226,15 @@ pub(super) fn restate(
     Ok(())
 }
 
-/// Forget the partition at `path`, which holds no row any more.
+const FORGET: &str = "DELETE FROM partitions WHERE path = ?1
+  AND NOT EXISTS (SELECT 1 FROM refs r WHERE r.partition = partitions.id)";
+
+/// Forget the partition at `path` once no ref points at it; one whose
+/// refs stay (its file was lost) is marked dropped instead (root V5).
 pub(super) fn forget(conn: &Connection, path: &str) -> Result<(), Error> {
-    conn.execute("DELETE FROM partitions WHERE path = ?1", [path])?;
+    if conn.execute(FORGET, [path])? == 0 {
+        mark_dropped(conn, path)?;
+    }
     Ok(())
 }
 
