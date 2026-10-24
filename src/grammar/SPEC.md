@@ -58,7 +58,9 @@ T3|x|port `expand`|V1
 T4|x|MIT notice|-
 T5|x|punctuation pass skips fenced & inline code; tests list each golden case it changes|V2,V4
 T6|x|deviations (b) & (c) of V5, RED → GREEN; tests list each golden case they change|V2,V5
+T7|.|deviation (d) of V2: a path or filename whose first segment is an article word (`a/b.ipynb`, `a.txt`, `the.txt`) stays whole; ⊥ `/b.ipynb`, `cat.txt`. cavemem 0.2.1 drops it (B1)|V2,V5
 
 ## §B BUGS
 
 id|date|cause|fix
+B1|2026-10-24|mine worker, confirmed on cavemem 0.2.1 oracle: at full & ultra the article filter splits a leading `a` or `the` off a path or filename (`cat a.txt` → `cat.txt`, `a/b.ipynb` → `/b.ipynb`) ∴ paths ⊥ survive (V2), mined hot files mangled|V2
