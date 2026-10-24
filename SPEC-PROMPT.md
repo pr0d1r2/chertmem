@@ -53,7 +53,7 @@ Goals:
   stone ancient toolmakers knapped into sharp edges: dense like compressed
   storage, layered like partitions, and quick to cut. The `mem` suffix
   says what it is and nods to cavemem.
-- Binary: `chert` is proposed (open question). The bare `chert` crate is
+- Binary: `chert` (decision 11). The bare `chert` crate is
   taken, so the crate keeps the suffix and `[[bin]] name` sets the command.
 - Availability checked 2026-10-24: `chertmem` free on crates.io (API
   returns 404) and npm; no GitHub repository named `chertmem` (0 search
@@ -195,9 +195,9 @@ chert completions <shell> · chert man
 - MCP tools keep cavemem's names and result shapes: `search`, `timeline`,
   `get_observations`, `list_sessions`.
 
-# Decisions (2026-10-24)
+# Decisions, round 1 (2026-10-24)
 
-Round 1, from the owner's conversation. Mechanisms the agent proposed but
+From the owner's conversation. Mechanisms the agent proposed but
 the owner has not decided are open questions below, not decisions.
 
 1. Rewrite cavemem in Rust to remove its Node dependencies from the
@@ -226,6 +226,17 @@ the owner has not decided are open questions below, not decisions.
    tools, the way rekall turns prose rules into executable checks. Local.
 10. Process: the paradigm lifecycle in full, from fda10ea. Atomic commits,
     one topic each, from this prompt on. Local.
+
+# Decisions, round 2 (2026-10-24)
+
+Gap round 1. The owner told the agent to accept its own proposals for
+open questions 1 to 12 and 14 to 17, so the agent answered this round;
+each answer stands until the owner amends it by a later decision. Open
+question 13 stays open.
+
+11. Binary: `chert`. The crate stays `chertmem` and sets the command with
+    `[[bin]] name = "chert"`; hook shims call `exec chert hook run
+    <event>`. Closes open question 1. Local.
 
 # Non-goals
 
@@ -274,8 +285,7 @@ Proposed by the agent; each rejection stands until the owner reopens it.
 Each carries the agent's proposal. A gap round turns each one into a
 decision or drops it.
 
-1. Binary name. Proposed: `chert`, with the hook shims calling `exec chert
-   hook run <event>`. Blocks the CLI node.
+1. Binary name. Closed by decision 11.
 2. Storage engine and layout. Proposed: one SQLite file per partition
    under `chunks/<project>/`, plus `catalog.db` that records each
    partition's dimensions, bounds, row count, state and checksum. The
