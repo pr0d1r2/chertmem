@@ -39,6 +39,7 @@ pub(super) fn findings(rows: &[Observation], min: u32) -> Vec<Finding> {
     let calls = calls(rows);
     let mut tally = Tally::new();
     sequences(&calls, &mut tally);
+    hot_files(&calls, &mut tally);
     let least = usize::try_from(min).unwrap_or(usize::MAX).max(1);
     let kept = tally.into_iter().filter(|(_, seen)| seen.len() >= least);
     let mut found: Vec<Finding> = kept
@@ -85,6 +86,17 @@ fn sequences<'a>(calls: &[Call<'a>], tally: &mut Tally<'a>) {
                 let seen = tally.entry((Kind::Sequence, pattern));
                 seen.or_default().push(row);
             }
+        }
+    }
+}
+
+/// Each path a call names, shown by that call's row; a call names each
+/// path once (`tool::parse`).
+fn hot_files<'a>(calls: &[Call<'a>], tally: &mut Tally<'a>) {
+    for call in calls {
+        for path in &call.tool.paths {
+            let seen = tally.entry((Kind::HotFile, path.clone()));
+            seen.or_default().push(call.row);
         }
     }
 }
