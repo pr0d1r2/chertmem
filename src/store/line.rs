@@ -9,8 +9,9 @@ use std::collections::HashMap;
 
 use tinyjson::JsonValue;
 
+use super::session::{Begun, Ended};
 use super::write::{Item, Note, Row};
-use super::{Error, Event, Scope, Summary};
+use super::{Error, Event, Scope, SessionStart, Summary};
 
 type Map = HashMap<String, JsonValue>;
 
@@ -19,6 +20,8 @@ pub(super) fn encode(item: &Item) -> Result<String, Error> {
     let fields = match item {
         Item::Observation(row) => observation(row),
         Item::Summary(note) => summary(note),
+        Item::Begun(begun) => started(begun),
+        Item::Ended(ended) => finished(ended),
     };
     let object = fields.into_iter().map(|(k, v)| (k.to_owned(), v));
     let value = JsonValue::Object(object.collect::<Map>());
@@ -61,6 +64,27 @@ fn summary(note: &Note) -> Vec<(&'static str, JsonValue)> {
     ]
 }
 
+fn started(begun: &Begun) -> Vec<(&'static str, JsonValue)> {
+    let s = &begun.start;
+    vec![
+        ("type", text("session-start")),
+        ("id", text(&s.id)),
+        ("project", text(&begun.project)),
+        ("ts", text(&s.ts.to_string())),
+        ("ide", text(&s.ide)),
+        ("cwd", text(&s.cwd)),
+    ]
+}
+
+fn finished(ended: &Ended) -> Vec<(&'static str, JsonValue)> {
+    vec![
+        ("type", text("session-end")),
+        ("id", text(&ended.id)),
+        ("project", text(&ended.project)),
+        ("ts", text(&ended.ts.to_string())),
+    ]
+}
+
 /// The item of 1 spool line; `None` for anything else.
 pub(super) fn decode(line: &str) -> Option<Item> {
     let value: JsonValue = line.parse().ok()?;
@@ -72,8 +96,25 @@ pub(super) fn decode(line: &str) -> Option<Item> {
             Some(Item::Observation(Row { id, project, event }))
         }
         "summary" => Some(Item::Summary(note(map, id, project)?)),
+        "session-start" => Some(Item::Begun(begun(map, id, project)?)),
+        "session-end" => Some(Item::Ended(ended(map, id, project)?)),
         _ => None,
     }
+}
+
+fn ended(map: &Map, id: String, project: String) -> Option<Ended> {
+    let ts = field(map, "ts")?.parse().ok()?;
+    Some(Ended { project, id, ts })
+}
+
+fn begun(map: &Map, id: String, project: String) -> Option<Begun> {
+    let start = SessionStart {
+        id,
+        ide: field(map, "ide")?,
+        cwd: field(map, "cwd")?,
+        ts: field(map, "ts")?.parse().ok()?,
+    };
+    Some(Begun { project, start })
 }
 
 fn note(map: &Map, id: String, project: String) -> Option<Note> {

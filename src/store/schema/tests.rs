@@ -37,7 +37,7 @@ fn catalog_holds_partitions_refs_and_generation() -> Test {
     let path = scratch("catalog")?;
     let conn = open(&path, BUSY, CATALOG)?;
     let tables = names(&conn, "table")?;
-    assert_eq!(tables, ["meta", "partitions", "refs"]);
+    assert_eq!(tables, ["meta", "partitions", "refs", "sessions"]);
     let generation: i64 = conn.query_row(
         "SELECT value FROM meta WHERE key = 'generation'",
         [],

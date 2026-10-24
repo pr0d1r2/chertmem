@@ -11,14 +11,18 @@ use rusqlite::{Connection, Transaction, TransactionBehavior};
 
 use super::Error;
 
-/// `PRAGMA user_version` once a file holds its schema.
-const VERSION: i64 = 1;
+/// The catalog's steps: version `n` of a file holds the first `n`, its
+/// `PRAGMA user_version`; an older file gains the rest on open.
+pub(super) const CATALOG: &[&str] = &[CATALOG_1, SESSIONS];
+
+/// A partition's steps, as [`CATALOG`]'s.
+pub(super) const PARTITION: &[&str] = &[PARTITION_1];
 
 /// The catalog: 1 row per partition (src/store C), the `generation`
 /// counter (D15) and every issued ref with its event identity, so a ref
 /// or an identity is unique per project across partitions (root V15,
 /// V16).
-pub(super) const CATALOG: &str = "
+const CATALOG_1: &str = "
 CREATE TABLE meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT INTO meta (key, value) VALUES ('generation', 0);
 CREATE TABLE partitions (
@@ -50,11 +54,25 @@ CREATE TABLE refs (
 CREATE INDEX refs_ref ON refs (ref);
 ";
 
+/// Catalog version 2: 1 row per project and session id, as a session
+/// spans buckets; a start or an end alone may be recorded first
+/// (src/store T16).
+const SESSIONS: &str = "
+CREATE TABLE sessions (
+  project TEXT NOT NULL,
+  id TEXT NOT NULL,
+  ide TEXT NOT NULL DEFAULT '',
+  cwd TEXT NOT NULL DEFAULT '',
+  started_at INTEGER,
+  ended_at INTEGER,
+  PRIMARY KEY (project, id));
+";
+
 /// A partition: its own catalog row's dims, bounds, spec and tier in
 /// `chunk`, so `doctor` can rebuild the catalog from files (src/store
 /// V6); observations with their FTS5 external-content index kept by
 /// triggers, and summaries (src/store C).
-pub(super) const PARTITION: &str = "
+const PARTITION_1: &str = "
 CREATE TABLE chunk (
   one INTEGER PRIMARY KEY CHECK (one = 1),
   dims TEXT NOT NULL,
@@ -108,11 +126,11 @@ CREATE INDEX summaries_session ON summaries (project, session, scope, ts);
 ";
 
 /// Open `path` in WAL mode with `busy` as its lock timeout and lay
-/// `schema` unless the file already holds it.
+/// the steps of `schema` the file does not hold yet.
 pub(super) fn open(
     path: &Path,
     busy: Duration,
-    schema: &str,
+    schema: &[&str],
 ) -> Result<Connection, Error> {
     let conn = Connection::open(path)?;
     conn.busy_timeout(busy)?;
@@ -128,16 +146,22 @@ pub(super) fn open(
     Ok(conn)
 }
 
-/// The schema, once: checked again under the write lock, so 2 processes
-/// opening a new file at once lay it once.
-fn lay(conn: &Connection, schema: &str) -> Result<(), Error> {
-    if version(conn)? == VERSION {
+/// The steps past the file's version, once: checked again under the
+/// write lock, so 2 processes opening a new file at once lay it once. A
+/// file from a newer build keeps its version.
+fn lay(conn: &Connection, steps: &[&str]) -> Result<(), Error> {
+    let target = i64::try_from(steps.len()).unwrap_or(i64::MAX);
+    if version(conn)? >= target {
         return Ok(());
     }
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
-    if version(&tx)? != VERSION {
-        tx.execute_batch(schema)?;
-        tx.pragma_update(None, "user_version", VERSION)?;
+    let laid = version(&tx)?;
+    let skip = usize::try_from(laid).unwrap_or(0);
+    for step in steps.iter().skip(skip) {
+        tx.execute_batch(step)?;
+    }
+    if laid < target {
+        tx.pragma_update(None, "user_version", target)?;
     }
     tx.commit()?;
     Ok(())

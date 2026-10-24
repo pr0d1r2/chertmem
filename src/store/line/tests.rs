@@ -1,7 +1,8 @@
 use super::{decode, encode};
+use crate::store::session::{Begun, Ended};
 use crate::store::tests::{Test, event};
 use crate::store::write::{Item, Note, Row};
-use crate::store::{Scope, Summary};
+use crate::store::{Scope, SessionStart, Summary};
 
 const ID: &str = "01JB2X3Y4Z5A6B7C8D9E0F1G2H";
 
@@ -27,6 +28,26 @@ fn summary(scope: Scope, body: &str) -> Item {
     })
 }
 
+fn begun() -> Item {
+    Item::Begun(Begun {
+        project: "proj-0123".into(),
+        start: SessionStart {
+            id: "session-1".into(),
+            ide: "claude-code".into(),
+            cwd: "/work/a \"b\"".into(),
+            ts: 1_709_211_600_000,
+        },
+    })
+}
+
+fn ended() -> Item {
+    Item::Ended(Ended {
+        project: "proj-0123".into(),
+        id: "session-1".into(),
+        ts: 1_709_211_600_001,
+    })
+}
+
 #[test]
 fn a_line_round_trips_every_field() -> Test {
     let items = [
@@ -34,6 +55,8 @@ fn a_line_round_trips_every_field() -> Test {
         observation(None, ""),
         summary(Scope::Turn, "did x\tthen y"),
         summary(Scope::Session, ""),
+        begun(),
+        ended(),
     ];
     for item in items {
         let line = encode(&item)?;
@@ -45,10 +68,20 @@ fn a_line_round_trips_every_field() -> Test {
 
 #[test]
 fn anything_else_decodes_to_none() -> Test {
-    for line in bad()? {
+    for line in bad()?.into_iter().chain(bad_sessions()?) {
         assert_eq!(decode(&line), None, "{line}");
     }
     Ok(())
+}
+
+/// Session lines a field away from good ones.
+fn bad_sessions() -> Result<[String; 3], Box<dyn std::error::Error>> {
+    let (start, end) = (encode(&begun())?, encode(&ended())?);
+    Ok([
+        start.replace("\"cwd\"", "\"dir\""),
+        start.replace("\"1709211600000\"", "\"soon\""),
+        end.replace("\"1709211600001\"", "\"soon\""),
+    ])
 }
 
 /// Lines that are not spool lines, most a field away from one.

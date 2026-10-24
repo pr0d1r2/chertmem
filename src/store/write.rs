@@ -10,6 +10,7 @@ use super::catalog::{self, Slot};
 use super::layout::{Key, Plan};
 use super::partition::{self, Chunks};
 use super::reference;
+use super::session::{self, Begun, Ended};
 use super::summary;
 use super::{Error, Event, Ref, Summary};
 
@@ -56,6 +57,8 @@ impl Note {
 pub(super) enum Item {
     Observation(Row),
     Summary(Note),
+    Begun(Begun),
+    Ended(Ended),
 }
 
 /// Store a replayed item, whichever it is.
@@ -63,6 +66,8 @@ pub(super) fn apply(cx: &mut Ctx<'_>, item: &Item) -> Result<(), Error> {
     match item {
         Item::Observation(row) => observation(cx, row).map(drop),
         Item::Summary(note) => summary(cx, note),
+        Item::Begun(begun) => session::start(cx.catalog, begun),
+        Item::Ended(ended) => session::end(cx.catalog, ended),
     }
 }
 
