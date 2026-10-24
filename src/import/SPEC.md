@@ -51,6 +51,7 @@ T1|~|JSONL export & import; export done, import waits on store append keeping id
 T2|x|cavemem 0.2.1 import from fixture DB|V2,V3
 T3|.|`--for rekall` shape, agreed via rekall issue (`.:T14`, R1)|-
 T4|x|import cavemem `summaries` (turn & session scope) w/ their sessions|V1,V2
+T5|.|cavemem rows split by session `cwd`: each session → chert project of its own cwd (same id the hook derives); missing cwd → current project, counted in report (owner 2026-10-24)|V2
 
 ## §B BUGS
 

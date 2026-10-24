@@ -33,7 +33,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. wave 3: `seal`, `compact`, `drop`, `repartition`, `rebuild`, `tail`, `data_version`, `catalog_version`.
+- fn (as built, wave 2): `Store::open(cfg, project_root, Mode::{Write,Read})`; `append(&Event) -> Appended::{Stored(Ref),Spooled}`; `append_summary`; `get(&[Ref]) -> Vec<Lookup::{Found,Dropped}>`; `partitions`, `observations(&Filter)`; `summaries`; `replay`; `generation`. Write mode: ∀ read → `Error::WriteOnly`. wave 3: `seal`, `compact`, `drop`, `repartition`, `rebuild`, `tail`, `data_version`, `catalog_version`. wave 4: `spool_raw(bytes)` (both modes, `spool/unreadable/<ULID>.hook`); `restore(&Observation)` keeps own id, ts, ref & project, id already stored → its ref, ref held by other id → `Error::RefTaken`, ⊥ spools.
 - fn: `Ref::parse("chert:<ref>")`; ref issued in `append`: shortest ULID prefix ≥ 8 ⊥ equal to issued ref in project, stored in unique column `ref`; `get` matches stored ref exactly (`.:V15`).
 - dir: `spool/` append-only JSONL, replayed by next reading `open` (V10).
 
@@ -78,6 +78,7 @@ T11|x|for `src/cache`: `tail` by seq, `data_version`, `catalog_version`|`src/cac
 T12|x|`generation` from a monotonic source (e.g. max(stored, now ms)), survives `rebuild`|V11
 T13|x|drop tombstones under `chunks/<project>/`, read by `rebuild`|V12
 T14|x|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24); `src/hook` calls it|V10
+T15|.|ULIDs monotonic within 1 ms per process ∴ same-ms events keep insert order in `(ts, id)` order (wave 4 hook report)|V1
 
 ## §B BUGS
 
