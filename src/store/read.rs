@@ -80,6 +80,17 @@ impl Store {
         Ok(row.map_or(dropped, Lookup::Found))
     }
 
+    /// The catalog's `generation`: bumped on every delete, redaction
+    /// or rewrite, so a cache knows its rows went stale (D15).
+    ///
+    /// # Errors
+    /// [`Error::WriteOnly`] on a write-only store; a failed query.
+    pub fn generation(&self) -> Result<u64, Error> {
+        let sql = "SELECT value FROM meta WHERE key = 'generation'";
+        let _ = sql;
+        Ok(u64::MAX) // RED stub
+    }
+
     /// The catalog of a reading open (src/store V10).
     fn reader(&self) -> Result<&Connection, Error> {
         self.reading()?;
