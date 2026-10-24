@@ -29,6 +29,9 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v hk >/dev/null 2>&1 || { echo 'no-case-conflict: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util check-case-conflict {{files}} || { echo 'no-case-conflict: two paths differ only by case' >&2; exit 1; }"
   }
+  ["no-broken-symlinks"] {
+    check = "command -v git >/dev/null 2>&1 || { echo 'no-broken-symlinks: git is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v hk >/dev/null 2>&1 || { echo 'no-broken-symlinks: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; git ls-files -z | xargs -0 hk util check-symlinks || { echo 'no-broken-symlinks: a symlink points nowhere' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
