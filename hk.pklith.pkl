@@ -21,6 +21,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*")
     check = "command -v hk >/dev/null 2>&1 || { echo 'no-bom: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util check-byte-order-marker {{files}} || { echo 'no-bom: file starts with a byte order marker' >&2; exit 1; }"
   }
+  ["no-merge-conflict"] {
+    glob = List("**/*")
+    check = "command -v hk >/dev/null 2>&1 || { echo 'no-merge-conflict: hk is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; hk util check-merge-conflict --assume-in-merge {{files}} || { echo 'no-merge-conflict: leftover merge conflict markers' >&2; exit 1; }"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {
