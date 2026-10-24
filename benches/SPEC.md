@@ -10,7 +10,7 @@ rel|path|lens
 up|.|-
 self|benches|benchmarks: fixtures, suites, baseline, regression gate
 sib|src|crate `chertmem`: lib + bin `chert`, 1 node per module
-sib|dev|dev shell flake & `dev` crate (`publish = false`) gate steps
+sib|dev|root `flake.nix` devShell & `dev` crate (`publish = false`) gate steps
 sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, LLM-DISCLAIMER
 
 ## §C CONSTRAINTS

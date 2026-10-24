@@ -15,7 +15,7 @@ Rust cargo workspace: crate `chertmem` (lib + bin `chert`, MIT, public) & `dev` 
 dir|owns|⊥owns|tokens
 src|crate `chertmem`: lib + bin `chert`, 1 node per module|gate steps (`dev`), benchmarks (`benches`), human pages (`docs`)|-
 benches|benchmarks: fixtures, suites, baseline, regression gate|product code (`src`), the human page (`docs`)|-
-dev|dev shell flake & `dev` crate (`publish = false`) gate steps|product code (`src`), hk steps (`.pklith`)|-
+dev|root `flake.nix` devShell & `dev` crate (`publish = false`) gate steps|product code (`src`), hk steps (`.pklith`)|-
 docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, LLM-DISCLAIMER|spec rules, benchmark code (`benches`)|-
 
 ## §N NAV

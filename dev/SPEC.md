@@ -2,13 +2,13 @@
 
 ## §G GOAL
 
-`dev/`: dev shell flake w/ pinned toolchain & gate tools; `dev` crate (`publish = false`) for gate steps: `bench-gate`, target/suite parity, name guard input.
+root `flake.nix` devShell w/ pinned toolchain & gate tools, laid out as public Rust member lablith (pklith `lib.devShell`, tools pinned by tag, ∀ input follows `nixpkgs-lock`); `dev/` = `dev` crate (`publish = false`) for gate steps: `bench-gate`, target/suite parity, name guard input.
 
 ## §N NAV
 
 rel|path|lens
 up|.|-
-self|dev|dev shell flake & `dev` crate (`publish = false`) gate steps
+self|dev|root `flake.nix` devShell & `dev` crate (`publish = false`) gate steps
 sib|src|crate `chertmem`: lib + bin `chert`, 1 node per module
 sib|benches|benchmarks: fixtures, suites, baseline, regression gate
 sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, LLM-DISCLAIMER
@@ -21,7 +21,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 
 ## §I INTERFACES
 
-- cmd: `nix develop ./dev`; `.envrc`.
+- cmd: `nix develop`; `.envrc` = `use flake`.
 - cmd: `cargo run -p dev -- bench-gate`.
 
 ## §V INVARIANTS
@@ -32,7 +32,7 @@ V2: Node ∈ dev shell only, ⊥ in `chert` closure (`.:§C`).
 ## §T TASKS
 
 id|status|task|cites
-T1|.|`dev/flake.nix` + `.envrc`|V1,V2
+T1|.|root `flake.nix` devShell + `.envrc`|V1,V2
 T2|.|`dev` crate w/ `bench-gate`|-
 
 ## §B BUGS
