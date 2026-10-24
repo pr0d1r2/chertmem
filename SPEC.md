@@ -33,7 +33,7 @@ self|.|-
 - store on disk = source of truth; cache = read accelerator only (D8, D14).
 - many processes at once: hooks, ∀ IDE session's `chert mcp`, worker ∴ store ! multi-process safe (SQLite WAL); single-process stores rejected.
 - config `chert.toml`: user `~/.config/chert/chert.toml` + project `chert.toml`, project overrides key by key. ∀ partition & cache setting configurable (D5, D6, D7).
-- defaults (D19): `partition.by = ["project","time"]`, `time_bucket = "7d"`, `shards = 1`, `cache.window = "28d"`, `cache.max_bytes = "256MiB"`, `on_overflow = "warn"`, `embedding.provider = "off"`.
+- defaults (D19): `partition.by = ["project","time"]`, `time_bucket = "7d"`, `shards = 1`, `cache.window = "28d"`, `cache.max_bytes = "256MiB"`, `on_overflow = "warn"`, `embedding.provider = "off"`. rest as `SPEC-PROMPT.md` config sketch: `compression.grammar = "full"`, `compression.zstd = { level = 3, dictionary = true }`, `search.alpha = 0.5`, `search.default_limit = 10`, `mining.enabled = true`, `mining.min_occurrences = 3`, `inject.max_tokens = 300`, `inject.on_prompt = false` (reconcile 1).
 - latency targets (D20), benchmark-gated: hook write < 5 ms · recent-window search < 10 ms · `get_observations` < 2 ms · semantic re-rank < 20 ms.
 - context injection (owner 2026-10-24): `session-start` by default; `user-prompt-submit` only w/ opt-in `inject.on_prompt`, documented w/ speed disclaimer. rules in `src/hook`.
 - `<private>…</private>` stripped & `privacy.exclude` paths ⊥ read, before any write.
