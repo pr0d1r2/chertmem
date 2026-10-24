@@ -107,3 +107,53 @@ fn protected_spans_survive_every_intensity() -> Res {
     }
     Ok(())
 }
+
+/// Edge cases outside the corpus, each with cavemem 0.2.1's own output.
+const EDGES: [(&str, Intensity, &str); 12] = [
+    (
+        "  the  thing ,  \n  \u{a0} is\r\nthe end . \u{2028} the x",
+        Intensity::Full,
+        " thing,\n\u{a0} is\r\nend.\u{2028}x",
+    ),
+    ("The THE tHe a An x", Intensity::Full, " tHe x"),
+    (
+        "AND And and with w/o b4 x",
+        Intensity::Ultra,
+        "& & & w/ w/o b4 x",
+    ),
+    ("\t\tthe\t\tend\t\t", Intensity::Full, " end "),
+    ("   ", Intensity::Full, "   "),
+    ("", Intensity::Full, ""),
+    (
+        "Configuration CONFIGURATION configuration",
+        Intensity::Ultra,
+        "Cfg CFG cfg",
+    ),
+    (
+        "I think that it is fine. i think so",
+        Intensity::Ultra,
+        "that it is fine. so",
+    ),
+    (
+        "line one  \r\n  line two\n\n\n\nend",
+        Intensity::Lite,
+        "line one\r\nline two\n\nend",
+    ),
+    ("a  \u{2029}  b", Intensity::Full, "\u{2029}b"),
+    ("the\n", Intensity::Full, "\n"),
+    (" x \n", Intensity::Full, " x\n"),
+];
+
+#[test]
+fn edge_cases_match_oracle_bytes() {
+    for (text, intensity, want) in EDGES {
+        assert_eq!(compress(text, intensity), want, "{text:?}");
+    }
+}
+
+/// cavemem's last pass drops blanks before `.,;:!?` across the whole
+/// output, kept spans included (src/grammar R1): V1 wins over V2 here.
+#[test]
+fn blank_before_a_mark_leaks_into_kept_code() {
+    assert_eq!(compress("`a .b` and x ;", Intensity::Full), "`a.b` and x;");
+}

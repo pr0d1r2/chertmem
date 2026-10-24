@@ -11,6 +11,15 @@
 #[cfg(test)]
 mod tests;
 
+mod ident;
+mod lexicon;
+mod numeric;
+mod prose;
+mod rules;
+mod scan;
+mod tokenize;
+mod words;
+
 /// How hard `compress` squeezes prose; `Off` leaves text as it is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Intensity {
@@ -28,8 +37,20 @@ pub enum Intensity {
 /// headings, dates, versions, numbers and identifiers are kept.
 #[must_use]
 pub fn compress(text: &str, intensity: Intensity) -> String {
-    let _ = (text, intensity);
-    String::new()
+    let Some(grammar) = lexicon::grammar_for(intensity) else {
+        return text.to_owned();
+    };
+    let joined: String = tokenize::tokenize(text)
+        .into_iter()
+        .map(|seg| {
+            if seg.kept {
+                seg.text.to_owned()
+            } else {
+                prose::compress_prose(seg.text, grammar)
+            }
+        })
+        .collect();
+    prose::tighten(&joined)
 }
 
 /// `text` with every abbreviation `compress` makes written out again.
