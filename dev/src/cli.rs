@@ -4,11 +4,11 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{name_guard, worktree};
+use crate::{lock_graph, name_guard, worktree};
 use std::path::Path;
 
 const USAGE: &str =
-    "usage: chertmem-dev name-guard [files...] | no-core-worktree";
+    "usage: chertmem-dev name-guard [files...] | no-core-worktree | lock-graph";
 
 /// Run one guard from `args` against the repository at `root`.
 #[must_use]
@@ -16,6 +16,7 @@ pub fn run(args: &[String], root: &Path) -> u8 {
     match args.split_first() {
         Some((verb, files)) if verb == "name-guard" => name(root, files),
         Some((verb, [])) if verb == "no-core-worktree" => shared_config(root),
+        Some((verb, [])) if verb == "lock-graph" => lock(root),
         _ => {
             eprintln!("{USAGE}");
             2
@@ -108,4 +109,20 @@ fn git_common_dir(root: &Path) -> Option<std::path::PathBuf> {
         .ok()?;
     let rel = String::from_utf8(out.stdout).ok()?;
     out.status.success().then(|| root.join(rel.trim()))
+}
+
+/// `lock-graph`: the root flake.lock holds one nixpkgs and one pin node.
+fn lock(root: &Path) -> u8 {
+    let Ok(text) = std::fs::read_to_string(root.join("flake.lock")) else {
+        eprintln!("lock-graph: cannot read flake.lock");
+        return 2;
+    };
+    let found = lock_graph::findings(&text);
+    for f in &found {
+        eprintln!(
+            "flake.lock: {f}; make the input follow nixpkgs-lock, then run \
+             `nix flake lock`"
+        );
+    }
+    u8::from(!found.is_empty())
 }
