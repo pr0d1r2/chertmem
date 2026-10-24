@@ -97,8 +97,8 @@ impl Inner {
             return false;
         };
         match window.refresh(&mut self.store) {
-            // RED stub: a stale window keeps answering.
-            Ok(Fresh::Current | Fresh::Stale) => return false,
+            Ok(Fresh::Current) => return false,
+            Ok(Fresh::Stale) => {}
             Err(e) => (env.log)(&e.to_string()),
         }
         self.state = State::Cold;
