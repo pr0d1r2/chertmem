@@ -3,7 +3,7 @@ use std::fs;
 
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::store::tests::{Scratch, Test, WEEK, event, stored};
-use crate::store::{Error, Filter, Mode, Observation, Ref, Store};
+use crate::store::{Error, Filter, Lookup, Mode, Observation, Ref, Store};
 
 /// A store under `cfg` for the scratch project.
 fn open(
@@ -124,5 +124,81 @@ fn a_write_only_store_reads_nothing() -> Test {
     let all = Filter::default();
     assert_eq!(store.partitions(&all).err(), Some(Error::WriteOnly));
     assert_eq!(store.observations(&all).err(), Some(Error::WriteOnly));
+    Ok(())
+}
+
+/// The body 1 ref resolves to, or why not.
+fn body(store: &mut Store, r: &Ref) -> Result<String, Box<dyn StdError>> {
+    match store.get(std::slice::from_ref(r))?.pop() {
+        Some(Lookup::Found(o)) if &o.reference == r => Ok(o.body),
+        other => Err(format!("{r}: {other:?}").into()),
+    }
+}
+
+#[test]
+fn another_projects_ref_resolves_when_this_one_lacks_it() -> Test {
+    let s = Scratch::new("ref-cross")?;
+    let mut a = s.open_other("alpha")?;
+    let r = stored(a.append(&event(7, None, "from alpha"))?)?;
+    let mut b = s.open_other("beta")?;
+    assert_eq!(body(&mut b, &r)?, "from alpha");
+    Ok(())
+}
+
+/// Projects alpha and beta, each with 1 row under the same ref: the
+/// first row of a millisecond gets the same 8 chars anywhere.
+fn twins(s: &Scratch) -> Result<(Store, Store, Ref), Box<dyn StdError>> {
+    let (mut a, mut b) = (s.open_other("alpha")?, s.open_other("beta")?);
+    let ra = stored(a.append(&event(7, None, "alpha's"))?)?;
+    let rb = stored(b.append(&event(7, None, "beta's"))?)?;
+    if ra != rb {
+        return Err(format!("{ra} != {rb}").into());
+    }
+    Ok((a, b, ra))
+}
+
+#[test]
+fn the_current_project_wins() -> Test {
+    let s = Scratch::new("ref-current")?;
+    let (mut a, mut b, r) = twins(&s)?;
+    assert_eq!(body(&mut a, &r)?, "alpha's");
+    assert_eq!(body(&mut b, &r)?, "beta's");
+    Ok(())
+}
+
+#[test]
+fn a_ref_in_two_other_projects_names_both() -> Test {
+    let s = Scratch::new("ref-ambiguous")?;
+    let (a, b, r) = twins(&s)?;
+    let mut projects = vec![a.project().to_owned(), b.project().to_owned()];
+    projects.sort();
+    let reference = r.to_string();
+    let want = Error::Ambiguous {
+        reference,
+        projects,
+    };
+    assert_eq!(s.open_other("gamma")?.get(&[r]).err(), Some(want));
+    Ok(())
+}
+
+/// Rows in 1 second (src/store V8).
+const BURST: u64 = 100_000;
+
+#[test]
+fn every_ref_of_a_burst_resolves_to_its_own_row() -> Test {
+    let s = Scratch::new("ref-burst")?;
+    let mut store = s.open(Mode::Read)?;
+    let start = 1_709_211_600_000;
+    let mut issued = Vec::new();
+    for i in 0..BURST {
+        let e = event(start + i % 1000, None, &i.to_string());
+        issued.push(stored(store.append(&e)?)?);
+    }
+    let got = store.get(&issued)?;
+    for (i, found) in got.iter().enumerate() {
+        let want = i.to_string();
+        let ok = matches!(found, Lookup::Found(o) if o.body == want);
+        assert!(ok, "{i}: {found:?}");
+    }
     Ok(())
 }

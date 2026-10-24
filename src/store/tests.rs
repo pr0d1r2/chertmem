@@ -29,6 +29,16 @@ impl Scratch {
         self.0.join("project")
     }
 
+    /// A store for another project root `name` in the same data dir.
+    pub(super) fn open_other(
+        &self,
+        name: &str,
+    ) -> Result<Store, Box<dyn StdError>> {
+        let root = self.0.join(name);
+        fs::create_dir_all(&root)?;
+        Ok(Store::open(&self.config()?, &root, Mode::Read)?)
+    }
+
     pub(super) fn data(&self) -> PathBuf {
         self.0.join("data")
     }
