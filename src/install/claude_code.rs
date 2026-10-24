@@ -12,6 +12,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value, json};
 
+use super::Wire;
 use crate::hook::Kind;
 
 /// Each hook chert registers and Claude Code's name for its event. The
@@ -192,4 +193,11 @@ fn prune(map: &mut Map<String, Value>, key: &str, changed: bool) {
     if changed && empty {
         map.remove(key);
     }
+}
+
+/// How each of chert's entries stands in `root`; a stub until
+/// src/install T2 lands.
+pub(super) fn wiring(root: &Value, chert: &str) -> Vec<Wire> {
+    let _ = (root, chert);
+    Vec::new()
 }

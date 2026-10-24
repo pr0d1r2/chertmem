@@ -1,5 +1,6 @@
 //! IDE wiring (src/install G): chert's hooks and MCP server registered
-//! in, and removed from, an IDE's config. v1 IDE = Claude Code (D24).
+//! in, and removed from, an IDE's config; `status` and `doctor` read it
+//! back. v1 IDE = Claude Code (D24).
 //!
 //! Every entry takes the config file as [`Target::settings`], so tests
 //! edit temp files, never a real `~/.claude/settings.json`.
@@ -15,6 +16,7 @@
 mod tests;
 
 mod claude_code;
+mod doctor;
 mod error;
 mod settings;
 
@@ -22,6 +24,8 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
 
+pub use doctor::{Drift, Finding, Report, Status, Wire, WireState};
+pub use doctor::{doctor, status};
 pub use error::Error;
 
 use crate::hook::Ide;
