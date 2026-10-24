@@ -1,0 +1,26 @@
+amends "pkl/Config.pkl"
+
+// Seeded by `pklith seed`; yours to edit. The steps come from hk.pklith.pkl,
+// which `pklith gen` and `pklith lay` write from .pklith: shape them here
+// (excludes, depends) by amending a step by its id.
+import "hk.pklith.pkl" as generated
+
+local all = (generated.steps) { ...generated.push }
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps = generated.steps
+  }
+  ["pre-push"] {
+    steps = all
+  }
+  ["check"] {
+    steps = all
+  }
+  ["fix"] {
+    fix = true
+    steps = all
+  }
+}

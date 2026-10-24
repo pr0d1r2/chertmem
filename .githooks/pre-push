@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Seeded by `pklith seed`: the steps live in hk.pkl, this only makes them run.
+# It refuses when hk is missing: a gate that cannot run has not passed.
+set -e
+if ! command -v hk >/dev/null 2>&1; then
+  echo 'pre-push REFUSED: hk is not on PATH, so nothing was checked.' >&2
+  exit 1
+fi
+exec hk run pre-push --from-hook "$@"

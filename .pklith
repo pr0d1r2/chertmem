@@ -1,0 +1,21 @@
+format 1
+
+# Seeded by `pklith seed --init` from the fragments this repository's
+# files switch on (`pklith detect`). It is yours now: pklith never rewrites it.
+#
+# No built-in check reads these types yet, so `pklith check` names them
+# until each gets checks or an exempt reason: envrc, gitignore, lock.
+
+## types
+type|checks|min|exempt
+*|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, itok|-|-
+editorconfig|-|-|written by pklith (seed or gen)
+gitattributes|-|-|written by pklith (seed or gen)
+md|markdownlint|-|-
+nix|nixfmt, statix, deadnix|-|-
+path:**/SPEC.md|markdownlint, mth-fmt, mth-check, sherd-check, sherd-nav, sherd-budget|-|-
+path:.context-limits|sherd-budget|-|-
+pklith|-|-|written by pklith (seed or gen)
+pkl|-|-|written by pklith (seed or gen)
+pre-commit|-|-|written by pklith (seed or gen)
+pre-push|-|-|written by pklith (seed or gen)
