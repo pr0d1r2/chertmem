@@ -144,3 +144,39 @@ fn a_write_only_store_rebuilds_nothing() -> Test {
     assert_eq!(hook.rebuild(), Err(Error::WriteOnly));
     Ok(())
 }
+
+/// Far past the clock, as a burst of bumps in 1 ms may leave it.
+const AHEAD: &str = "UPDATE meta SET value = 9000000000000
+  WHERE key = 'generation'";
+
+/// Every `generation` a cache-like reader saw while weeks 0 and 1 were
+/// dropped, the counter first pushed past the clock.
+fn seen(s: &Scratch) -> Result<Vec<u64>, Box<dyn StdError>> {
+    let mut store = s.open(Mode::Read)?;
+    store.append(&event(5, None, "a"))?;
+    store.append(&event(WEEK + 1, None, "b"))?;
+    let mut seen = vec![store.generation()?];
+    s.sql("catalog.db")?.execute(AHEAD, [])?;
+    for week in ["19700101-7d", "19700108-7d"] {
+        store.drop(&chunk(&store, week))?;
+        seen.push(store.generation()?);
+    }
+    Ok(seen)
+}
+
+#[test]
+fn a_generation_seen_before_a_lost_catalog_never_comes_back() -> Test {
+    let s = Scratch::new("doctor-generation")?;
+    let seen = seen(&s)?;
+    remove_catalog(&s);
+    let mut store = s.open(Mode::Read)?;
+    let fresh = store.generation()?;
+    store.rebuild()?;
+    let after = [fresh, store.generation()?];
+    assert!(
+        after.iter().all(|g| !seen.contains(g)),
+        "{seen:?} {after:?}"
+    );
+    assert!(fresh < store.generation()?);
+    Ok(())
+}
