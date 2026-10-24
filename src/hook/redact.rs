@@ -18,7 +18,7 @@ pub(super) fn strip(text: &str) -> String {
 }
 
 /// `raw` without its private spans, whatever its encoding.
-fn strip_bytes(raw: &[u8]) -> Vec<u8> {
+pub(super) fn strip_bytes(raw: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(raw.len());
     let mut rest = raw;
     while let Some(at) = find(rest, OPEN) {
