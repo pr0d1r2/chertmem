@@ -135,13 +135,14 @@ fn the_re_rank_embeds_the_compressed_query_it_scores() -> Test {
 }
 
 #[test]
-fn openai_is_refused_in_v1_only_when_semantic() -> Test {
+fn openai_falls_back_to_keyword_ranking() -> Test {
     let (s, _, mut store) = fresh("blend-openai")?;
     store.append(&event(BASE, "s", "cargo"))?;
     let (mut e, _) = engine_at(&s, Provider::Openai, "")?;
-    assert_eq!(e.run(&query("cargo"), None)?.len(), 1);
-    let refused = e.run(&semantic("cargo"), None);
-    assert_eq!(refused, Err(Error::Unsupported { provider: "openai" }));
+    let keyword = e.run(&query("cargo"), None)?;
+    assert_eq!(keyword.len(), 1);
+    assert_eq!(e.run(&semantic("cargo"), None)?, keyword);
+    assert_eq!(e.run(&semantic("cargo"), None)?, keyword);
     Ok(())
 }
 
