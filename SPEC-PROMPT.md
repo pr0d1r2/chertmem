@@ -226,3 +226,18 @@ the owner has not decided are open questions below, not decisions.
    tools, the way rekall turns prose rules into executable checks.
 10. Process: the paradigm lifecycle in full, from fda10ea. Atomic commits,
     one topic each, from this prompt on.
+
+# Non-goals
+
+Proposed by the agent; the owner has not ruled on them yet.
+
+- No server to run: no Postgres, no required daemon. A daemon, if any, is
+  an accelerator that every path works without.
+- No cloud and no network by default. Remote embedding providers are
+  opt-in, and nothing else leaves the machine.
+- No automatic changes from mining: chert proposes candidates with
+  evidence, a human accepts them, and rekall enforces them.
+- No agent harness features: chert does not schedule agents or manage
+  their usage limits.
+- No general-purpose time-series database: partitions serve agent memory
+  only.
