@@ -17,7 +17,12 @@ wildcards = "deny"
 allow-wildcard-paths = true
 
 [licenses]
-allow = ["MIT"]
+# Owner 2026-10-24 (reconcile 2): BSD-3-Clause for zstd's C library
+# (src/store T6 cold tier), Apache-2.0 for ryu, which serde_json needs
+# (hook and MCP JSON). Both permissive and MIT-compatible.
+allow = ["MIT", "BSD-3-Clause", "Apache-2.0"]
+# Allowed ahead of the crates that bring them; unmatched until then.
+unused-allowed-license = "allow"
 confidence-threshold = 0.93
 
 [sources]
