@@ -18,7 +18,8 @@ pub const ON_PROMPT_DISCLAIMER: &str = "chert: inject.on_prompt = true: \
 /// `inject.*` (root C, src/hook C).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Inject {
-    /// o200k tokens of injected context at most; default 300.
+    /// Estimated tokens of injected context at most (bytes/4 as itok;
+    /// exact o200k with feature `bpe`, root V17); default 300.
     pub max_tokens: u32,
     /// Also inject on `user-prompt-submit`; default false.
     pub on_prompt: bool,
