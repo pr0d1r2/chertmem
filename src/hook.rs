@@ -8,7 +8,9 @@
 mod tests;
 
 mod claude_code;
+mod exclude;
 mod kind;
+mod redact;
 
 use std::path::Path;
 
@@ -86,17 +88,14 @@ pub fn run(kind: Kind, stdin: &[u8], ctx: &Ctx<'_>) -> Outcome {
     }
 }
 
-/// Store a readable payload.
+/// Store a readable payload; one touching an excluded path stores
+/// nothing (V1).
 fn handle(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Outcome {
-    let body = prepare(&payload.body, ctx.config);
-    let event = Event {
-        ts: ctx.now,
-        session: payload.session.clone(),
-        kind: kind.as_str().to_owned(),
-        ide: ctx.ide.as_str().to_owned(),
-        identity: payload.identity.clone(),
-        body,
-    };
+    let globs = &ctx.config.privacy.exclude;
+    if exclude::excluded(globs, ctx.root, &payload.paths) {
+        return Outcome::done(None);
+    }
+    let event = event(kind, payload, ctx);
     let stored = Store::open(ctx.config, ctx.root, Mode::Write)
         .and_then(|mut store| store.append(&event));
     match stored {
@@ -105,9 +104,23 @@ fn handle(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Outcome {
     }
 }
 
-/// `text` as stored: compressed at `compression.grammar`.
+/// The event `payload` stores, its body redacted and compressed.
+fn event(kind: Kind, payload: &Payload, ctx: &Ctx<'_>) -> Event {
+    Event {
+        ts: ctx.now,
+        session: payload.session.clone(),
+        kind: kind.as_str().to_owned(),
+        ide: ctx.ide.as_str().to_owned(),
+        identity: payload.identity.clone(),
+        body: prepare(&payload.body, ctx.config),
+    }
+}
+
+/// `text` as stored: private spans removed, then compressed at
+/// `compression.grammar` (V1: redaction comes first).
 fn prepare(text: &str, config: &Config) -> String {
-    grammar::compress(text, intensity(config.compression.grammar))
+    let kept = redact::strip(text);
+    grammar::compress(&kept, intensity(config.compression.grammar))
 }
 
 fn intensity(grammar: Grammar) -> Intensity {
