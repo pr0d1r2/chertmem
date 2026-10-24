@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::prose::tighten;
 use super::{Intensity, compress, expand};
 
 type Res = Result<(), Box<dyn Error>>;
@@ -46,11 +47,28 @@ fn corpus_is_not_empty() -> Res {
     Ok(())
 }
 
+/// The corpus cases where chert's output differs from the golden file
+/// because the last punctuation pass skips code (src/grammar V4, T5), as
+/// (corpus file, intensity, chert's exact bytes). No corpus text has a
+/// blank before `.,;:!?` inside code, so the list is empty and every
+/// case must match the oracle; `CODE_DEVIATIONS` pins the deviation.
+const DEVIATES: [(&str, &str, &str); 0] = [];
+
+/// What `compress` must give for a corpus case: the golden file, or the
+/// bytes `DEVIATES` lists for it.
+fn expected(name: &str, level: &str) -> Result<String, Box<dyn Error>> {
+    let listed = DEVIATES.iter().find(|d| d.0 == name && d.1 == level);
+    match listed {
+        Some(&(_, _, bytes)) => Ok(bytes.to_owned()),
+        None => golden(name, level, "compressed"),
+    }
+}
+
 #[test]
 fn compress_matches_oracle_bytes() -> Res {
     for (name, text) in corpus()? {
         for (intensity, level) in INTENSITIES {
-            let want = golden(&name, level, "compressed")?;
+            let want = expected(&name, level)?;
             assert_eq!(compress(&text, intensity), want, "{name}.{level}");
         }
     }
@@ -151,11 +169,81 @@ fn edge_cases_match_oracle_bytes() {
     }
 }
 
-/// cavemem's last pass drops blanks before `.,;:!?` across the whole
-/// output, kept spans included (src/grammar R1): V1 wins over V2 here.
+/// Inputs where chert deliberately differs from cavemem 0.2.1 (src/grammar
+/// V4, R1): its last pass drops blanks before `.,;:!?` inside code too.
+/// Each is (text, intensity, cavemem's bytes, chert's bytes).
+const CODE_DEVIATIONS: [(&str, Intensity, &str, &str); 5] = [
+    (
+        "`a .b` and x ;",
+        Intensity::Full,
+        "`a.b` and x;",
+        "`a .b` and x;",
+    ),
+    (
+        "```\nlet x = a .b ;\n``` the end .",
+        Intensity::Full,
+        "```\nlet x = a.b;\n``` end.",
+        "```\nlet x = a .b ;\n``` end.",
+    ),
+    (
+        "~~~\nf(a , b)\t!\n~~~ x",
+        Intensity::Lite,
+        "~~~\nf(a, b)!\n~~~ x",
+        "~~~\nf(a , b)\t!\n~~~ x",
+    ),
+    (
+        "run `x ; y` then `p :q` .",
+        Intensity::Full,
+        "run `x; y` then `p:q`.",
+        "run `x ; y` then `p :q`.",
+    ),
+    (
+        "x ```b ?``` c `d \t,` e",
+        Intensity::Full,
+        "x ```b?``` c `d,` e",
+        "x ```b ?``` c `d \t,` e",
+    ),
+];
+
 #[test]
-fn blank_before_a_mark_leaks_into_kept_code() {
-    assert_eq!(compress("`a .b` and x ;", Intensity::Full), "`a.b` and x;");
+fn blank_before_a_mark_survives_inside_code() {
+    for (text, intensity, _, want) in CODE_DEVIATIONS {
+        assert_eq!(compress(text, intensity), want, "{text:?}");
+    }
+}
+
+/// The deviation is real and is the pass alone: cavemem's bytes are
+/// chert's with the pass run once more over the whole output, code too.
+#[test]
+fn code_deviations_are_the_pass_over_code_only() {
+    for (text, _, cavemem, chert) in CODE_DEVIATIONS {
+        assert_ne!(cavemem, chert, "{text:?}");
+        assert_eq!(tighten(chert), cavemem, "{text:?}");
+    }
+}
+
+/// Outside fenced and inline code the pass still runs (V4), also next
+/// to and across kept spans that are not code (cavemem 0.2.1's bytes).
+const PROSE_MARKS: [(&str, Intensity, &str); 4] = [
+    ("x ,y \t; z !", Intensity::Full, "x,y; z!"),
+    (
+        "lives in ./config/a.toml now",
+        Intensity::Full,
+        "lives in./config/a.toml now",
+    ),
+    (
+        "see https://x.y/z . ok",
+        Intensity::Lite,
+        "see https://x.y/z. ok",
+    ),
+    ("`a` . and ```b``` ;", Intensity::Full, "`a`. and ```b```;"),
+];
+
+#[test]
+fn blank_before_a_mark_still_goes_outside_code() {
+    for (text, intensity, want) in PROSE_MARKS {
+        assert_eq!(compress(text, intensity), want, "{text:?}");
+    }
 }
 
 #[test]
