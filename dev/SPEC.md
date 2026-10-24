@@ -36,6 +36,7 @@ V5: `lock-graph`: `flake.lock` holds exactly 1 nixpkgs node & ∀ input named `n
 V6: ∀ guard proven by unit test rejecting planted violation & passing clean twin (`paradigm/V21`).
 V7: `rust-mirror` (port of xenolith v0.1.0 rule, as lablith copies it): ∀ tracked `.rs` w/ a bodied fn has wired mirror (`<m>.rs` ↔ `<m>/tests.rs`, `lib.rs`|`mod.rs` ↔ `tests.rs`, `#[cfg(test)] mod tests;`); ∀ `tests.rs` has its module; `main.rs` = shim w/ only `fn main`; `build.rs`, `vendor/`, crate `tests/` exempt.
 V8: `tdd-order` (same port, Rust rule only, ⊥ shell scripts here): ∀ commit in range adding a `.rs` outside `tests/` has a `test:` | `test(` commit before it in range, unless its full id ∈ `dev/tdd-order.exempt`; missing | malformed exempt file → finding.
+V9: ∀ gate step running `cargo run` depends on step `build` (`cargo build -q --workspace --bins`, after clippy); `test` waits for ∀ such step ∴ ⊥ step relinks a binary another is executing (B2).
 
 ## §T TASKS
 
@@ -52,3 +53,4 @@ T7|.|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
 
 id|date|cause|fix
 B1|2026-10-24|workspace stub (`src:T1`) laid by hand w/ bodiless `lib.rs` & `main.rs`: ⊥ behaviour for a RED test to pin ∴ exempt in `dev/tdd-order.exempt`|V8
+B2|2026-10-24|`name-guard` failed w/o denylist & w/o output in pre-commit while clippy, rustdoc & doctest rebuilt `chertmem-dev` beside it: a cargo step relinked the binary another was executing (lablith & actlith B9)|V9
