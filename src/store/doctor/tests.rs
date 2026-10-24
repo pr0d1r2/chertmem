@@ -180,3 +180,57 @@ fn a_generation_seen_before_a_lost_catalog_never_comes_back() -> Test {
     assert!(fresh < store.generation()?);
     Ok(())
 }
+
+/// A store in 2 shards: rows in 1 ms split across 2 files.
+fn sharded(s: &Scratch) -> Result<Store, Box<dyn StdError>> {
+    let mut cfg = s.config()?;
+    cfg.partition.shards = 2;
+    Ok(Store::open(&cfg, &s.project(), Mode::Read)?)
+}
+
+const HOLDER: &str = "SELECT p.path FROM refs r
+  JOIN partitions p ON p.id = r.partition WHERE r.ref = ?1";
+
+/// 6 rows in 1 ms, then the shard holding the first, shortest ref
+/// dropped; every ref it held.
+fn drop_first(s: &Scratch) -> Result<Vec<Ref>, Box<dyn StdError>> {
+    let mut store = sharded(s)?;
+    let mut refs = Vec::new();
+    for body in ["a", "b", "c", "d", "e", "f"] {
+        refs.push(stored(store.append(&event(5, None, body))?)?);
+    }
+    let first = refs.first().ok_or("no ref")?.as_str().to_owned();
+    let catalog = s.sql("catalog.db")?;
+    let path: String = catalog.query_row(HOLDER, [first], |r| r.get(0))?;
+    store.drop(&path)?;
+    let found = store.get(&refs)?;
+    let gone = refs.into_iter().zip(found);
+    let gone = gone.filter(|(_, l)| matches!(l, Lookup::Dropped(_)));
+    Ok(gone.map(|(r, _)| r).collect())
+}
+
+/// 12 appends in the dropped rows' ms: the live shard takes them, the
+/// dropped one refuses; none is issued a ref in `gone`.
+fn burst(store: &mut Store, gone: &[Ref]) -> Test {
+    for n in 0..12 {
+        match store.append(&event(5, None, &format!("burst {n}"))) {
+            Ok(a) => assert!(!gone.contains(&stored(a)?)),
+            Err(e) => assert!(matches!(e, Error::ReadOnly { .. }), "{e}"),
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn a_dropped_ref_stays_dropped_across_a_lost_catalog() -> Test {
+    let s = Scratch::new("doctor-tombstone")?;
+    let gone = drop_first(&s)?;
+    remove_catalog(&s);
+    let mut store = sharded(&s)?;
+    store.rebuild()?;
+    let dropped: Vec<_> = gone.iter().cloned().map(Lookup::Dropped).collect();
+    assert_eq!(store.get(&gone)?, dropped);
+    burst(&mut store, &gone)?;
+    assert_eq!(store.get(&gone)?, dropped);
+    Ok(())
+}
