@@ -35,10 +35,11 @@ sib|src/import|JSONL export for rekall, import incl. cavemem DB
 ## §R RESEARCH
 
 id|topic|finding|src
-R1|finding store, wave 5|own SQLite file `<data_dir>/mine/findings.db` (WAL, 1 s busy), ⊥ `catalog.db` & partition files (`src/store`'s). key = partition path + project + checksum + `min_occurrences` + version (`<crate version>/signals-1`); ⊥ `generation`: catalog-wide, bumped by any drop \| rewrite anywhere ∴ would re-mine all; checksum moves iff partition's rows do. hot → mined each call, ⊥ kept. dropped partition ⊥ listed ∴ its kept findings ⊥ returned (V2). rows of paths gone by repartition stay orphaned, harmless|`src/mine/ledger.rs`
+R1|finding store, wave 5|own SQLite file `<data_dir>/mine/findings.db` (WAL, 1 s busy), ⊥ `catalog.db` & partition files (`src/store`'s). key = partition path + project + checksum + `min_occurrences` + version (`<crate version>/signals-2`, bumped w/ every signal change, wave 6: token sinks); ⊥ `generation`: catalog-wide, bumped by any drop \| rewrite anywhere ∴ would re-mine all; checksum moves iff partition's rows do. hot → mined each call, ⊥ kept. dropped partition ⊥ listed ∴ its kept findings ⊥ returned (V2). rows of paths gone by repartition stay orphaned, harmless|`src/mine/ledger.rs`
 R2|failing commands, wave 5|stored `post-tool-use` body = `name\n{tool_input}\n{tool_response}` (`src/hook`); Claude Code Bash `tool_response` = `stdout stderr interrupted isImage noOutputExpected`, ⊥ exit status; failed tool calls likely fire `PostToolUseFailure` (⊥ hooked, ⊥ verified) ∴ T1 waits on 1 field per stored tool call: exit status \| error flag. ⊥ guess from stderr text|`tests/hook/fixtures/claude-code/post-tool-use.json`
-R3|token sinks, wave 5|count ! = `src/hook` estimate (bytes/4, o200k w/ `bpe`); `tokens_at_most` private in `src/hook/inject.rs` ∴ token sinks wait on it as `pub(crate)` \| shared fn|`src/hook/inject.rs`
+R3|token sinks, wave 5|count ! = `src/hook` estimate (bytes/4, o200k w/ `bpe`); `tokens_at_most` private in `src/hook/inject.rs` ∴ token sinks wait on it as `pub(crate)` \| shared fn. reconcile 5: `pub(crate)` → R5|`src/hook/inject.rs`
 R4|signals as built, wave 5|sequence = 2 consecutive Bash commands of 1 session in 1 partition, ref = 1st's row; hot file = path in `file_path`, `path`, `notebook_path`, 1 per call. threshold per partition, then merged by id (count = Σ, refs in partition order) ∴ pattern under threshold in every partition ⊥ found. `--since` prunes by partition. commands as stored, compressed at `compression.grammar`: same command → same text; grammar drops leading `a` of path `a/b` (`a/b.ipynb` → `/b.ipynb`)|`src/mine/signal.rs`, `src/mine/tool.rs`
+R5|token sinks, wave 6|cost of 1 call = `tokens_at_most` over stored (compressed) body, as `src/hook` counts budget (R3). pattern = tool name + Bash command, else + paths it names, else name alone (⊥ query etc.). sink = pattern w/ Σ cost ≥ 1/10 of Σ cost of all tool calls in partition, & ≥ `min_occurrences` calls; refs = its calls' rows, time order. share per partition, then merged by id as R4 ∴ summary `token sink <pattern>: >= 1/10 of tool call tokens` true of every partition merged; ⊥ token total in summary (merge sums refs only)|`src/mine/signal.rs`
 
 ## §V INVARIANTS
 
@@ -51,7 +52,7 @@ V3: findings ⊥ written under `.rekall/` (`.:V7`).
 id|status|task|cites
 T1|.|failing-command & error signal; waits on exit status \| error flag in stored tool call (R2)|V1,V2
 T2|x|command-sequence signal (R4)|V1,V2
-T3|~|hot files & token sinks, `report`; hot files & `report` done, token sinks wait on `src/hook` estimate reachable (R3)|V1
+T3|x|hot files & token sinks, `report` (R3, R4, R5)|V1,V2
 T4|x|per-partition finding store (R1)|V1
 
 ## §B BUGS
