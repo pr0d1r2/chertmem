@@ -1,0 +1,7 @@
+# Vendored byte-identical from paradigm (root T1); edits would fork the format.
+FORMAT.md
+FORMAT-EXTENSIONS.md
+# Frozen as HISTORICAL INPUT after the spec run (root T3).
+SPEC-PROMPT.md
+# Vendored with hk's schema by pklith; edits would fork it.
+pkl/VENDORED.md

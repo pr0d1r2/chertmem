@@ -24,3 +24,5 @@ pre-push|-|-|written by pklith (seed or gen)
 envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|-|-|written by `nix flake lock`; hygiene steps only
+markdownlintignore|-|-|ignore patterns, no linter reads them
+path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)

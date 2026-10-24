@@ -1,0 +1,4 @@
+---
+# Spec files keep one statement per line (microlith V3), so a line cap
+# would force the hard wraps mth fmt removes. Pages stay short by review.
+MD013: false
