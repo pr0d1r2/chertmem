@@ -26,6 +26,7 @@ up|.|-
 self|src|crate `chertmem`: lib + bin `chert`, 1 node per module
 sib|benches|benchmarks: fixtures, suites, baseline, regression gate
 sib|dev|dev shell flake & `dev` crate (`publish = false`) gate steps
+sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, LLM-DISCLAIMER
 
 ## §C CONSTRAINTS
 
