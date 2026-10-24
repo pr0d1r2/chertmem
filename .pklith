@@ -8,6 +8,13 @@ format 1
 # ceilings with another tokenizer, so the two disagree on every row, as
 # nix-codebuff and nix-orca found. sherd-budget gates the ceilings.
 
+## checks
+id|category|nix|glob|check|fix|env|msg
+# The registry judges itself, as in pklith, actlith and lablith: generated
+# steps match .pklith, and every tracked file type has a row.
+gen-check|gate|-|.pklith, hk.pklith.pkl, nix/pklith.nix|pklith gen --check|pklith gen|-|hk.pklith.pkl or nix/pklith.nix no longer matches .pklith; run pklith gen
+pklith-check|gate|-|-|pklith check|-|-|a tracked file type has no row in .pklith, a row matches nothing, or a claimed check never reaches its files
+
 ## types
 type|checks|min|exempt
 *|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths|-|-
@@ -17,7 +24,7 @@ md|markdownlint|-|-
 nix|nixfmt, statix, deadnix|-|-
 path:**/SPEC.md|markdownlint, mth-fmt, mth-check, sherd-check, sherd-nav, sherd-budget|-|-
 path:.context-limits|sherd-budget|-|-
-pklith|-|-|written by pklith (seed or gen)
+pklith|pklith-check, gen-check|-|-
 pkl|-|-|written by pklith (seed or gen)
 pre-commit|-|-|written by pklith (seed or gen)
 pre-push|-|-|written by pklith (seed or gen)
