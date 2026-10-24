@@ -22,7 +22,7 @@ pub(super) struct Row {
 }
 
 impl Row {
-    fn key(&self) -> Key<'_> {
+    pub(super) fn key(&self) -> Key<'_> {
         Key {
             project: &self.project,
             ide: &self.event.ide,
@@ -41,7 +41,7 @@ pub(super) struct Note {
 }
 
 impl Note {
-    fn key(&self) -> Key<'_> {
+    pub(super) fn key(&self) -> Key<'_> {
         Key {
             project: &self.project,
             ide: &self.summary.ide,

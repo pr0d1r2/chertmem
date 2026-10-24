@@ -6,9 +6,9 @@ mod tests;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
-use super::layout::{self, FNV_OFFSET, Place};
+use super::layout::{self, FNV_OFFSET, Place, Plan};
 use super::write::Row;
-use super::{Error, State};
+use super::{Error, State, Stats};
 
 /// A partition's catalog row, as a write needs it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,14 +54,23 @@ pub(super) fn state(
     conn: &Connection,
     path: &str,
 ) -> Result<(i64, Option<State>), Error> {
+    find(conn, path)?.ok_or_else(|| Error::Sqlite {
+        reason: format!("no partition {path}"),
+    })
+}
+
+/// As [`state`], `None` when the catalog has no such row.
+pub(super) fn find(
+    conn: &Connection,
+    path: &str,
+) -> Result<Option<(i64, Option<State>)>, Error> {
     let row = |r: &rusqlite::Row<'_>| {
         Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get(2)?))
     };
     let found = conn.query_row(STATE, [path], row).optional()?;
-    let (id, state, dropped) = found.ok_or_else(|| Error::Sqlite {
-        reason: format!("no partition {path}"),
-    })?;
-    Ok((id, if dropped { None } else { State::parse(&state) }))
+    Ok(found.map(|(id, state, dropped)| {
+        (id, if dropped { None } else { State::parse(&state) })
+    }))
 }
 
 /// Move the partition at `path` to `state` (src/store T6).
@@ -158,6 +167,23 @@ pub(super) fn record(
       VALUES (?1, ?2, ?3, ?4, ?5)";
     let identity = &row.event.identity;
     conn.execute(sql, params![row.project, stored, row.id, identity, slot.id])?;
+    grow(conn, slot, row)
+}
+
+/// Point the ref of a row a repartition moved at its new partition,
+/// and fold the row in there (src/store V5).
+pub(super) fn moved(
+    conn: &Connection,
+    slot: &Slot,
+    row: &Row,
+) -> Result<(), Error> {
+    let sql = "UPDATE refs SET partition = ?2 WHERE id = ?1";
+    conn.execute(sql, params![row.id, slot.id])?;
+    grow(conn, slot, row)
+}
+
+/// Fold `row` into its partition's rows, bytes and checksum.
+fn grow(conn: &Connection, slot: &Slot, row: &Row) -> Result<(), Error> {
     let sql = "SELECT checksum FROM partitions WHERE id = ?1";
     let sum: String = conn.query_row(sql, [slot.id], |r| r.get(0))?;
     let next = checksum(&sum, &row.id, &row.event.body);
@@ -168,9 +194,47 @@ pub(super) fn record(
     Ok(())
 }
 
+const STALE: &str = "SELECT path, state FROM partitions
+  WHERE dropped = 0 AND spec <> ?1 ORDER BY t0, path";
+
+/// Every live partition written under a spec other than `spec`, by
+/// `t0` then path, with its tier.
+pub(super) fn stale(
+    conn: &Connection,
+    spec: &str,
+) -> Result<Vec<(String, State)>, Error> {
+    let mut stmt = conn.prepare(STALE)?;
+    let rows = stmt.query_map([spec], |r| {
+        let state: String = r.get(1)?;
+        Ok((r.get(0)?, State::parse(&state).unwrap_or(State::Hot)))
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
+}
+
+/// The partition at `path` now holds `stats`, under `plan`'s spec.
+pub(super) fn restate(
+    conn: &Connection,
+    path: &str,
+    plan: &Plan,
+    stats: &Stats,
+) -> Result<(), Error> {
+    let sql = "UPDATE partitions SET dims = ?2, spec = ?3, rows = ?4,
+      bytes = ?5, checksum = ?6 WHERE path = ?1";
+    let (dims, spec, s) = (plan.dims(), plan.spec(), stats);
+    let args = params![path, dims, spec, s.rows, s.bytes, s.checksum];
+    conn.execute(sql, args)?;
+    Ok(())
+}
+
+/// Forget the partition at `path`, which holds no row any more.
+pub(super) fn forget(conn: &Connection, path: &str) -> Result<(), Error> {
+    conn.execute("DELETE FROM partitions WHERE path = ?1", [path])?;
+    Ok(())
+}
+
 /// FNV-1a 64 continued from `sum` over the row's id and body, so the
 /// checksum folds every row in insert order.
-fn checksum(sum: &str, id: &str, body: &str) -> String {
+pub(super) fn checksum(sum: &str, id: &str, body: &str) -> String {
     let state = u64::from_str_radix(sum, 16).unwrap_or(FNV_OFFSET);
     let state = layout::fnv1a(state, id.as_bytes());
     let state = layout::fnv1a(layout::fnv1a(state, &[0x1f]), body.as_bytes());

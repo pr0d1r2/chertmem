@@ -10,9 +10,11 @@ use std::time::Duration;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
-use super::layout::Place;
+use super::layout::{FNV_OFFSET, Place, Plan};
 use super::write::Row;
-use super::{Error, Filter, Observation, Ref, State, cold, schema};
+use super::{
+    Error, Filter, Observation, Ref, State, Stats, catalog, cold, schema,
+};
 
 /// The open partition files of 1 store.
 #[derive(Debug)]
@@ -200,4 +202,44 @@ pub(super) fn insert(
     conn.execute(INSERT, args)?;
     let key = params![id, p, e.identity];
     Ok(conn.query_row(STORED, key, |r| r.get(0))?)
+}
+
+/// Delete the row `id`, which a repartition moved elsewhere.
+pub(super) fn remove(conn: &Connection, id: &str) -> Result<(), Error> {
+    conn.execute("DELETE FROM observations WHERE id = ?1", [id])?;
+    Ok(())
+}
+
+/// The file now holds rows under `plan`'s dims and spec.
+pub(super) fn restamp(conn: &Connection, plan: &Plan) -> Result<(), Error> {
+    let sql = "UPDATE chunk SET dims = ?1, spec = ?2";
+    conn.execute(sql, [plan.dims(), plan.spec()])?;
+    Ok(())
+}
+
+/// Rows, bytes and checksum of the file, folded in insert (seq) order
+/// as the catalog folds them (src/store R1).
+pub(super) fn stats(conn: &Connection) -> Result<Stats, Error> {
+    let sql = "SELECT id, body FROM observations ORDER BY seq";
+    let mut stmt = conn.prepare(sql)?;
+    let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+    let empty = Stats {
+        rows: 0,
+        bytes: 0,
+        checksum: format!("{FNV_OFFSET:016x}"),
+    };
+    rows.into_iter().try_fold(empty, |s, row| {
+        let (id, body): (String, String) = row?;
+        Ok(fold(&s, &id, &body))
+    })
+}
+
+/// `s` with 1 more row folded in.
+fn fold(s: &Stats, id: &str, body: &str) -> Stats {
+    let bytes = u64::try_from(body.len()).unwrap_or(u64::MAX);
+    Stats {
+        rows: s.rows.saturating_add(1),
+        bytes: s.bytes.saturating_add(bytes),
+        checksum: catalog::checksum(&s.checksum, id, body),
+    }
 }
