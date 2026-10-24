@@ -40,6 +40,7 @@ R2|expand dead keys|`w/` `w/o` `b/c`: `/x` tokenized as path ∴ ⊥ expanded; c
 R3|V4 deviation vs corpus 2026-10-24|0 of 24 corpus cases change: ⊥ corpus text has blank before `.,;:!?` inside code ∴ `DEVIATES` empty, golden files ≡ chert. deviation pinned by `CODE_DEVIATIONS` (cavemem bytes = chert bytes + pass once more). prose next to kept non-code spans still loses its blank (`in ./config` → `in./config`)|`src/grammar/tests.rs`
 R4|inline code after a fence|cavemem tokenizer takes `` ` c ` `` from the fence's last tick as inline code, it loses to the fence ∴ a following `` `d ,` `` is prose & loses its blank; fixed by V5 (b) (T6)|`CODE_DEVIATIONS`
 R5|V5 (b), (c) vs corpus 2026-10-24|(b) changes 0 cases; (c) changes `urls_paths.{lite,full,ultra}.{compressed,expanded}` (`in ./config`, `is ../shared`), in `DEVIATES`. (c) = blank before a path kept; ⊥ other kept span starts w/ `.,;:!?` ∴ ≡ "before any protected token"|`src/grammar/tests.rs`
+R6|(d) rule & corpus 2026-10-24|path span = article word at `\b`, any case, + `/`&path byte or `.`&alnum, then `[A-Za-z0-9._\-/]*`; `a.`+blank, `a/`+blank ≡ cavemem; `a.The` kept. 0 corpus cases change|`ARTICLE_DEVIATIONS`
 
 ## §V INVARIANTS
 
@@ -58,7 +59,7 @@ T3|x|port `expand`|V1
 T4|x|MIT notice|-
 T5|x|punctuation pass skips fenced & inline code; tests list each golden case it changes|V2,V4
 T6|x|deviations (b) & (c) of V5, RED → GREEN; tests list each golden case they change|V2,V5
-T7|.|deviation (d) of V2: a path or filename whose first segment is an article word (`a/b.ipynb`, `a.txt`, `the.txt`) stays whole; ⊥ `/b.ipynb`, `cat.txt`. cavemem 0.2.1 drops it (B1)|V2,V5
+T7|x|deviation (d) of V2: a path or filename whose first segment is an article word (`a/b.ipynb`, `a.txt`, `the.txt`) stays whole; ⊥ `/b.ipynb`, `cat.txt`. cavemem 0.2.1 drops it (B1)|V2,V5
 
 ## §B BUGS
 
