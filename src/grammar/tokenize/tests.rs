@@ -237,3 +237,21 @@ fn a_lost_fence_cuts_no_inline_code() {
     ];
     assert_eq!(segs("`a ```b```c`"), want);
 }
+
+/// An article word that starts a path or file name is one kept path
+/// with it (src/grammar V5 (d)); cavemem keeps only `/b.ipynb` and
+/// takes `the.md` as prose.
+#[test]
+fn an_article_that_starts_a_file_name_is_part_of_its_path() {
+    let got: Vec<(&str, bool)> = tokenize("a/b.ipynb the.md a. x")
+        .iter()
+        .map(|s| (s.text, s.path))
+        .collect();
+    let want = [
+        ("a/b.ipynb", true),
+        (" ", false),
+        ("the.md", true),
+        (" a. x", false),
+    ];
+    assert_eq!(got, want);
+}

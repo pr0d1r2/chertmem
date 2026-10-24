@@ -1,9 +1,11 @@
+mod articles;
 mod deviates;
 
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use articles::{ARTICLE_DEVIATIONS, ARTICLE_PROSE};
 use deviates::DEVIATES;
 
 use super::prose::tighten;
@@ -385,4 +387,29 @@ fn expand_edge_cases_match_oracle_bytes() {
     for (text, want) in EXPANDS {
         assert_eq!(expand(text), want, "{text:?}");
     }
+}
+
+/// Deviation (d) of V5 (B1): `articles` lists the inputs.
+#[test]
+fn a_file_name_that_starts_with_an_article_stays_whole() {
+    for (text, intensity, cavemem, chert) in ARTICLE_DEVIATIONS {
+        assert_ne!(cavemem, chert, "{text:?}");
+        assert_eq!(compress(text, intensity), chert, "{text:?}");
+    }
+}
+
+#[test]
+fn an_article_that_starts_no_file_name_still_goes() {
+    for (text, intensity, want) in ARTICLE_PROSE {
+        assert_eq!(compress(text, intensity), want, "{text:?}");
+    }
+}
+
+/// `expand` keeps the name too: cavemem gives `cfg.cfg` at ultra and
+/// expands it to `configuration.configuration`.
+#[test]
+fn a_file_name_that_starts_with_an_article_survives_expand() {
+    let out = compress("the cfg a.cfg", Intensity::Ultra);
+    assert_eq!(out, "cfg a.cfg");
+    assert_eq!(expand(&out), "configuration a.cfg");
 }
