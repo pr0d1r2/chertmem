@@ -56,6 +56,8 @@ V7: warm & cold partitions read-only; write into them ⊥.
 V8: ∀ issued ref stays exact-match unique: insert 10⁵ rows in 1 s → ∀ earlier ref still resolves to own row (`.:V15`, `.:B1`).
 V9: same event identity twice → 1 row, 2nd append returns 1st ref; event w/o identity → new row every time (`.:V16`).
 V10: lock timeout → event in spool & `append` returns Ok. write-only open (hook) ⊥ replays spool ∴ hook latency ⊥ grows w/ spool; ∀ reading open replays whole spool before first read ∴ reads complete (`.:V2`, `.:V1`, `.:B3`).
+V11: `generation` never repeats a value, across `rebuild` too ∴ a cache holding an old value ⊥ reads stale as fresh (B1).
+V12: a dropped ref stays dropped across catalog loss: drop writes a tombstone outside `catalog.db` that `rebuild` reads ∴ ⊥ reissued (B2).
 
 ## §T TASKS
 
@@ -71,7 +73,12 @@ T8|x|ref column & exact-match resolution, cross-project lookup|V5,V8
 T9|x|summaries table, turn & session scopes|V1
 T10|x|w/ T6: spooled item whose partition got sealed ⊥ blocks replay forever|V7,V10
 T11|x|for `src/cache`: `tail` by seq, `data_version`, `catalog_version`|`src/cache:V2`
+T12|.|`generation` from a monotonic source (e.g. max(stored, now ms)), survives `rebuild`|V11
+T13|.|drop tombstones under `chunks/<project>/`, read by `rebuild`|V12
+T14|.|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24); `src/hook` calls it|V10
 
 ## §B BUGS
 
 id|date|cause|fix
+B1|2026-10-24|wave 3 report: `rebuild` after a deleted catalog restarts `generation` at 1 ∴ a running cache that saw 1 earlier takes changed data as fresh, breaking `.:V1`|V11
+B2|2026-10-24|wave 3 report: deleted catalog loses dropped markers ∴ a dropped ref's text could be issued again for a new row in the same ms window, breaking `.:V15`|V12
