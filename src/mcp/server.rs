@@ -10,22 +10,28 @@ use serde_json::{Value, json};
 use super::rpc::{self, Frame};
 use super::tools::{self, Call};
 use super::{Ctx, Error, shape};
+use crate::cache::{Cache, Handle};
 use crate::search::{self, Engine, Query};
 use crate::store::{Mode, Ref, Store};
 
-/// What a session reads: the engine for `search` and `timeline`, a
-/// store for `get_observations`.
+/// What a session reads: the engine for `search` and `timeline`, the
+/// cache it searches through, a store for `get_observations`.
 pub(super) struct Server {
     engine: Engine,
+    cache: Handle,
     store: Store,
 }
 
 impl Server {
-    /// Open the engine and store of `ctx`'s project.
+    /// Open the engine and store of `ctx`'s project and start its cache,
+    /// which warms in the background and logs only to `ctx.env` (V3).
     pub(super) fn open(ctx: &Ctx<'_>) -> Result<Self, Error> {
+        let (cfg, root) = (ctx.config, ctx.root);
+        let window = Store::open(cfg, root, Mode::Read)?;
         Ok(Self {
-            engine: Engine::open(ctx.config, ctx.root)?,
-            store: Store::open(ctx.config, ctx.root, Mode::Read)?,
+            engine: Engine::open(cfg, root)?,
+            cache: Cache::start_with(window, cfg, ctx.env.clone()),
+            store: Store::open(cfg, root, Mode::Read)?,
         })
     }
 
@@ -84,7 +90,7 @@ impl Server {
             semantic: true,
             ..Query::default()
         };
-        Ok(shape::hits(&self.engine.run(&q, None)?))
+        Ok(shape::hits(&self.engine.run(&q, Some(&self.cache))?))
     }
 
     fn timeline(
