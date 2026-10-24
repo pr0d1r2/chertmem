@@ -99,7 +99,7 @@ T3|x|freeze `SPEC-PROMPT.md`: line 1 → `HISTORICAL INPUT`, own commit|-
 T4|x|`.context-limits` from `sherd budget` + 12–20%|-
 T5|x|`.gitignore`: `.claude/`, `.direnv/`, `/target`, `result*`, `.envrc.local`, `.private/` (first commit)|V12
 T6|x|dev shell (`dev`): pinned toolchain, `mth` `sherd` `itok` on PATH; ask human to reload|-
-T7|.|guardrails via `.pklith`, 1 check per commit, planted violation each; ask human to reload|V10,V12
+T7|x|guardrails via `.pklith`, 1 check per commit, planted violation each; ask human to reload|V10,V12
 T8|.|waves via `sherd wave`, order: `src/config` → `src/store` → `src/grammar` → `src/hook` → `src/cache` → `src/search` → `src/mcp` → `src/cli` → `src/install` → `src/import` → `src/mine` → `benches` → `docs`|V1,V2,V3,V4,V5
 T9|.|grammar oracle: corpus + cavemem 0.2.1 JavaScript pinned by hash, test-only|V9
 T10|.|benchmark step on push w/ baseline file; regression fails|V10,V14
