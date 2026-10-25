@@ -49,9 +49,15 @@ fn lookup(found: &Lookup, expand: bool) -> Value {
     }
 }
 
-/// `list_sessions`: not built yet.
+/// `list_sessions`: `[{id, ide, cwd, started_at, ended_at}]`, newest
+/// first as the store gives them; `ended_at` is `null` while a session
+/// runs.
 pub(super) fn sessions(found: &[Session]) -> Value {
-    found.iter().map(|_| Value::Null).collect()
+    let session = |s: &Session| {
+        json!({"id": s.id, "ide": s.ide, "cwd": s.cwd,
+            "started_at": s.started_at, "ended_at": s.ended_at})
+    };
+    found.iter().map(session).collect()
 }
 
 /// A tool's result:`value` as JSON text in 1 content item.

@@ -19,6 +19,8 @@ const TIMELINE_MAX: u32 = 200;
 const IDS_MAX: usize = 50;
 /// The sessions `list_sessions` gives unless asked, as cavemem.
 const SESSIONS_DEFAULT: u32 = 20;
+/// The most sessions `list_sessions` gives, as cavemem.
+const SESSIONS_MAX: u32 = 200;
 
 /// 1 parsed `tools/call`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,7 +46,8 @@ pub(super) enum Call {
 /// The answer to `tools/list`: cavemem's descriptions, but for refs and
 /// `expand` defaulting false (root I).
 pub(super) fn list() -> Value {
-    json!({"tools": [search(), timeline(), get_observations()]})
+    json!({"tools": [search(), timeline(), get_observations(),
+        list_sessions()]})
 }
 
 fn search() -> Value {
@@ -69,6 +72,13 @@ fn get_observations() -> Value {
     let about = "Fetch observation bodies by ID. Returns compressed text \
                  unless expand is true.";
     tool("get_observations", about, &props, &["ids"])
+}
+
+fn list_sessions() -> Value {
+    let props = json!({"limit": count(SESSIONS_MAX)});
+    let about = "List recent sessions in reverse chronological order. \
+                 Use to navigate before calling timeline.";
+    tool("list_sessions", about, &props, &[])
 }
 
 fn tool(name: &str, about: &str, props: &Value, required: &[&str]) -> Value {
@@ -104,9 +114,7 @@ pub(super) fn parse(params: &Value) -> Result<Call, String> {
         }),
         "timeline" => around(&a),
         "get_observations" => get(&a),
-        "list_sessions" => Ok(Call::Sessions {
-            limit: SESSIONS_DEFAULT,
-        }),
+        "list_sessions" => recent(&a),
         other => Err(format!("Tool {other} not found")),
     }
 }
@@ -116,6 +124,14 @@ fn around(a: &Args<'_>) -> Result<Call, String> {
         session_id: a.text("session_id")?,
         around_id: a.reference("around_id")?,
         limit: a.count("limit", TIMELINE_MAX)?,
+    })
+}
+
+/// `limit` defaults to 20, as cavemem.
+fn recent(a: &Args<'_>) -> Result<Call, String> {
+    let limit = a.count("limit", SESSIONS_MAX)?;
+    Ok(Call::Sessions {
+        limit: limit.unwrap_or(SESSIONS_DEFAULT),
     })
 }
 
