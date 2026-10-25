@@ -1,4 +1,5 @@
-# Vendored byte-identical from paradigm (root T1); edits would fork the format.
+# Vendored from paradigm (root T1) below a 1-line provenance comment;
+# edits would fork the format.
 FORMAT.md
 FORMAT-EXTENSIONS.md
 # Frozen as HISTORICAL INPUT after the spec run (root T3).

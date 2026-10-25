@@ -22,7 +22,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 ## §I INTERFACES
 
 - cmd: `nix develop`; `.envrc` = `use flake`.
-- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `commit-msg <file>` `bench-gate` `perf-doc [--check]`.
+- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `commit-msg <file>` `bench-gate` `perf-doc [--check]` `notices [--check]` `package-list`.
 - file: `dev/tdd-order.exempt` — full commit id + reason per line; ∀ entry has a §B row. exit 0 hold · 1 finding (file:line & fix on stderr) · 2 usage | unreadable input.
 - file: `.private/denylist` — untracked, 1 name per line, `#` comments (`paradigm/V37`).
 - file: `dev/public-repos.toml` — `self = "owner/name"` & `[[repo]]` rows `name`, `public` (YYYY-MM-DD) (V14).
