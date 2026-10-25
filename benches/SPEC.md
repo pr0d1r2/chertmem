@@ -26,7 +26,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 - cmd: `cargo bench -p chertmem`; `cargo run -p dev -- bench-gate` compares to baseline.
 - file: `benches/baseline.toml`.
 - target (as built, wave 9): `[[bench]] latency` = `benches/latency/main.rs`, `harness = false`; `[[bench]] latency-tests` = same modules via `lib.rs` under libtest, `test = true`, `bench = false` ∴ nextest runs V1, V2. bench id `<suite>/<size>-p<parts>` (`1k-p52`); filter: `cargo bench -p chertmem -- '/100k-p'`. criterion output `target/criterion/<suite>/<label>/new/estimates.json`.
-- dir: `target/bench-fixtures/<seed>-<size>-<parts>/` (`project/`, `data/`, `stamp` = generator version, key, digest); stale stamp → rebuilt.
+- dir: `target/bench-fixtures/<seed>-<size>-<parts>/` (`data/`, `stamp` = generator version, key, digest; project root `/chert-bench/project`, R5); stale stamp → rebuilt.
 
 ## §R RESEARCH
 
