@@ -39,13 +39,22 @@ fn os() -> Option<String> {
 #[cfg(not(target_os = "macos"))]
 fn machine() -> Option<String> {
     let info = std::fs::read_to_string("/proc/cpuinfo").ok()?;
-    model(&info)
+    model(&info).or_else(|| output("uname", &["-m"]))
 }
 
 /// The CPU model a Linux `/proc/cpuinfo` names.
 #[cfg(any(test, not(target_os = "macos")))]
 fn model(info: &str) -> Option<String> {
-    field(info, "model name")
+    field(info, "model name").or_else(|| arm(info))
+}
+
+/// An ARM kernel prints no `model name`, only who designed the core and
+/// which part it is (Neoverse N1: implementer 0x41, part 0xd0c).
+#[cfg(any(test, not(target_os = "macos")))]
+fn arm(info: &str) -> Option<String> {
+    let implementer = field(info, "CPU implementer")?;
+    let part = field(info, "CPU part")?;
+    Some(format!("ARM implementer {implementer} part {part}"))
 }
 
 /// The trimmed value of the first `key : value` line whose key is `key`.
