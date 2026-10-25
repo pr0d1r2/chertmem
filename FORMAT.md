@@ -1,3 +1,4 @@
+<!-- Provenance: cavekit FORMAT.md (JuliusBrussee/cavekit, MIT) at dc77177, via pr0d1r2/microlith and pr0d1r2/paradigm; unchanged below this line. See THIRD-PARTY-NOTICES.md. -->
 # SPEC.md FORMAT
 
 Single file. Project root. Every cavekit command reads it.
