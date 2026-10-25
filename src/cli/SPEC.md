@@ -49,6 +49,7 @@ V2: exit 0 ok · 1 finding · 2 usage | unreadable input (`.:§I`); test per ver
 id|status|task|cites
 T1|x|clap definition ∀ verbs|V1
 T2|x|exit-code tests|V2
+T3|.|`chert statusline` (root §I): ms from mcp heartbeat, n & size (B·KB·MB·GB, rounded up) from catalog; ANSI per value, thresholds in `[statusline]`: ms 10/50, n by cache fit 80%, size 1/5 GB; label red ⊥ live mcp; < 5 ms|V1,V2
 
 ## §B BUGS
 

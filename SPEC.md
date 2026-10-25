@@ -54,6 +54,7 @@ self|.|-
 - cmd: `chert install|uninstall [--ide NAME]`; `chert status`; `chert doctor`; `chert config show|get|set|path`.
 - cmd: `chert partitions [list|seal|compact|drop|repartition]`; `chert cache [plan]`.
 - cmd: `chert mine [--since T] [--format text|json]`; `chert report [--format text|json|md]`.
+- cmd: `chert statusline [--color auto|always|never]`: statusline payload on stdin → `chert:<ms>ms,<n>,<size>` (owner 2026-10-25, itok-style), `chert` red ⊥ live `chert mcp`.
 - cmd: `chert compress <file>`; `chert expand <file>`; `chert export <out.jsonl> [--for rekall]`; `chert import <in.jsonl> [--from cavemem]`; `chert completions <shell>`; `chert man`.
 - exit: 0 ok · 1 finding · 2 usage | unreadable input.
 - file: `chert.toml` — user & project scope (§C). keys incl. `inject.max_tokens`, `inject.on_prompt`.

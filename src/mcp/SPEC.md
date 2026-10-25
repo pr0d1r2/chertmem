@@ -50,6 +50,7 @@ id|status|task|cites
 T1|x|transport lib choice, §R row|V2
 T2|x|4 tools w/ golden JSON incl. `list_sessions` (R3)|V1
 T3|x|start cache on launch|V3
+T4|.|heartbeat for `chert statusline`: hold a file lock per running server & write median latency of last 20 replies to data dir after each reply, ⊥ slowing replies|V3
 
 ## §B BUGS
 
