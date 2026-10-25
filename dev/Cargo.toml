@@ -20,6 +20,10 @@ path = "src/main.rs"
 # flake.lock reading for lock-graph (dev V5): MIT, no dependencies, so the
 # MIT-only deny.toml holds.
 tinyjson = "2.5.1"
+# benches/baseline.toml reading for bench-gate, bench-record and perf-doc
+# (benches T4, dev T2, T9): the root crate's own toml, so the lock gains
+# no crate and the MIT-only deny.toml holds.
+toml = "1.1.8"
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }

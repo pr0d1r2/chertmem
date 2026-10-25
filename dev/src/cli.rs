@@ -4,12 +4,16 @@
 #[cfg(test)]
 mod tests;
 
+mod bench;
+
 use crate::{lock_graph, message, mirror, name_guard, tdd_order, worktree};
 use std::path::Path;
 
 const USAGE: &str = "usage: chertmem-dev name-guard [files...] | \
                      no-core-worktree | lock-graph | rust-mirror | \
-                     tdd-order [RANGE] | commit-msg <file>";
+                     tdd-order [RANGE] | commit-msg <file> | \
+                     bench-record | bench-gate [fixture...] | \
+                     perf-doc [--check]";
 
 /// Run one guard from `args` against the repository at `root`.
 #[must_use]
@@ -25,7 +29,7 @@ pub fn run(args: &[String], root: &Path) -> u8 {
         ("tdd-order", []) => order(root, None),
         ("tdd-order", [range]) => order(root, Some(range)),
         ("commit-msg", [file]) => commit_msg(root, file),
-        _ => usage(),
+        (verb, rest) => bench::run(verb, rest, root).unwrap_or_else(usage),
     }
 }
 
