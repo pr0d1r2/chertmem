@@ -1,16 +1,26 @@
 //! A read-only look at the catalog for `chert statusline` (src/cli
 //! T3): no dir made, no spool replayed, no partition opened, so a badge
 //! drawn every turn costs 1 catalog query. Rows still in the spool are
-//! not counted until a reading open replays them (V10). RED stub: never
-//! a catalog.
+//! not counted until a reading open replays them (V10).
 
 #[cfg(test)]
 mod tests;
 
 use std::path::Path;
+use std::time::Duration;
 
-use super::{Error, Store};
+use rusqlite::{Connection, OpenFlags};
+
+use super::layout::Plan;
+use super::partition::Chunks;
+use super::{Error, Mode, Store, project_id};
 use crate::config::Config;
+
+/// A WAL reader rarely waits; a badge should not wait long when it does.
+const BUSY: Duration = Duration::from_millis(5);
+
+const FLAGS: OpenFlags =
+    OpenFlags::SQLITE_OPEN_READ_ONLY.union(OpenFlags::SQLITE_OPEN_NO_MUTEX);
 
 impl Store {
     /// The catalog of `cfg`'s data dir for the project at
@@ -19,11 +29,24 @@ impl Store {
     ///
     /// # Errors
     /// An unreadable catalog.
-    #[allow(clippy::unnecessary_wraps, reason = "RED stub")]
     pub fn peek(
-        _cfg: &Config,
-        _project_root: &Path,
+        cfg: &Config,
+        project_root: &Path,
     ) -> Result<Option<Self>, Error> {
-        Ok(None)
+        let root = cfg.storage.data_dir.clone();
+        let Some(root) = root.filter(|r| r.join("catalog.db").is_file()) else {
+            return Ok(None);
+        };
+        let conn = Connection::open_with_flags(root.join("catalog.db"), FLAGS)?;
+        conn.busy_timeout(BUSY)?;
+        Ok(Some(Self {
+            chunks: Chunks::new(root.clone(), BUSY),
+            root,
+            mode: Mode::Read,
+            project: project_id(project_root),
+            plan: Plan::new(&cfg.partition),
+            catalog: Some(conn),
+            zstd: cfg.compression.zstd,
+        }))
     }
 }
