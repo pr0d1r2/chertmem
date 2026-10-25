@@ -39,8 +39,22 @@ fn os() -> Option<String> {
 #[cfg(not(target_os = "macos"))]
 fn machine() -> Option<String> {
     let info = std::fs::read_to_string("/proc/cpuinfo").ok()?;
-    let line = info.lines().find(|l| l.starts_with("model name"))?;
-    Some(line.split_once(':')?.1.trim().to_owned())
+    model(&info)
+}
+
+/// The CPU model a Linux `/proc/cpuinfo` names.
+#[cfg(any(test, not(target_os = "macos")))]
+fn model(info: &str) -> Option<String> {
+    field(info, "model name")
+}
+
+/// The trimmed value of the first `key : value` line whose key is `key`.
+#[cfg(any(test, not(target_os = "macos")))]
+fn field(info: &str, key: &str) -> Option<String> {
+    info.lines()
+        .find_map(|l| l.split_once(':').filter(|(k, _)| k.trim() == key))
+        .map(|(_, v)| v.trim().to_owned())
+        .filter(|v| !v.is_empty())
 }
 
 #[cfg(not(target_os = "macos"))]

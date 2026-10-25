@@ -1,4 +1,27 @@
-use super::{date_of, output, this};
+use super::{date_of, model, output, this};
+
+const X86: &str = "processor\t: 0\nvendor_id\t: GenuineIntel\nmodel name\t: Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz\n";
+const ARM: &str = "processor\t: 0\nBogoMIPS\t: 50.00\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x3\nCPU part\t: 0xd0c\nCPU revision\t: 1\n";
+
+#[test]
+fn an_x86_cpuinfo_names_its_model_name() {
+    let named = model(X86);
+    assert_eq!(
+        named.as_deref(),
+        Some("Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz")
+    );
+}
+
+#[test]
+fn an_arm_cpuinfo_without_a_model_name_names_implementer_and_part() {
+    let named = model(ARM);
+    assert_eq!(named.as_deref(), Some("ARM implementer 0x41 part 0xd0c"));
+}
+
+#[test]
+fn a_cpuinfo_naming_no_cpu_is_none() {
+    assert_eq!(model("processor\t: 0\n"), None);
+}
 
 #[test]
 fn this_machine_has_a_cpu_model_and_an_os() -> Result<(), String> {
