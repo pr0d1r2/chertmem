@@ -9,12 +9,14 @@ mod blend;
 mod error;
 mod merge;
 mod ollama;
+mod postings;
 mod rank;
 mod snippet;
 mod terms;
 mod timeline;
 mod token;
 
+use std::any::Any;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -22,11 +24,12 @@ use std::sync::Arc;
 pub use error::Error;
 pub use timeline::Entry;
 
-use crate::cache::{Handle, Log};
+use crate::cache::{Handle, Index, Log, Rows};
 use crate::config::{Config, Grammar, Provider};
 use crate::grammar;
 use crate::store::{self, Filter, Mode, Ref, Store};
 use ollama::Ollama;
+use postings::Postings;
 use rank::{Rater, Scored};
 use terms::Terms;
 
@@ -203,7 +206,7 @@ impl Engine {
         rater: &Rater,
     ) -> Result<Vec<Scored>, Error> {
         if let Some(handle) = cache {
-            return Ok(rater.best(handle.query(filter)?));
+            return cached(handle, filter, rater);
         }
         let parts = self.store.partitions(filter)?;
         let paths: Vec<String> = parts.into_iter().map(|p| p.path).collect();
@@ -270,6 +273,45 @@ impl Asked {
         terms.dedup();
         Self { text: shown, terms }
     }
+}
+
+/// The keyword index a cache searched by [`Engine::run`] keeps (T9):
+/// start it with [`crate::cache::Cache::start_indexed`] so a warm
+/// search reads only the rows its terms are in.
+#[must_use]
+pub fn index() -> Box<dyn Index> {
+    Box::new(Postings::default())
+}
+
+/// The keyword best through `handle`: the warm window's postings (T9),
+/// else the rows [`Handle::query`] reads from the store.
+fn cached(
+    handle: &Handle,
+    filter: &Filter,
+    rater: &Rater,
+) -> Result<Vec<Scored>, Error> {
+    let warm = handle.with_index(filter, |rows, i| lent(rater, rows, i))?;
+    match warm {
+        Some(best) => Ok(best),
+        None => Ok(rater.best(handle.query(filter)?)),
+    }
+}
+
+/// The best of the window's lent `rows`: those [`index`]'s postings
+/// hold a term in, scored from their counts; every row scored whole
+/// when the cache keeps another index.
+fn lent(rater: &Rater, rows: Rows<'_>, index: &dyn Index) -> Vec<Scored> {
+    let any: &dyn Any = index;
+    let hits = any
+        .downcast_ref::<Postings>()
+        .and_then(|p| p.hits(&rater.terms));
+    let Some(hits) = hits else {
+        return rater.best(rows.to_vec());
+    };
+    let found = hits
+        .into_iter()
+        .filter_map(|(key, c)| Some((rows.get(key)?, c)));
+    rater.best_counted(found)
 }
 
 /// The store's side of `q`.
