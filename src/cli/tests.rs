@@ -14,6 +14,9 @@ pub(super) type Res<T> = Result<T, Box<dyn StdError>>;
 /// Milliseconds of 2026-10-24, the time every test verb runs at.
 pub(super) const NOW: u64 = 1_792_800_000_000;
 
+/// The session of the recorded hook fixtures (src/hook R1).
+pub(super) const SESSION: &str = "00000000-0000-4000-8000-000000000001";
+
 /// The `chert` the sandbox wires into IDE configs.
 pub(super) const CHERT: &str = "/opt/chert-test/bin/chert";
 
@@ -52,13 +55,27 @@ impl Sandbox {
         self.dir.join("project")
     }
 
-    /// `chert <args>` with empty stdin.
-    pub(super) fn run(&self, args: &[&str]) -> Ran {
-        let home = self.home();
-        self.run_in(args, b"", Some(&home))
+    /// A path in the sandbox, outside home and project.
+    pub(super) fn file(&self, name: &str) -> PathBuf {
+        self.dir.join(name)
     }
 
-    /// `chert <args>` with `stdin`, in the project, `home` injected.
+    /// `chert <args>` with empty stdin.
+    pub(super) fn run(&self, args: &[&str]) -> Ran {
+        self.run_with(args, b"")
+    }
+
+    /// `chert <args>` with `stdin`, in the project, home injected.
+    pub(super) fn run_with(&self, args: &[&str], stdin: &[u8]) -> Ran {
+        let home = self.home();
+        self.run_in(args, stdin, Some(&home))
+    }
+
+    /// `chert <args>` with no home dir at all.
+    pub(super) fn run_homeless(&self, args: &[&str]) -> Ran {
+        self.run_in(args, b"", None)
+    }
+
     fn run_in(&self, args: &[&str], stdin: &[u8], home: Option<&Path>) -> Ran {
         let (mut input, project) = (stdin, self.project());
         let (mut out, mut err) = (Vec::new(), Vec::new());
@@ -76,6 +93,18 @@ impl Sandbox {
         let (out, err) = (text(&out), text(&err));
         Ran { code, out, err }
     }
+
+    /// Store the recorded `<event>` hook payload: exit 0 asserted.
+    pub(super) fn hook(&self, event: &str) -> Test {
+        let ran = self.run_with(&["hook", "run", event], &fixture(event)?);
+        assert_eq!(ran.code, 0, "{ran:?}");
+        Ok(())
+    }
+
+    /// The project's `chert.toml` set to `text`.
+    pub(super) fn project_toml(&self, text: &str) -> Test {
+        Ok(fs::write(self.project().join("chert.toml"), text)?)
+    }
 }
 
 impl Drop for Sandbox {
@@ -87,6 +116,19 @@ impl Drop for Sandbox {
 /// `chert`, then `args`.
 fn argv<'a>(args: &'a [&'a str]) -> impl Iterator<Item = &'a str> {
     std::iter::once("chert").chain(args.iter().copied())
+}
+
+/// `tests/hook/fixtures/claude-code/<event>.json`.
+pub(super) fn fixture(event: &str) -> Res<Vec<u8>> {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let path = dir.join("tests/hook/fixtures/claude-code");
+    Ok(fs::read(path.join(format!("{event}.json")))?)
+}
+
+/// The first `chert:<ref>` in `text`.
+pub(super) fn first_ref(text: &str) -> Res<String> {
+    let word = text.split_whitespace().find(|w| w.starts_with("chert:"));
+    Ok(word.ok_or("no ref")?.to_owned())
 }
 
 #[test]
@@ -121,6 +163,25 @@ fn an_unknown_verb_is_exit_2_with_a_suggestion() -> Test {
     let ran = s.run(&["partition", "list"]);
     assert_eq!(ran.code, 2, "{ran:?}");
     assert!(ran.err.contains("partitions"), "{ran:?}");
+    Ok(())
+}
+
+#[test]
+fn a_bad_config_is_exit_2_naming_the_file() -> Test {
+    let s = Sandbox::new("bad-config")?;
+    s.project_toml("[cache]\nwindow = 7\n")?;
+    let ran = s.run(&["partitions"]);
+    assert_eq!(ran.code, 2, "{ran:?}");
+    assert!(ran.err.contains("chert.toml"), "{ran:?}");
+    Ok(())
+}
+
+#[test]
+fn no_home_and_no_data_dir_is_exit_2() -> Test {
+    let s = Sandbox::new("no-data-dir")?;
+    let ran = s.run_homeless(&["partitions", "list"]);
+    assert_eq!(ran.code, 2, "{ran:?}");
+    assert!(ran.err.starts_with("chert: "), "{ran:?}");
     Ok(())
 }
 
