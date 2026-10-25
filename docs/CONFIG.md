@@ -71,6 +71,11 @@ no file sets the key; `~` there stands for your home directory.
 | `mining.min_occurrences` | integer, at least 1 | `3` | How many times a pattern must repeat within a partition before it becomes a finding. |
 | `inject.max_tokens` | integer, at least 0 | `300` | The budget for the context chert hands the agent at session start, in estimated tokens (bytes divided by 4; exact o200k tokens in a build with the `bpe` feature). The text is references and one-line gists, never whole bodies. |
 | `inject.on_prompt` | `true` or `false` | `false` | Also inject context on every prompt, not only at session start. Read the note below before turning it on. |
+| `statusline.ms_green` | integer, at least 1 | `10` | `chert statusline` shows the reply time of the project's running `chert mcp` in green below this many milliseconds. |
+| `statusline.ms_amber` | integer, at least 1 | `50` | Below this many milliseconds the reply time is amber; at or above it, red. |
+| `statusline.size_green` | size | `"1GiB"` | The project's stored size shows green below this. |
+| `statusline.size_amber` | size | `"5GiB"` | Below this the size is amber; at or above it, red. |
+| `statusline.fit_amber` | integer, 1 to 100 | `80` | The observation count shows how well the cache window fits `cache.max_bytes`: green while the window's estimate is below this percent of it, amber from this percent up to the limit, red over the limit. |
 
 ## Before you turn on `inject.on_prompt`
 
