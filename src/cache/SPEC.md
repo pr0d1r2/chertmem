@@ -56,6 +56,7 @@ T1|x|load window from partitions, background warm|V1
 T2|x|data_version + seq tail|V2
 T3|x|generation reload|V3
 T4|x|estimate, overflow policies, memory check, `cache plan`|V4
+T5|.|`Cache::plan(store, cfg) -> Plan` ⊥ warm-up thread; `chert cache plan` uses it (src/cli R4)|V4
 
 ## §B BUGS
 
