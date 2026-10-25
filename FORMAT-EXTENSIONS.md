@@ -1,3 +1,4 @@
+<!-- Provenance: the owner's own extension of the cavekit format (MIT), from pr0d1r2/paradigm via pr0d1r2/microlith; not cavekit text. See THIRD-PARTY-NOTICES.md. -->
 # SPEC.md FORMAT -- EXTENSIONS
 
 Cavekit's `FORMAT.md` fixes seven sections. This document is the DELTA a

@@ -49,6 +49,52 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## cavekit
+
+Every `SPEC.md` in this repository follows the spec format of cavekit,
+<https://github.com/JuliusBrussee/cavekit>, under the MIT license below.
+From it chertmem takes:
+
+- **Copied text.** `FORMAT.md` is cavekit's own `FORMAT.md`, copied
+  unchanged below its one-line provenance comment. It matches cavekit
+  commit `dc77177756dcde21c068c9b2de6b1bde63ec9bc9` (2026-06-18) byte
+  for byte. It reached this repository through pr0d1r2/microlith and
+  pr0d1r2/paradigm, both of which vendored it without edits.
+- **The format, followed.** The sections, their order and headers, and
+  the `§<S>.<n>` addressing that every `SPEC.md` here uses. No other
+  cavekit text is copied.
+
+`FORMAT-EXTENSIONS.md` is not cavekit's. It is the owner's own document
+(MIT, from pr0d1r2/paradigm by way of pr0d1r2/microlith), and it lists
+what a spec may add on top of cavekit's format. It quotes only
+cavekit's section headers.
+
+The license below is cavekit's `LICENSE` file, unchanged.
+
+```text
+MIT License
+
+Copyright (c) 2026 Julius Brussee
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## SQLite
 
 The store is SQLite, with FTS5, compiled into `chert` from the
