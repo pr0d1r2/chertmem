@@ -30,8 +30,9 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn: `Cache::start(store, cfg) -> Handle`; `Handle::query(q) -> Rows`; `Handle::plan() -> Plan{estimate, limit, days_kept}`; `Cache::plan(&store, cfg) -> Plan` (system clock), `Cache::plan_at(&store, cfg, now) -> Plan`: same estimate as `Handle::plan` (1 `fit_at`), ⊥ thread, ⊥ row load, ⊥ log.
-- cmd: `chert cache plan` prints `Cache::plan_at`'s `Plan`; exit 1 when estimate > limit.
+- fn: `Cache::start(store, cfg) -> Handle`; `Handle::query(q) -> Vec<Observation>`; `Handle::plan() -> Plan{estimate, index, limit, days_kept}`; `Cache::plan(&store, cfg) -> Plan` (system clock), `Cache::plan_at(&store, cfg, now) -> Plan`: same estimate as `Handle::plan` (1 `fit_at`), ⊥ thread, ⊥ row load, ⊥ log.
+- fn (T6): `trait Index: Any + Send { reset(&mut self); insert(&mut self, key: &Key, row: &Observation, replaced: Option<&Observation>); bytes(&self) -> u64 }`, `Key = (u64, String)`; `Cache::start_indexed(store, cfg, env, Box<dyn Index>) -> Handle` (`start`, `start_with`: no-op index); `Handle::with_index<R>(&self, q, f: impl FnOnce(Rows<'_>, &dyn Index) -> R) -> Result<Option<R>, Error>`; `Rows::{get(&Key), range(), to_vec()}` bounded to `q`'s `[since, until)`.
+- cmd: `chert cache plan` prints `Cache::plan_at`'s `Plan` + an `index <n> bytes of the estimate` line; exit 1 when estimate > limit.
 
 ## §R RESEARCH
 
@@ -41,6 +42,7 @@ R2|memory, lead|Linux `MemAvailable`; macOS total `hw.memsize` (⊥ cheap availa
 R3|query, lead|`q` = `store::Filter` → rows in store `(ts, id)` order (§G "by id" → reconcile); memory answers only same project & `since` ≥ window start|`window.rs`
 R4|tests, lead|V1: test binary re-invoked as 2nd writer process. V3: ⊥ store `drop` on base ∴ raw SQL edit + `generation` bump|`window/tests.rs`
 R5|later, lead|keyword index & embedding matrix → `src/search`; cache holds rows only. `chert cache plan` verb → `src/cli`|-
+R6|index hook, wave 10|observer over a borrowed view: window feeds `Index` ∀ row added/replaced in begin & sync under the rows' lock; `replaced` = old row at same `(ts, id)` (a tail re-reading a kept key) ∴ index drops its terms w/o a lookup of its own. begin drops old window (store answers), resets index, bumps epoch ∴ an older load stops. `Index: Any` ∴ search downcasts `&dyn Index` (upcast, Rust 1.86). `Rows::get` ⊥ rows outside `q` ∴ postings span window, filter applied per hit. estimate: `INDEX_ROW` = 512 B a row (search T9 profile: postings + row length ~230 B raw, 340-450 B w/ `Vec` slack; rounded up, errs high as R1) before a load, `Plan.index` its part; after a load `Index::bytes` replaces it: over limit → warning (once under `shrink`), `fail` → disk only; ⊥ re-check on later syncs. `Handle::plan` stays pre-load (= `plan_at`)|`index.rs`, `fit.rs`, `cache.rs`
 
 ## §V INVARIANTS
 
@@ -57,7 +59,7 @@ T2|x|data_version + seq tail|V2
 T3|x|generation reload|V3
 T4|x|estimate, overflow policies, memory check, `cache plan`|V4
 T5|x|`Cache::plan(store, cfg) -> Plan` ⊥ warm-up thread; `chert cache plan` uses it (src/cli R4)|V4
-T6|.|`cache::Index` trait (reset, insert, bytes) called from window begin & sync; `Handle::with_index(q, f)` reads rows & index under 1 lock ⊥ cloning the window; `fit` & `cache plan` count `Index::bytes` toward `max_bytes`; for `src/search` T9 (lead picks the observer over a borrowed view + change feed)|V1,V4
+T6|x|`cache::Index` trait (reset, insert, bytes) called from window begin & sync; `Handle::with_index(q, f)` reads rows & index under 1 lock ⊥ cloning the window; `fit` & `cache plan` count `Index::bytes` toward `max_bytes`; for `src/search` T9 (lead picks the observer over a borrowed view + change feed)|V1,V4
 
 ## §B BUGS
 
