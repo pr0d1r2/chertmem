@@ -35,7 +35,9 @@ const PAIR: &str = "`cargo fmt` then `cargo test`";
 
 fn seal_all(store: &mut Store) -> Test {
     for p in store.partitions(&Filter::default())? {
-        store.seal(&p.path)?;
+        // Its bucket is still open by the system clock: seal it as of
+        // its end (src/store T19).
+        store.seal_at(&p.path, p.t1)?;
     }
     Ok(())
 }

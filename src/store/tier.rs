@@ -6,6 +6,7 @@
 mod tests;
 
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{Connection, Transaction};
 
@@ -13,6 +14,12 @@ use super::partition::{self, Chunks};
 use super::write::immediate;
 use super::{Error, State, Store, catalog, cold, generation, tombstone};
 use crate::config::Zstd;
+
+/// Milliseconds since the epoch by the system clock.
+fn clock() -> u64 {
+    let since = SystemTime::now().duration_since(UNIX_EPOCH);
+    u64::try_from(since.unwrap_or_default().as_millis()).unwrap_or(u64::MAX)
+}
 
 /// What a tier move reaches, under the catalog's write lock.
 struct Work<'a> {
@@ -79,17 +86,18 @@ impl Store {
         })
     }
 
-    /// Seal the partition at `path`, whatever the time: warm, so no
-    /// append lands in it again; the next one for its bucket opens a
-    /// fresh partition (src/store V7, V13). A warm or cold one stays as
-    /// it is. The spool is replayed first, so what waits there lands
-    /// before the seal. A caller that knows the time, as `chert
-    /// partitions seal` does, calls [`Store::seal_at`] (R9).
+    /// Seal the partition at `path` once its bucket ended by the system
+    /// clock: warm, so no append lands in it again; the next one for its
+    /// bucket opens a fresh partition (src/store V7, V13). A warm or cold
+    /// one stays as it is. The spool is replayed first, so what waits
+    /// there lands before the seal. [`Store::seal_at`] takes the time
+    /// from the caller (R9, T19).
     ///
     /// # Errors
-    /// [`Error::WriteOnly`] on a write-only store; no such partition.
+    /// [`Error::WriteOnly`] on a write-only store; no such partition;
+    /// [`Error::Open`] while the bucket is open.
     pub fn seal(&mut self, path: &str) -> Result<(), Error> {
-        self.seal_at(path, u64::MAX)
+        self.seal_at(path, clock())
     }
 
     /// [`Store::seal`] at `now` (ms since the epoch): a bucket ending
@@ -108,14 +116,15 @@ impl Store {
         Ok(w.tx.commit()?)
     }
 
-    /// Compact the partition at `path`, whatever the time, sealing it
-    /// first: `VACUUM INTO` a copy, zstd it to `<path>.zst`, drop the
-    /// `.db`. Its rows, and so its stats, stay as they were.
+    /// Compact the partition at `path` once its bucket ended by the
+    /// system clock, sealing it first: `VACUUM INTO` a copy, zstd it to
+    /// `<path>.zst`, drop the `.db`. Its rows, and so its stats, stay as
+    /// they were.
     ///
     /// # Errors
     /// As [`Store::seal`].
     pub fn compact(&mut self, path: &str) -> Result<(), Error> {
-        self.compact_at(path, u64::MAX)
+        self.compact_at(path, clock())
     }
 
     /// [`Store::compact`] at `now` (ms since the epoch), refused as

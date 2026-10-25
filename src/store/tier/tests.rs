@@ -1,7 +1,12 @@
 use std::error::Error as StdError;
 
+use rusqlite::Connection;
+
+use crate::store::cold;
 use crate::store::tests::{Scratch, Test, WEEK, chunk, event, stored};
-use crate::store::{Error, Filter, Lookup, Mode, Ref, State, Stats, Store};
+use crate::store::{
+    Error, Filter, Lookup, Mode, Ref, Scope, State, Stats, Store, Summary,
+};
 
 /// The tier the catalog gives `path`, `None` when it lists no such row.
 fn state(store: &Store, path: &str) -> Result<Option<State>, Error> {
@@ -140,14 +145,67 @@ fn seal_and_compact_refuse_a_bucket_still_open() -> Test {
 }
 
 #[test]
-fn seal_and_compact_without_a_clock_take_any_bucket() -> Test {
-    let s = Scratch::new("tier-no-clock")?;
+fn seal_and_compact_read_the_system_clock() -> Test {
+    let s = Scratch::new("tier-clock")?;
     let mut store = s.open(Mode::Read)?;
     store.append(&event(1 << 47, None, "far ahead"))?;
     let all = store.partitions(&Filter::default())?;
-    let path = all.first().ok_or("no partition")?.path.clone();
+    let ahead = all.first().ok_or("no partition")?;
+    let (path, end) = (ahead.path.clone(), ahead.t1);
+    assert_eq!(store.seal(&path), open_until(&path, end));
+    assert_eq!(store.compact(&path), open_until(&path, end));
+    assert_eq!(state(&store, &path)?, Some(State::Hot));
+    Ok(())
+}
+
+/// Turn the cold file of `path` back into 1 written before the
+/// summaries scope index (partition schema version 1).
+fn as_version_1(s: &Scratch, path: &str) -> Test {
+    let root = s.data();
+    let thawed = cold::thaw(&root, path)?;
+    let conn = Connection::open(&thawed)?;
+    conn.execute_batch(
+        "DROP INDEX IF EXISTS summaries_scope; PRAGMA user_version = 1;",
+    )?;
+    drop(conn);
+    let zstd = s.config()?.compression.zstd;
+    cold::freeze(&thawed, &root, path, zstd)?;
+    Ok(cold::remove_hot(&root.join("thawed"), path)?)
+}
+
+fn rolled_up() -> Summary {
+    Summary {
+        ts: 5,
+        session: "s1".to_owned(),
+        scope: Scope::Session,
+        ide: "claude-code".to_owned(),
+        body: "rolled up".to_owned(),
+    }
+}
+
+/// Whether the thawed copy of `path` holds the summaries scope index.
+fn thawed_indexed(s: &Scratch, path: &str) -> Result<bool, Box<dyn StdError>> {
+    let thawed = Connection::open(s.data().join("thawed").join(path))?;
+    let sql = "SELECT count(*) FROM sqlite_master WHERE name = ?1";
+    let n: i64 = thawed.query_row(sql, ["summaries_scope"], |r| r.get(0))?;
+    Ok(n == 1)
+}
+
+#[test]
+fn a_cold_partition_from_before_the_scope_index_still_reads() -> Test {
+    let s = Scratch::new("tier-cold-v1")?;
+    let mut store = s.open(Mode::Read)?;
+    let (refs, path) = fill(&mut store)?;
+    store.append_summary(&rolled_up())?;
     store.compact(&path)?;
-    assert_eq!(state(&store, &path)?, Some(State::Cold));
+    drop(store);
+    as_version_1(&s, &path)?;
+    let mut fresh = s.open(Mode::Read)?;
+    let found = fresh.summaries_in(&path, Scope::Session)?;
+    let found: Vec<Summary> = found.into_iter().map(|l| l.summary).collect();
+    assert_eq!(found, [rolled_up()]);
+    assert_eq!(bodies(&mut fresh, &refs)?, some(&["a", "b", "c", "d"]));
+    assert!(thawed_indexed(&s, &path)?);
     Ok(())
 }
 

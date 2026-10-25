@@ -8,7 +8,7 @@ mod tests;
 use rusqlite::{Connection, params};
 
 use super::write::Note;
-use super::{Error, Filter, Scope, Store, Summary};
+use super::{Error, Filter, Listed, Scope, Store, Summary};
 
 const INSERT: &str = "INSERT INTO summaries
   (id, project, session, scope, ts, ide, body)
@@ -49,9 +49,25 @@ pub(super) fn remove(conn: &Connection, id: &str) -> Result<(), Error> {
     Ok(())
 }
 
-const LIST: &str = "SELECT ts, session, scope, ide, body, id FROM summaries
-  WHERE project = ?1 AND (?2 IS NULL OR session = ?2) AND scope = ?3
+/// Every session's summaries of 1 scope, through `summaries_scope`; `?2`
+/// is bound but unused, so both queries take the same 3 values.
+const LIST_ALL: &str = "SELECT ts, session, scope, ide, body, id
+  FROM summaries WHERE project = ?1 AND scope = ?3 ORDER BY ts, id";
+
+/// 1 session's, through `summaries_session`.
+const LIST_ONE: &str = "SELECT ts, session, scope, ide, body, id
+  FROM summaries WHERE project = ?1 AND session = ?2 AND scope = ?3
   ORDER BY ts, id";
+
+/// The query [`list`] runs, of 1 session or of every session: 2, so
+/// each searches an index (src/store T19).
+fn list_sql(session: Option<&str>) -> &'static str {
+    if session.is_some() {
+        LIST_ONE
+    } else {
+        LIST_ALL
+    }
+}
 
 /// The summaries of 1 partition, with their ids for a stable order.
 fn list(
@@ -59,10 +75,15 @@ fn list(
     project: &str,
     session: Option<&str>,
     scope: Scope,
-) -> Result<Vec<(Summary, String)>, Error> {
-    let mut stmt = conn.prepare(LIST)?;
+) -> Result<Vec<Listed>, Error> {
+    let mut stmt = conn.prepare(list_sql(session))?;
     let args = params![project, session, scope.as_str()];
-    let rows = stmt.query_map(args, |r| Ok((summary(r, scope)?, r.get(5)?)))?;
+    let rows = stmt.query_map(args, |r| {
+        Ok(Listed {
+            id: r.get(5)?,
+            summary: summary(r, scope)?,
+        })
+    })?;
     Ok(rows.collect::<Result<_, _>>()?)
 }
 
@@ -77,6 +98,24 @@ fn summary(r: &rusqlite::Row<'_>, scope: Scope) -> rusqlite::Result<Summary> {
 }
 
 impl Store {
+    /// This project's `scope` summaries in the 1 partition at `path`, by
+    /// time then id, opening only that file; none when its file is gone
+    /// (src/store T19).
+    ///
+    /// # Errors
+    /// [`Error::WriteOnly`] on a write-only store; an unreadable file.
+    pub fn summaries_in(
+        &mut self,
+        path: &str,
+        scope: Scope,
+    ) -> Result<Vec<Listed>, Error> {
+        self.reading()?;
+        match self.chunks.existing(path)? {
+            Some(conn) => list(conn, &self.project, None, scope),
+            None => Ok(Vec::new()),
+        }
+    }
+
     /// This project's `scope` summaries, of `session` or of every
     /// session, by time across every partition the catalog names.
     ///
@@ -97,7 +136,7 @@ impl Store {
                 found.extend(list(conn, &self.project, session, scope)?);
             }
         }
-        found.sort_by(|(a, ia), (b, ib)| (a.ts, ia).cmp(&(b.ts, ib)));
-        Ok(found.into_iter().map(|(s, _)| s).collect())
+        found.sort_by(|a, b| (a.summary.ts, &a.id).cmp(&(b.summary.ts, &b.id)));
+        Ok(found.into_iter().map(|l| l.summary).collect())
     }
 }
