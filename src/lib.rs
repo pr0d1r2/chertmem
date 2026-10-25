@@ -4,6 +4,7 @@
 //! one per worker, test first.
 
 pub mod cache;
+pub mod cli;
 pub mod config;
 pub mod grammar;
 pub mod hook;

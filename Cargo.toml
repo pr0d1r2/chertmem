@@ -17,6 +17,22 @@ name = "chert"
 path = "src/main.rs"
 
 [dependencies]
+# `chert` verbs (src/cli C, paradigm/V29), as lablith: clap MIT OR
+# Apache-2.0; its derive needs unicode-ident (Unicode-3.0, deny.toml).
+# Default features off: no color, so no anstream tree; help, usage,
+# error context and suggestions kept for humans.
+clap = { version = "4.6.7", default-features = false, features = [
+  "std",
+  "derive",
+  "help",
+  "usage",
+  "error-context",
+  "suggestions",
+] }
+# `chert completions` and `chert man` from the same clap definition
+# (src/cli V1): both MIT OR Apache-2.0, as is roff under clap_mangen.
+clap_complete = "4.6.11"
+clap_mangen = "0.3.3"
 # SQLite with FTS5 compiled in (root C, src/store C). Default features
 # off: `cache` pulls hashlink and foldhash (Zlib), outside the MIT-only
 # deny.toml; the rest of the tree is MIT or MIT OR Apache-2.0.
