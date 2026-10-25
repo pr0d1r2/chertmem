@@ -2,8 +2,11 @@ use std::error::Error as StdError;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::store::tests::{Scratch, Test, WEEK};
-use crate::store::{Error, Mode, Scope, Store, Summary, Written};
+use crate::config::{Config, Dimension};
+use crate::store::tests::{Scratch, Test, WEEK, chunk};
+use crate::store::{
+    Error, Filter, Listed, Mode, Scope, Store, Summary, Written,
+};
 
 fn summary(ts: u64, session: &str, scope: Scope, body: &str) -> Summary {
     Summary {
@@ -122,4 +125,98 @@ fn scopes_round_trip_through_their_names() {
         assert_eq!(Scope::parse(scope.as_str()), Some(scope));
     }
     assert_eq!(Scope::parse("week"), None);
+}
+
+fn listed(found: &[Listed]) -> Vec<&str> {
+    found.iter().map(|l| l.summary.body.as_str()).collect()
+}
+
+#[test]
+fn summaries_in_reads_1_partition_by_time_then_id() -> Test {
+    let s = Scratch::new("sum-in")?;
+    let mut store = s.open(Mode::Read)?;
+    fill(&mut store)?;
+    store.append_summary(&summary(6, "s3", Scope::Turn, "tied"))?;
+    let turns =
+        store.summaries_in(&chunk(&store, "19700101-7d"), Scope::Turn)?;
+    let bodies = listed(&turns);
+    let ends = (bodies.first(), bodies.last(), bodies.len());
+    assert_eq!(ends, (Some(&"turn 1"), Some(&"turn 2"), 4));
+    let keys: Vec<(u64, &str)> = turns
+        .iter()
+        .map(|l| (l.summary.ts, l.id.as_str()))
+        .collect();
+    assert!(keys.windows(2).all(|w| w.first() < w.last()), "{keys:?}");
+    Ok(())
+}
+
+#[test]
+fn summaries_in_reads_each_scope_and_nothing_where_no_file_is() -> Test {
+    let s = Scratch::new("sum-in-scope")?;
+    let mut store = s.open(Mode::Read)?;
+    fill(&mut store)?;
+    let week1 = chunk(&store, "19700108-7d");
+    assert_eq!(
+        listed(&store.summaries_in(&week1, Scope::Turn)?),
+        ["turn 3"]
+    );
+    let whole = store.summaries_in(&week1, Scope::Session)?;
+    let whole: Vec<Summary> = whole.into_iter().map(|l| l.summary).collect();
+    assert_eq!(whole, [summary(WEEK + 2, "s1", Scope::Session, "whole s1")]);
+    let gone = chunk(&store, "19700115-7d");
+    assert!(store.summaries_in(&gone, Scope::Turn)?.is_empty());
+    Ok(())
+}
+
+/// A config without the project dim, so projects share files, and a
+/// summary of another project already stored under it.
+fn theirs_beside(s: &Scratch) -> Result<Config, Box<dyn StdError>> {
+    let mut cfg = s.config()?;
+    cfg.partition.by = vec![Dimension::Time];
+    let other = s.project().with_file_name("elsewhere");
+    fs::create_dir_all(&other)?;
+    let mut theirs = Store::open(&cfg, &other, Mode::Read)?;
+    theirs.append_summary(&summary(6, "s2", Scope::Turn, "theirs"))?;
+    Ok(cfg)
+}
+
+#[test]
+fn summaries_in_keeps_to_its_project_and_a_reading_open() -> Test {
+    let s = Scratch::new("sum-in-project")?;
+    let cfg = theirs_beside(&s)?;
+    let mut store = Store::open(&cfg, &s.project(), Mode::Read)?;
+    store.append_summary(&summary(5, "s1", Scope::Turn, "mine"))?;
+    let all = store.partitions(&Filter::default())?;
+    let [p] = all.as_slice() else {
+        return Err(format!("{all:?}").into());
+    };
+    assert_eq!(listed(&store.summaries_in(&p.path, Scope::Turn)?), ["mine"]);
+    let mut hook = Store::open(&cfg, &s.project(), Mode::Write)?;
+    let refused = hook.summaries_in(&p.path, Scope::Turn);
+    assert_eq!(refused, Err(Error::WriteOnly));
+    Ok(())
+}
+
+/// What `EXPLAIN QUERY PLAN` says of [`super::list_sql`] for `session`.
+fn plan(session: Option<&str>) -> Result<String, Box<dyn StdError>> {
+    let s = Scratch::new(&format!("sum-plan-{}", session.is_some()))?;
+    let mut store = s.open(Mode::Read)?;
+    store.append_summary(&summary(5, "s1", Scope::Turn, "b"))?;
+    let conn = s.sql(&chunk(&store, "19700101-7d"))?;
+    let sql = format!("EXPLAIN QUERY PLAN {}", super::list_sql(session));
+    let mut stmt = conn.prepare(&sql)?;
+    let args = rusqlite::params!["p", session, "turn"];
+    let rows = stmt.query_map(args, |r| r.get::<_, String>(3))?;
+    Ok(rows.collect::<Result<Vec<_>, _>>()?.join("; "))
+}
+
+#[test]
+fn listing_summaries_searches_an_index_with_or_without_a_session() -> Test {
+    let every = plan(None)?;
+    let index = "summaries_scope (project=? AND scope=?)";
+    assert!(every.contains(index), "{every}");
+    let one = plan(Some("s1"))?;
+    let index = "summaries_session (project=? AND session=? AND scope=?)";
+    assert!(one.contains(index), "{one}");
+    Ok(())
 }

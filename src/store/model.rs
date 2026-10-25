@@ -71,6 +71,14 @@ pub struct Summary {
     pub body: String,
 }
 
+/// 1 stored summary with its id (a ULID), which breaks a tie in time:
+/// summaries order by `(ts, id)` (src/store T19).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Listed {
+    pub id: String,
+    pub summary: Summary,
+}
+
 /// What became of a summary append (src/store V10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Written {

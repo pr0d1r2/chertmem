@@ -8,7 +8,7 @@ mod tests;
 use rusqlite::{Connection, params};
 
 use super::write::Note;
-use super::{Error, Filter, Scope, Store, Summary};
+use super::{Error, Filter, Listed, Scope, Store, Summary};
 
 const INSERT: &str = "INSERT INTO summaries
   (id, project, session, scope, ts, ide, body)
@@ -53,6 +53,12 @@ const LIST: &str = "SELECT ts, session, scope, ide, body, id FROM summaries
   WHERE project = ?1 AND (?2 IS NULL OR session = ?2) AND scope = ?3
   ORDER BY ts, id";
 
+/// The query [`list`] runs, of 1 session or of every session.
+fn list_sql(session: Option<&str>) -> &'static str {
+    let _ = session;
+    LIST
+}
+
 /// The summaries of 1 partition, with their ids for a stable order.
 fn list(
     conn: &Connection,
@@ -60,7 +66,7 @@ fn list(
     session: Option<&str>,
     scope: Scope,
 ) -> Result<Vec<(Summary, String)>, Error> {
-    let mut stmt = conn.prepare(LIST)?;
+    let mut stmt = conn.prepare(list_sql(session))?;
     let args = params![project, session, scope.as_str()];
     let rows = stmt.query_map(args, |r| Ok((summary(r, scope)?, r.get(5)?)))?;
     Ok(rows.collect::<Result<_, _>>()?)
@@ -77,6 +83,22 @@ fn summary(r: &rusqlite::Row<'_>, scope: Scope) -> rusqlite::Result<Summary> {
 }
 
 impl Store {
+    /// This project's `scope` summaries in the 1 partition at `path`, by
+    /// time then id, opening only that file; none when its file is gone
+    /// (src/store T19).
+    ///
+    /// # Errors
+    /// [`Error::WriteOnly`] on a write-only store; an unreadable file.
+    pub fn summaries_in(
+        &mut self,
+        path: &str,
+        scope: Scope,
+    ) -> Result<Vec<Listed>, Error> {
+        self.reading()?;
+        let _ = (path, scope);
+        Ok(Vec::new())
+    }
+
     /// This project's `scope` summaries, of `session` or of every
     /// session, by time across every partition the catalog names.
     ///

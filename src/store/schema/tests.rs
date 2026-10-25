@@ -114,6 +114,21 @@ fn summaries_take_turn_and_session_scopes_only() -> Test {
 }
 
 #[test]
+fn a_version_1_partition_gains_the_scope_index_and_keeps_its_rows() -> Test {
+    let path = scratch("partition-upgrade")?;
+    let first = PARTITION.first().ok_or("no step")?;
+    let conn = open(&path, BUSY, std::slice::from_ref(first))?;
+    conn.execute(ROW, ["A", "kept"])?;
+    drop(conn);
+    let conn = open(&path, BUSY, PARTITION)?;
+    assert!(names(&conn, "index")?.contains(&"summaries_scope".to_owned()));
+    let version: i64 =
+        conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    assert_eq!((version, hits(&conn, "kept")?), (2, 1));
+    Ok(())
+}
+
+#[test]
 fn an_unopenable_path_is_an_error() -> Test {
     let dir = scratch("unopenable")?;
     let missing = dir.with_file_name("no-such-dir").join("file.db");
