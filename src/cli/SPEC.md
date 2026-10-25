@@ -38,6 +38,7 @@ R2|exit map, wave 8|1 = finding: `mine` w/ findings, `get` naming a dropped ref,
 R3|as built, wave 8|fn = `cli::run(args, &mut Io) -> u8`, `Io` = stdin, stdout, stderr, cwd (project root), `home: Option<&Path>`, `now`, wired `chert` path; `cli::main` = system entry, `main.rs` a shim. `--since` = `<n>h`, `<n>d` or `<n>mo` back from now (month = 31 d, as cache) or raw ms. `export` writes whole store (`Filter::default`); `compress` uses `compression.grammar`; `config set` writes project file, `--user` user file; `cache plan` starts cache w/ silent log & reads its plan; `search --project` takes id as `partitions list` prints|`src/cli.rs`, `src/cli/`
 R4|hook latency, wave 8|`chert hook run post-tool-use < tests/hook/fixtures/claude-code/post-tool-use.json`, release, temp HOME & project, fork+exec+wait wall clock, 50 runs: median 4.51 ms, p95 4.84 ms (`/usr/bin/true` same harness: median 1.82 ms) vs root §C < 5 ms. Apple M1 Pro, macOS 26.6.2, 2026-10-25|perl `Time::HiRes` loop over fork, exec, waitpid
 R5|builder, wave 11|derive → builder: help ∀ verb, errors, completions (5 shells) & man byte-identical; only derive's implicit unrequired ArgGroups gone. `cargo tree -e normal,build -i unicode-ident` empty; dev graph keeps it via criterion → serde_derive ∴ deny.toml allows Unicode-3.0 for unicode-ident alone. test: `cargo metadata` walk, 4 deny targets|`src/cli/args/tests.rs`, `deny.toml`
+R6|statusline, wave 12|stdin ⊥ read if tty; JSON object = payload: root `workspace.project_dir` > `cwd` > cwd. ms = `mcp::pulse` ↑, `-` ⊥ live; n = itok `shorten` (ceil: `13k` ⊥ `12.3k`), hue by `plan_at` fit; size = Σ catalog `bytes` B·KB·MB·GB ↑0.1, via `Store::peek` (read-only, ⊥ replay ⊥ partition). values itok 32/33/31, label cavemem 172 / 196. auto = payload ∨ tty (itok T95). 0.43 ms in process; 5.2 ms wall on 100k-p52, `--version` 4.3|`badge.rs`, `badge/tests.rs`
 
 ## §V INVARIANTS
 
@@ -49,7 +50,7 @@ V2: exit 0 ok · 1 finding · 2 usage | unreadable input (`.:§I`); test per ver
 id|status|task|cites
 T1|x|clap definition ∀ verbs|V1
 T2|x|exit-code tests|V2
-T3|.|`chert statusline` (root §I): ms from mcp heartbeat, n & size (B·KB·MB·GB, rounded up) from catalog; ANSI per value, thresholds in `[statusline]`: ms 10/50, n by cache fit 80%, size 1/5 GB; label red ⊥ live mcp; < 5 ms|V1,V2
+T3|x|`chert statusline` (root §I, R6)|V1,V2
 
 ## §B BUGS
 
