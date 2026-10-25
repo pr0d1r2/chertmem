@@ -16,6 +16,7 @@ mod layout;
 mod line;
 mod model;
 mod partition;
+mod peek;
 mod prune;
 mod read;
 mod reference;
