@@ -19,13 +19,21 @@ allow-wildcard-paths = true
 [licenses]
 # Owner 2026-10-24 (reconcile 2): BSD-3-Clause for zstd's C library
 # (src/store T6 cold tier), Apache-2.0 for ryu, which serde_json needs
-# (hook and MCP JSON). Both permissive and MIT-compatible. Owner
-# 2026-10-25: Unicode-3.0 for unicode-ident, which every proc macro needs
-# (clap derive, src/cli; paradigm/V29), as lablith allows it.
-allow = ["MIT", "BSD-3-Clause", "Apache-2.0", "Unicode-3.0"]
+# (hook and MCP JSON). Both permissive and MIT-compatible.
+allow = ["MIT", "BSD-3-Clause", "Apache-2.0"]
 # Allowed ahead of the crates that bring them; unmatched until then.
 unused-allowed-license = "allow"
 confidence-threshold = 0.93
+
+# Owner 2026-10-25 (take MIT if possible): Unicode-3.0 for unicode-ident
+# alone, which every proc macro needs. Dev-only now (criterion ->
+# serde_derive); never in the chert binary, since src/cli builds its
+# clap definition without derive (src/cli C, args tests). The graph
+# cargo-deny checks here holds no dev dependency, so this exception is
+# unmatched (a warning) until one is checked.
+[[licenses.exceptions]]
+crate = "unicode-ident"
+allow = ["Unicode-3.0"]
 
 [sources]
 unknown-registry = "deny"

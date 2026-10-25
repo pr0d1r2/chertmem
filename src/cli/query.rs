@@ -4,49 +4,103 @@
 #[cfg(test)]
 mod tests;
 
-use clap::{Args, Subcommand};
+use clap::{Arg, ArgAction, ArgMatches, value_parser};
 
-use super::args::{Since, since};
+use super::args::{Since, flag, many, one, option, since_arg, value, verb};
 use super::{Done, Io, fail, load, open, say};
 use crate::search::{self, Engine, Query};
 use crate::store::{Lookup, Observation, Ref};
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug)]
 pub(super) enum Verb {
-    /// Ranked search across partitions, best first
     Search(Search),
-    /// A session's rows in order, around 1 ref
     Timeline {
-        /// The IDE's session id
         session: String,
-        /// Centre on this `chert:<ref>`
-        #[arg(long)]
         around: Option<String>,
     },
-    /// Observations by `chert:<ref>`; exit 1 when one is dropped
     Get {
-        #[arg(required = true)]
         refs: Vec<String>,
     },
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug)]
 pub(super) struct Search {
-    /// The query; several words are joined by spaces
-    #[arg(required = true)]
     query: Vec<String>,
-    /// Hits at most; default `search.default_limit`
-    #[arg(long)]
     limit: Option<u32>,
-    /// Only rows since `<n>h`, `<n>d`, `<n>mo` ago, or ms since epoch
-    #[arg(long, value_parser = since)]
     since: Option<Since>,
-    /// Only this project id, as `chert partitions list` prints it
-    #[arg(long)]
     project: Option<String>,
-    /// Keyword ranking only, even when embeddings are on
-    #[arg(long)]
     no_semantic: bool,
+}
+
+impl Search {
+    fn parse(m: &ArgMatches) -> Self {
+        Self {
+            query: many(m, "query"),
+            limit: one(m, "limit"),
+            since: one(m, "since"),
+            project: one(m, "project"),
+            no_semantic: m.get_flag("no_semantic"),
+        }
+    }
+}
+
+/// `search`, `timeline` and `get`.
+pub(super) fn commands() -> Vec<clap::Command> {
+    let timeline = verb("timeline", "A session's rows in order, around 1 ref")
+        .arg(
+            value("session", "SESSION", value_parser!(String))
+                .help("The IDE's session id"),
+        )
+        .arg(
+            option("around", "AROUND", value_parser!(String))
+                .help("Centre on this `chert:<ref>`"),
+        );
+    let get = verb(
+        "get",
+        "Observations by `chert:<ref>`; exit 1 when one is dropped",
+    )
+    .arg(words("refs", "REFS"));
+    vec![search_command(), timeline, get]
+}
+
+fn search_command() -> clap::Command {
+    let query = words("query", "QUERY")
+        .help("The query; several words are joined by spaces");
+    let limit = option("limit", "LIMIT", value_parser!(u32))
+        .help("Hits at most; default `search.default_limit`");
+    let project = option("project", "PROJECT", value_parser!(String))
+        .help("Only this project id, as `chert partitions list` prints it");
+    let no_semantic = flag("no_semantic", "NO_SEMANTIC", "no-semantic")
+        .help("Keyword ranking only, even when embeddings are on");
+    verb("search", "Ranked search across partitions, best first").args([
+        query,
+        limit,
+        since_arg(),
+        project,
+        no_semantic,
+    ])
+}
+
+/// `<NAME>...`: 1 or more words, required.
+fn words(id: &'static str, name: &'static str) -> Arg {
+    let arg = Arg::new(id).value_name(name).num_args(1..);
+    let arg = arg.value_parser(value_parser!(String));
+    arg.action(ArgAction::Append).required(true)
+}
+
+/// The verb `name` names, when it is 1 of this group's.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
+    match name {
+        "search" => Some(Verb::Search(Search::parse(m))),
+        "timeline" => Some(Verb::Timeline {
+            session: one(m, "session")?,
+            around: one(m, "around"),
+        }),
+        "get" => Some(Verb::Get {
+            refs: many(m, "refs"),
+        }),
+        _ => None,
+    }
 }
 
 pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
