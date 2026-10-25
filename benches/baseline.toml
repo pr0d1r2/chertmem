@@ -1,0 +1,761 @@
+# The latency baseline (benches C, T4): 1 row per suite and fixture.
+# Written by `cargo run -q -p chertmem-dev -- bench-record` from a
+# criterion run; updated only by its own reviewed commit. A tolerance is
+# kept across records, so it is tuned here by hand.
+
+[[row]]
+suite = "session_start"
+fixture = "1k-p52"
+target = "hook write"
+median_ms = 2.701
+p95_ms = 2.842
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/1k-p52$'"
+
+[[row]]
+suite = "session_start"
+fixture = "10k-p52"
+target = "hook write"
+median_ms = 2.388
+p95_ms = 2.441
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/10k-p52$'"
+
+[[row]]
+suite = "session_start"
+fixture = "100k-p1"
+target = "hook write"
+median_ms = 3.826
+p95_ms = 3.972
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/100k-p1$'"
+
+[[row]]
+suite = "session_start"
+fixture = "100k-p4"
+target = "hook write"
+median_ms = 2.762
+p95_ms = 2.800
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/100k-p4$'"
+
+[[row]]
+suite = "session_start"
+fixture = "100k-p52"
+target = "hook write"
+median_ms = 2.449
+p95_ms = 2.483
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/100k-p52$'"
+
+[[row]]
+suite = "session_start"
+fixture = "100k-p520"
+target = "hook write"
+median_ms = 2.729
+p95_ms = 2.875
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/100k-p520$'"
+
+[[row]]
+suite = "session_start"
+fixture = "1M-p52"
+target = "hook write"
+median_ms = 2.796
+p95_ms = 3.034
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^session_start/1M-p52$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "1k-p52"
+target = "hook write"
+median_ms = 2.701
+p95_ms = 2.857
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/1k-p52$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "10k-p52"
+target = "hook write"
+median_ms = 2.321
+p95_ms = 2.427
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/10k-p52$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "100k-p1"
+target = "hook write"
+median_ms = 3.746
+p95_ms = 3.814
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/100k-p1$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "100k-p4"
+target = "hook write"
+median_ms = 2.752
+p95_ms = 2.802
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/100k-p4$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "100k-p52"
+target = "hook write"
+median_ms = 2.436
+p95_ms = 2.541
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/100k-p52$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "100k-p520"
+target = "hook write"
+median_ms = 2.751
+p95_ms = 2.827
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/100k-p520$'"
+
+[[row]]
+suite = "prompt_inject"
+fixture = "1M-p52"
+target = "hook write"
+median_ms = 2.732
+p95_ms = 2.786
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^prompt_inject/1M-p52$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "1k-p52"
+target = "get_observations"
+median_ms = 0.08078
+p95_ms = 0.08199
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/1k-p52$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "10k-p52"
+target = "get_observations"
+median_ms = 0.08162
+p95_ms = 0.08275
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/10k-p52$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "100k-p1"
+target = "get_observations"
+median_ms = 0.08319
+p95_ms = 0.08389
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/100k-p1$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "100k-p4"
+target = "get_observations"
+median_ms = 0.08302
+p95_ms = 0.08413
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/100k-p4$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "100k-p52"
+target = "get_observations"
+median_ms = 0.08262
+p95_ms = 0.08322
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/100k-p52$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "100k-p520"
+target = "get_observations"
+median_ms = 0.08267
+p95_ms = 0.08488
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/100k-p520$'"
+
+[[row]]
+suite = "get_observations"
+fixture = "1M-p52"
+target = "get_observations"
+median_ms = 0.08340
+p95_ms = 0.08421
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^get_observations/1M-p52$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "1k-p52"
+target = "recent-window search"
+median_ms = 0.6277
+p95_ms = 0.6329
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/1k-p52$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "10k-p52"
+target = "recent-window search"
+median_ms = 0.6216
+p95_ms = 0.6290
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/10k-p52$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "100k-p1"
+target = "recent-window search"
+median_ms = 1.515
+p95_ms = 1.549
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/100k-p1$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "100k-p4"
+target = "recent-window search"
+median_ms = 1.546
+p95_ms = 1.597
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/100k-p4$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "100k-p52"
+target = "recent-window search"
+median_ms = 0.6782
+p95_ms = 0.6853
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/100k-p52$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "100k-p520"
+target = "recent-window search"
+median_ms = 7.429
+p95_ms = 9.011
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/100k-p520$'"
+
+[[row]]
+suite = "recent_warm"
+fixture = "1M-p52"
+target = "recent-window search"
+median_ms = 1.842
+p95_ms = 2.071
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_warm/1M-p52$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "1k-p52"
+target = "recent-window search"
+median_ms = 1.421
+p95_ms = 1.465
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/1k-p52$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "10k-p52"
+target = "recent-window search"
+median_ms = 1.506
+p95_ms = 1.578
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/10k-p52$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "100k-p1"
+target = "recent-window search"
+median_ms = 16.03
+p95_ms = 16.24
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p1$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "100k-p4"
+target = "recent-window search"
+median_ms = 7.439
+p95_ms = 7.533
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p4$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "100k-p52"
+target = "recent-window search"
+median_ms = 2.052
+p95_ms = 2.092
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p52$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "100k-p520"
+target = "recent-window search"
+median_ms = 8.922
+p95_ms = 9.407
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p520$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "1M-p52"
+target = "recent-window search"
+median_ms = 6.639
+p95_ms = 6.762
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/1M-p52$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "1k-p52"
+median_ms = 9.354
+p95_ms = 9.753
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/1k-p52$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "10k-p52"
+median_ms = 11.76
+p95_ms = 12.92
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/10k-p52$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "100k-p1"
+median_ms = 16.04
+p95_ms = 17.54
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/100k-p1$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "100k-p4"
+median_ms = 7.324
+p95_ms = 7.388
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/100k-p4$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "100k-p52"
+median_ms = 15.50
+p95_ms = 15.67
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/100k-p52$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "100k-p520"
+median_ms = 122.6
+p95_ms = 124.9
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/100k-p520$'"
+
+[[row]]
+suite = "cross_partition"
+fixture = "1M-p52"
+median_ms = 47.97
+p95_ms = 51.04
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cross_partition/1M-p52$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "1k-p52"
+target = "semantic re-rank"
+median_ms = 1.052
+p95_ms = 1.080
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/1k-p52$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "10k-p52"
+target = "semantic re-rank"
+median_ms = 2.244
+p95_ms = 2.292
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/10k-p52$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "100k-p1"
+target = "semantic re-rank"
+median_ms = 3.264
+p95_ms = 3.332
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/100k-p1$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "100k-p4"
+target = "semantic re-rank"
+median_ms = 3.321
+p95_ms = 3.367
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/100k-p4$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "100k-p52"
+target = "semantic re-rank"
+median_ms = 2.327
+p95_ms = 2.405
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/100k-p52$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "100k-p520"
+target = "semantic re-rank"
+median_ms = 9.730
+p95_ms = 9.990
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/100k-p520$'"
+
+[[row]]
+suite = "semantic_rerank"
+fixture = "1M-p52"
+target = "semantic re-rank"
+median_ms = 3.608
+p95_ms = 3.692
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^semantic_rerank/1M-p52$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "1k-p52"
+median_ms = 3.089
+p95_ms = 3.239
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/1k-p52$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "10k-p52"
+median_ms = 5.967
+p95_ms = 6.081
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/10k-p52$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "100k-p1"
+median_ms = 332.5
+p95_ms = 339.1
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/100k-p1$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "100k-p4"
+median_ms = 333.3
+p95_ms = 342.6
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/100k-p4$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "100k-p52"
+median_ms = 29.98
+p95_ms = 30.74
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/100k-p52$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "100k-p520"
+median_ms = 5.979
+p95_ms = 6.097
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/100k-p520$'"
+
+[[row]]
+suite = "cache_warmup"
+fixture = "1M-p52"
+median_ms = 257.2
+p95_ms = 264.1
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^cache_warmup/1M-p52$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "1k-p52"
+median_ms = 0.03848
+p95_ms = 0.03881
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/1k-p52$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "10k-p52"
+median_ms = 0.1773
+p95_ms = 0.1817
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/10k-p52$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "100k-p1"
+median_ms = 95.09
+p95_ms = 99.86
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/100k-p1$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "100k-p4"
+median_ms = 23.53
+p95_ms = 24.01
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/100k-p4$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "100k-p52"
+median_ms = 1.571
+p95_ms = 1.616
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/100k-p52$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "100k-p520"
+median_ms = 0.1900
+p95_ms = 0.1948
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/100k-p520$'"
+
+[[row]]
+suite = "partition_scan"
+fixture = "1M-p52"
+median_ms = 17.73
+p95_ms = 18.20
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^partition_scan/1M-p52$'"
+
+[[row]]
+suite = "compress"
+fixture = "1k-p1"
+median_ms = 34.51
+p95_ms = 34.61
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^compress/1k-p1$'"
+
+[[row]]
+suite = "expand"
+fixture = "1k-p1"
+median_ms = 10.92
+p95_ms = 11.07
+tolerance = 0.5
+machine = "Apple M1 Pro"
+os = "macOS 26.6.2"
+date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^expand/1k-p1$'"
