@@ -38,6 +38,11 @@ actlith-check|gate|-|.actlith, .github/workflows/**|actlith check|-|-|a workflow
 # Cargo.lock ships, never a hand edit. cargo tree and metadata run
 # offline, so hk.pkl orders it after clippy, whose build fills the
 # registry; a failed cargo call is reported, not read as no crates.
+# dev T11: the crates.io tarball holds no SPEC.md and no .githooks/,
+# holds every file building and licensing need, and every relative
+# README link points at a file in it. `cargo package --list` builds
+# nothing, so it runs at commit.
+package-list|gate|-|Cargo.toml, README.md|cargo run -q -p chertmem-dev -- package-list|-|-|cargo package -p chertmem --list ships a spec or hook, lacks a required file, or the README links to a file left out
 notices|gate|-|Cargo.lock, Cargo.toml, THIRD-PARTY-NOTICES.md|cargo run -q -p chertmem-dev -- notices --check|cargo run -q -p chertmem-dev -- notices|-|THIRD-PARTY-NOTICES.md does not list the crates Cargo.lock ships; run cargo run -q -p chertmem-dev -- notices
 
 # Offline, as in lablith: advisories need a fetched database, so they wait
@@ -89,6 +94,7 @@ path:benches/baseline.toml|taplo, bench-gate, perf-doc|-|-
 path:docs/PERFORMANCE.md|markdownlint, perf-doc|-|-
 path:Cargo.lock|deny, notices|-|-
 path:THIRD-PARTY-NOTICES.md|markdownlint, notices|-|-
+path:README.md|markdownlint, package-list|-|-
 exempt|tdd-order|-|-
 coverage|coverage|-|-
 path:LICENSE|-|-|MIT license text, kept verbatim; the `*` checks still apply
