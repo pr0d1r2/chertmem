@@ -321,11 +321,11 @@ fn cut_keeps_whole_lines_until_one_does_not_fit() {
     assert_eq!(cut(&[], u32::MAX), None);
 }
 
-/// The default count is the structured estimate (T12, B1): the header
-/// is its 12 o200k tokens, where bytes / 4 counted 11.
+/// The default count is the memory tokenizer (T14, B1): the header is
+/// its 12 o200k tokens, where bytes / 4 counted 11.
 #[cfg(not(feature = "bpe"))]
 #[test]
-fn the_default_count_is_the_structured_estimate() {
+fn the_default_count_is_the_memory_tokenizer() {
     for text in ["", "chert", "chertmem!", HEADER, "- chert:01MH94JKC0 a"] {
         assert_eq!(tokens_at_most(text), super::estimate::tokens(text));
     }

@@ -8,6 +8,8 @@
 mod tests;
 
 pub(super) mod piece;
+#[cfg(test)]
+pub(super) mod vocab;
 
 use piece::Piece;
 
