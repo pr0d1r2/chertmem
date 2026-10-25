@@ -15,15 +15,32 @@ fn payload(body: &str) -> Payload {
         body: body.to_owned(),
         paths: Vec::new(),
         source: None,
+        cwd: None,
     }
 }
+
+/// The `cwd` every recorded fixture reports (src/hook R1).
+const CWD: &str = "/workspace/project";
 
 /// `body` as the first recorded session's payload.
 fn recorded(body: &str) -> Payload {
     Payload {
         session: SESSION.to_owned(),
+        cwd: Some(CWD.to_owned()),
         ..payload(body)
     }
+}
+
+/// Every event reports its `cwd`; a payload without one has none (T10).
+#[test]
+fn every_event_keeps_its_cwd() -> Test {
+    for kind in Kind::ALL {
+        assert_eq!(parsed(kind)?.cwd.as_deref(), Some(CWD), "{kind:?}");
+    }
+    let bare = br#"{"session_id":"abc123","cwd":7}"#;
+    let got = parse(Kind::SessionStart, bare).map(|p| p.cwd);
+    assert_eq!(got, Some(None));
+    Ok(())
 }
 
 #[test]
@@ -72,7 +89,7 @@ fn post_tool_use_failure_keeps_tool_input_error_and_id() -> Test {
     let want = Payload {
         session: SESSION_FAILURE.to_owned(),
         identity: Some("toolu_01FIXTURE000000000000003".to_owned()),
-        ..payload(&format!("Bash\n{input}\nExit code 1"))
+        ..recorded(&format!("Bash\n{input}\nExit code 1"))
     };
     assert_eq!(parsed(Kind::PostToolUseFailure)?, want);
     Ok(())

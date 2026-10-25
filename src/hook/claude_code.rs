@@ -32,6 +32,7 @@ pub(super) fn parse(kind: Kind, raw: &[u8]) -> Option<Payload> {
         body: body(kind, obj),
         paths: paths(kind, obj),
         source: text(obj, "source").map(str::to_owned),
+        cwd: None,
     })
 }
 

@@ -13,6 +13,7 @@ pub(crate) mod inject;
 mod kind;
 mod raw;
 pub(crate) mod redact;
+mod session;
 mod summary;
 
 use std::path::Path;
@@ -58,6 +59,8 @@ struct Payload {
     paths: Vec<String>,
     /// `session-start` only: why the session started.
     source: Option<String>,
+    /// The working dir the IDE reports, kept on the session's row.
+    cwd: Option<String>,
 }
 
 impl Outcome {
@@ -112,7 +115,9 @@ fn handle(
         Ok(store) => store,
         Err(e) => return kept(stdin, ctx, &e.to_string()),
     };
-    match follow(&mut store, kind, &event, budget) {
+    let cwd = payload.cwd.as_deref();
+    let done = session::record(&mut store, kind, &event, cwd);
+    match done.and_then(|()| follow(&mut store, kind, &event, budget)) {
         Ok(stdout) => Outcome::done(stdout),
         Err(e) => Outcome::noted(e.to_string()),
     }
