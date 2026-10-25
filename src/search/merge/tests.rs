@@ -1,17 +1,29 @@
 use std::error::Error as StdError;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
-use super::{Job, parallel, split, workers};
+use super::{Job, candidates, parallel, split, workers};
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::search::rank::{Rater, top};
 use crate::search::terms::{Stats, Terms};
-use crate::search::tests::{BASE, DAY, Scratch, Test, engine, event, fresh};
-use crate::search::{Hit, Query};
+use crate::search::tests::{
+    BASE, DAY, Scratch, Test, engine, event, fresh, query,
+};
+use crate::search::{Engine, Hit, Query};
 use crate::store::{Filter, Mode, Store, project_id};
 
 fn paths(n: usize) -> Vec<String> {
     (0..n).map(|i| format!("p{i}")).collect()
+}
+
+/// Stats before any row is counted, for 1 term.
+fn empty() -> Stats {
+    Stats {
+        docs: 0,
+        tokens: 0,
+        df: vec![0],
+    }
 }
 
 fn rater(stats: Stats, keep: usize) -> Rater {
@@ -93,12 +105,8 @@ fn a_worker_that_cannot_open_its_store_fails_the_query() -> Test {
     let s = Scratch::new("merge-fail")?;
     let mut cfg = s.config()?;
     cfg.storage.data_dir = None;
-    let empty = Stats {
-        docs: 0,
-        tokens: 0,
-        df: vec![0],
-    };
-    let (filter, root, rater) = (Filter::default(), s.root(), rater(empty, 1));
+    let (filter, root, rater) =
+        (Filter::default(), s.root(), rater(empty(), 1));
     let found = parallel(&job(&cfg, &root, &filter, &rater), &paths(2));
     assert!(found.is_err());
     Ok(())
@@ -256,5 +264,73 @@ fn merged_ranking_equals_1_unpartitioned_table_of_the_same_rows() -> Test {
         found = found.saturating_add(agree(rng, &split, &one)?);
     }
     assert!(found > 50, "only {found} hits");
+    Ok(())
+}
+
+#[test]
+fn a_partition_gives_only_the_rows_its_index_matches() -> Test {
+    let (s, cfg, mut store) = fresh("merge-fts")?;
+    for (ts, body) in [(BASE, "cargo build"), (BASE + 1, "git push")] {
+        store.append(&event(ts, "s", body))?;
+    }
+    store.append(&event(BASE + 2, "s", "Cargo, test"))?;
+    let parts = store.partitions(&Filter::default())?;
+    let path = parts.first().map(|p| p.path.clone()).ok_or("none")?;
+    let (filter, root, rater) =
+        (Filter::default(), s.root(), rater(empty(), 9));
+    let job = job(&cfg, &root, &filter, &rater);
+    let got = candidates(&mut store, &path, &job)?;
+    let bodies: Vec<&str> = got.iter().map(|o| o.body.as_str()).collect();
+    assert_eq!(bodies, ["cargo build", "Cargo, test"]);
+    Ok(())
+}
+
+// The T6 benchmark (src/search T6, root C: search < 10 ms): 10^5 rows
+// over about 10 weekly partitions, 10 words each from 1000, a 2-term
+// query, the median of warm runs from disk. Ignored by default; run it
+// with `cargo nextest run --release --run-ignored only -E
+// 'test(bench)' --no-capture`.
+
+const ROWS: u64 = 100_000;
+/// 1 row a minute: 10^5 minutes are about 10 weeks.
+const MINUTE: u64 = 60_000;
+const WORDS: u64 = 1000;
+const RUNS: usize = 21;
+const MEDIAN: usize = 10;
+const TARGET: Duration = Duration::from_millis(10);
+
+fn body(rng: &mut Rng) -> String {
+    let words: Vec<String> =
+        (0..10).map(|_| format!("w{}", rng.below(WORDS))).collect();
+    words.join(" ")
+}
+
+/// The median of [`RUNS`] runs of `q`.
+fn median(e: &mut Engine, q: &Query) -> Result<Duration, Box<dyn StdError>> {
+    let mut took = Vec::with_capacity(RUNS);
+    for _ in 0..RUNS {
+        let start = Instant::now();
+        e.run(q, None)?;
+        took.push(start.elapsed());
+    }
+    took.sort_unstable();
+    Ok(took.get(MEDIAN).copied().unwrap_or(Duration::MAX))
+}
+
+#[test]
+#[ignore = "benchmark: appends 10^5 rows; run it in release"]
+fn bench_a_2_term_query_over_10_5_rows_takes_under_10_ms() -> Test {
+    let (s, cfg, mut store) = fresh("bench-t6")?;
+    let rng = &mut Rng(6);
+    for i in 0..ROWS {
+        let ts = BASE.saturating_add(i.saturating_mul(MINUTE));
+        store.append(&event(ts, "s", &body(rng)))?;
+    }
+    let mut e = engine(&s, &cfg)?;
+    let q = query("w1 w2");
+    let found = e.run(&q, None)?.len();
+    let median = median(&mut e, &q)?;
+    eprintln!("src/search T6: {ROWS} rows, 2 terms, median {median:?}");
+    assert!(found > 0 && median < TARGET, "{found} hits, {median:?}");
     Ok(())
 }

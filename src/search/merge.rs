@@ -14,7 +14,7 @@ use std::thread;
 use super::Error;
 use super::rank::{self, Rater, Scored};
 use crate::config::Config;
-use crate::store::{Filter, Mode, Store};
+use crate::store::{Filter, Mode, Observation, Store};
 
 /// What every worker needs: how to open its store, the store's filter,
 /// and the query's rater.
@@ -50,11 +50,19 @@ fn group(job: &Job<'_>, paths: &[String]) -> Result<Vec<Scored>, Error> {
     let mut store = Store::open(job.cfg, job.root, Mode::Read)?;
     let mut best = Vec::new();
     for path in paths {
-        let rows = store.tail(path, 0, job.filter)?;
-        let rows = rows.into_iter().map(|t| t.observation).collect();
-        best.extend(job.rater.best(rows));
+        best.extend(job.rater.best(candidates(&mut store, path, job)?));
     }
     Ok(best)
+}
+
+/// The rows of the partition at `path` that `job` may score.
+fn candidates(
+    store: &mut Store,
+    path: &str,
+    job: &Job<'_>,
+) -> Result<Vec<Observation>, Error> {
+    let rows = store.tail(path, 0, job.filter)?;
+    Ok(rows.into_iter().map(|t| t.observation).collect())
 }
 
 /// 1 thread per partition, at most 1 per core.
