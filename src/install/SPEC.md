@@ -34,7 +34,7 @@ sib|src/mine|behaviour findings & awareness report
 
 id|topic|finding|src
 R1|bytes, wave 7|⊥ `preserve_order` (`src/hook` V3 needs sorted keys) ∴ write = sorted, 2-space. 1st write → `<file>.chert.bak`; uninstall: rest ≡ backup JSON → backup bytes back; no backup & rest `{}` → file removed; else rest written, backup kept|`install.rs`
-R2|wiring, wave 7|as cavemem: 1 group/event `<chert> hook run <event> --ide claude-code`, `mcpServers.chert = {command, args: [mcp]}`; appended ⊥ replacing. doctor: rebuild & diff catalog; files left in `spool/`, `sealed/`, `unreadable/` = stale|cavemem `dist/index.js` installers; `doctor.rs`
+R2|wiring, wave 7|as cavemem: 1 group/event `<chert> hook run <event> --ide claude-code`, hooks appended ⊥ replacing; MCP in `~/.claude.json` as `claude mcp add --scope user` writes it: `{type: stdio, command, args: [mcp], env: {}}` (T3, B1); file mode kept. doctor: rebuild & diff catalog; files left in `spool/`, `sealed/`, `unreadable/` = stale|cavemem `dist/index.js` installers; `doctor.rs`
 
 ## §V INVARIANTS
 
