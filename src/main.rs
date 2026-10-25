@@ -1,3 +1,6 @@
-//! `chert`, the chertmem binary. A stub until `src/cli` lands (`src` T1).
+//! `chert`, the chertmem binary: a shim over the library's `cli::main`
+//! (src/cli G).
 
-fn main() {}
+fn main() -> std::process::ExitCode {
+    chertmem::cli::main()
+}
