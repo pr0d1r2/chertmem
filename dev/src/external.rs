@@ -1,4 +1,4 @@
-//! External commands that fail loudly (dev T10, rekall#47): a command
+//! External commands that fail loudly (dev T11, rekall#47): a command
 //! that does not start, exits non-zero or prints non-UTF-8 is an error
 //! carrying the command line and its stderr, never empty output.
 

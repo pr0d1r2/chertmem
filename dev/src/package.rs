@@ -1,4 +1,4 @@
-//! `package-list` (dev T11): what `cargo package -p chertmem --list`
+//! `package-list` (dev T12): what `cargo package -p chertmem --list`
 //! puts in the crates.io tarball. No `SPEC.md` and nothing under
 //! `.githooks/` ships, every file building and licensing need does, and
 //! every relative link in `README.md` points at a file that ships, so

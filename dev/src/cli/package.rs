@@ -1,4 +1,4 @@
-//! `package-list` (dev T11): `cargo package --list` against the rules
+//! `package-list` (dev T12): `cargo package --list` against the rules
 //! of `package::findings`; a failed cargo call is reported with its
 //! stderr (rekall#47).
 

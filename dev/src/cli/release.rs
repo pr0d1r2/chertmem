@@ -1,4 +1,4 @@
-//! The release verbs: `notices [--check]` (dev T10). Every cargo call
+//! The release verbs: `notices [--check]` (dev T11). Every cargo call
 //! goes through `external::stdout`, so a failed one is reported with its
 //! stderr, never read as an empty crate list (rekall#47).
 

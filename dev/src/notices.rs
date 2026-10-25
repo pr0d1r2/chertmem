@@ -1,4 +1,4 @@
-//! `notices` (dev T10): the Rust crates part of
+//! `notices` (dev T11): the Rust crates part of
 //! `THIRD-PARTY-NOTICES.md`, rendered from `cargo tree` and `cargo
 //! metadata` and the license files each crate's source ships; the same
 //! bytes for the same inputs.
