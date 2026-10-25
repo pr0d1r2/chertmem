@@ -32,7 +32,7 @@ pub(super) const ROW_OVERHEAD: u64 = 640;
 pub(super) const INDEX_ROW: u64 = 512;
 
 /// What 1 row costs beyond its body, its index share included.
-const ROW_COST: u64 = ROW_OVERHEAD;
+const ROW_COST: u64 = ROW_OVERHEAD.saturating_add(INDEX_ROW);
 
 /// What `cache plan` prints (src/cache I): the window's estimate, the
 /// limit, and how many of its newest days are kept in memory.
@@ -181,7 +181,7 @@ pub(super) fn fit(parts: &[Partition], cfg: &config::Cache, now: u64) -> Fit {
     };
     let plan = Plan {
         estimate,
-        index: total(parts, postings, start, now).saturating_sub(u64::MAX),
+        index: total(parts, postings, start, now),
         limit: cfg.max_bytes,
         days_kept,
     };

@@ -196,6 +196,7 @@ impl Inner {
     /// Drop the window and empty the index; a load under way stops.
     fn restart(&mut self, state: State) {
         self.epoch = self.epoch.wrapping_add(1);
+        self.index.reset();
         self.state = state;
     }
 
@@ -203,7 +204,13 @@ impl Inner {
     /// counted, is over the limit (V4): reported, and under `fail` the
     /// cache is off.
     fn keep(&mut self, load: Load, env: &Env) {
-        let _ = (env, load.fit.live(0, &self.cfg));
+        if let Some(plan) = load.fit.live(self.index.bytes(), &self.cfg) {
+            self.report(&plan, env);
+            if plan.days_kept == 0 {
+                self.restart(State::Off);
+                return;
+            }
+        }
         self.state = State::Warm(load.window);
     }
 
@@ -270,8 +277,8 @@ impl Handle {
         q: &Filter,
         f: impl FnOnce(Rows<'_>, &dyn Index) -> R,
     ) -> Result<Option<R>, Error> {
-        let _ = (self.fresh()?, q, f);
-        Ok(None)
+        let inner = self.fresh()?;
+        Ok(inner.view(q).map(|rows| f(rows, &*inner.index)))
     }
 
     /// Whether the window is loaded and answering.

@@ -120,7 +120,7 @@ impl Window {
             part.seq = part.seq.max(t.seq);
             let o = t.observation;
             let key = (o.ts, o.id.clone());
-            let _ = &index;
+            index.insert(&key, &o, self.rows.get(&key));
             self.rows.insert(key, o);
         }
         Ok(())
