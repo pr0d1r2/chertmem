@@ -19,10 +19,11 @@ use super::{Wire, WireState};
 
 /// Each hook chert registers: the event as `chert hook run` names it,
 /// and Claude Code's name for it.
-const EVENTS: [(&str, &str); 5] = [
+const EVENTS: [(&str, &str); 6] = [
     ("session-start", "SessionStart"),
     ("user-prompt-submit", "UserPromptSubmit"),
     ("post-tool-use", "PostToolUse"),
+    ("post-tool-use-failure", "PostToolUseFailure"),
     ("stop", "Stop"),
     ("session-end", "SessionEnd"),
 ];
@@ -69,7 +70,7 @@ pub(super) fn owned(command: &str, event: &str) -> bool {
 /// The MCP server entry, as `claude mcp add --scope user chert --
 /// <chert> mcp` writes it (src/install T3).
 pub(super) fn server(chert: &str) -> Value {
-    json!({"command": chert, "args": ["mcp"]})
+    json!({"type": "stdio", "command": chert, "args": ["mcp"], "env": {}})
 }
 
 /// The object `value` holds, else the key it sits under as the error.
@@ -127,8 +128,7 @@ pub(super) fn wire(root: &mut Value, chert: &str) -> Result<(), String> {
 /// The key whose value is of the wrong JSON type.
 pub(super) fn serve(root: &mut Value, chert: &str) -> Result<(), String> {
     let top = object(root, MCP_FILE)?;
-    object_at(top, "mcpServers")?;
-    let _ = chert;
+    object_at(top, "mcpServers")?.insert(SERVER.to_owned(), server(chert));
     Ok(())
 }
 
