@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 
 use serde_json::Value;
 
-use super::{Engine, Hit, Query, token};
+use super::{Asked, Engine, Hit, Query, Warn, token};
 use crate::config::{Config, Grammar, load_from};
 use crate::grammar::{Intensity, compress};
 use crate::hook::{self, Ctx, Ide, Kind};
@@ -312,9 +312,20 @@ fn found_at(
     grammar: Grammar,
     text: &str,
 ) -> Result<Vec<String>, Box<dyn StdError>> {
+    found_in(name, grammar, PROMPT, text)
+}
+
+/// The snippets `text` finds at `grammar`, after the hook stored
+/// `prompt`.
+fn found_in(
+    name: &str,
+    grammar: Grammar,
+    prompt: &str,
+    text: &str,
+) -> Result<Vec<String>, Box<dyn StdError>> {
     let (s, mut cfg, _) = fresh(name)?;
     cfg.compression.grammar = grammar;
-    prompted(&s, &cfg, PROMPT)?;
+    prompted(&s, &cfg, prompt)?;
     let hits = engine(&s, &cfg)?.run(&query(text), None)?;
     Ok(hits.into_iter().map(|h| h.snippet).collect())
 }
@@ -385,4 +396,72 @@ fn kept_spans_and_dropped_phrases_differ_from_a_lone_word() {
     assert_eq!(full("the kind of x"), ["x"]);
     assert_eq!(full("think"), ["think"]);
     assert!(full("i think that").is_empty());
+}
+
+#[test]
+fn a_plain_word_finds_its_long_form_kept_in_a_path_or_code() -> Test {
+    for (name, prompt) in [
+        ("t7-path", "see src/middleware.rs now"),
+        ("t7-code", "see `middleware` now"),
+        ("t7-compound", "a middleware-based y"),
+    ] {
+        let stored = compress(prompt, Intensity::Full);
+        assert!(stored.contains("middleware"), "{stored}");
+        let got = found_in(name, Grammar::Full, prompt, "middleware")?;
+        assert_eq!(got, [stored]);
+    }
+    Ok(())
+}
+
+#[test]
+fn the_plain_and_the_compressed_form_each_score_once() -> Test {
+    let (s, mut cfg, mut store) = fresh("t7-both")?;
+    cfg.compression.grammar = Grammar::Full;
+    store.append(&event(BASE, "s", "mw middleware"))?;
+    store.append(&event(BASE + DAY, "s", "mw"))?;
+    store.append(&event(BASE + 2 * DAY, "s", "middleware"))?;
+    let hits = engine(&s, &cfg)?.run(&query("middleware Middleware"), None)?;
+    let ts: Vec<u64> = hits.iter().map(|h| h.ts).collect();
+    assert_eq!(ts, [BASE, BASE + 2 * DAY, BASE + DAY]);
+    let at = |i: usize| hits.get(i).map_or(0.0, |h| h.score);
+    assert!(at(0) > at(1), "both forms outscore 1");
+    assert!((at(1) - at(2)).abs() < 1e-12, "1 form, same df");
+    Ok(())
+}
+
+#[test]
+fn a_term_alike_in_both_forms_scores_as_at_grammar_off() -> Test {
+    let (s, mut cfg, mut store) = fresh("t7-alike")?;
+    store.append(&event(BASE, "s", "cargo build"))?;
+    store.append(&event(BASE, "s", "rust run"))?;
+    let mut scores = Vec::new();
+    for grammar in [Grammar::Off, Grammar::Full] {
+        cfg.compression.grammar = grammar;
+        let hits = engine(&s, &cfg)?.run(&query("cargo"), None)?;
+        scores.push(hits.iter().map(|h| h.score).collect::<Vec<_>>());
+    }
+    assert_eq!(scores.first(), scores.get(1));
+    assert_eq!(scores.first().map(Vec::len), Some(1));
+    Ok(())
+}
+
+#[test]
+fn the_default_warning_goes_to_stderr_once() {
+    let mut warn = Warn::stderr();
+    warn.once("chert: a test warning on stderr (ignore it)");
+    assert!(warn.said);
+    warn.once("chert: never shown (ignore it)");
+    assert!(format!("{warn:?}").contains("said: true"));
+}
+
+#[test]
+fn asked_holds_both_forms_and_embeds_the_raw_text_only_when_dropped() {
+    let text = "fix the middleware now";
+    let mw = Asked::new(text, Grammar::Full);
+    assert_eq!(mw.text, compress(text, Intensity::Full));
+    assert_eq!(mw.terms, ["fix", "middleware", "mw", "now"]);
+    let dropped = Asked::new("i think that", Grammar::Full);
+    assert_eq!(dropped.text, "i think that");
+    assert_eq!(dropped.terms, ["i", "that", "think"]);
+    assert!(Asked::new("the a", Grammar::Full).terms.is_empty());
 }

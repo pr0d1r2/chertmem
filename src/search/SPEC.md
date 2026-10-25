@@ -36,8 +36,10 @@ sib|src/mine|behaviour findings & awareness report
 
 id|topic|finding|src
 R1|term stats, wave 4|store exposes ⊥ FTS5 or `fts5vocab` ∴ stats in search-owned `<data_dir>/search/terms.db`, ⊥ `catalog.db`: per partition last seq counted, tail past it; new `generation` or counted partition gone → recount; generation re-read after pass, moved → rollback & retry. 1 tokenizer (alphanumeric runs, lowercased) ∀ count & score. relies on `src/store` T12 (generation ⊥ repeats)|`terms.rs`, `token.rs`
-R2|ranking, wave 4|BM25 k1 1.2 b 0.75, idf `ln(1+(N-df+.5)/(df+.5))`; ties ts desc, id desc. semantic: top 4×limit embedded, `(1-α)·bm25/max + α·cos`. ollama `POST /api/embed`, model `nomic-embed-text` (⊥ `chert.toml` key yet), std TCP, ⊥ TLS; openai → error in v1. real-ollama test skipped unless `CHERT_TEST_OLLAMA=1`|`rank.rs`, `blend.rs`, `ollama.rs`
-R3|query grammar, wave 6|`Engine::rater` compresses `q.text` at `compression.grammar.intensity()` before `token::terms` ∴ stats & score see stored form; snippet cuts stored body; embed gets raw text. lone word compresses ≡ inside prose, but kept spans keep long form (`middleware_x`, inline code, `src/middleware.rs`, `middleware-based`) & dropped phrases remove words (`kind` in `kind of`, `think` in `i think that`) ∴ such rows miss the lone word; pinned, ⊥ fixed|`search.rs`, `tests.rs`
+R2|ranking, wave 4|BM25 k1 1.2 b 0.75, idf `ln(1+(N-df+.5)/(df+.5))`; ties ts desc, id desc. semantic: top 4×limit embedded, `(1-α)·bm25/max + α·cos`. ollama `POST /api/embed`, model `nomic-embed-text` (⊥ `chert.toml` key yet), std TCP, ⊥ TLS; openai → keyword + 1 warning (R5). real-ollama test skipped unless `CHERT_TEST_OLLAMA=1`|`rank.rs`, `blend.rs`, `ollama.rs`
+R3|query grammar, wave 6|query `q.text` compressed at `compression.grammar.intensity()` before `token::terms` ∴ stats & score see stored form; snippet cuts stored body. lone word compresses ≡ inside prose, but kept spans keep long form (`middleware_x`, inline code, `src/middleware.rs`, `middleware-based`) & dropped phrases remove words (`kind` in `kind of`, `think` in `i think that`) ∴ such rows miss the lone word; kept spans fixed by R4|`search.rs`, `tests.rs`
+R4|both forms, wave 7|`Asked`: terms = compressed query's ∪ plain token whose lone compression keeps ≥1 token, sorted, deduped ∴ alike form counts once, a row w/ `mw` & `middleware` scores each once; `the`, `a` stay out, lone `i`, `that` stay in. re-rank embeds compressed query (≡ form of stored bodies), raw text when it holds ⊥ term|`search.rs`, `tests.rs`
+R5|no v1 client, wave 7|openai & `semantic` → `None` embedder, `Unsupported` text logged once per `Engine` via private `Warn` (`cache::Log`, stderr default); ⊥ public API change|`search.rs`, `blend/tests.rs`
 
 ## §V INVARIANTS
 
@@ -56,8 +58,8 @@ T3|x|scoring fn shared w/ cache|V1
 T4|x|ollama provider, alpha blend|V3
 T5|x|compress query terms w/ `compression.grammar` before tokenizing; test plain word finds compressed body|V5
 T6|.|candidate rows via store FTS5 MATCH per partition (needs store API), ⊥ full scan per query ∴ `.:§C` search < 10 ms holds at 10^5 rows; benchmark it|V2
-T7|.|query both the plain & the compressed form of each term ∴ a word kept long inside an identifier, inline code, path or compound (`src/middleware.rs`) is found again (R3); semantic re-rank embeds the same text it scores|V5
-T8|.|`embedding.provider` w/o a v1 client (openai) → keyword ranking w/ 1 log warning, ⊥ every search an error (mcp passes `semantic = true`)|V3
+T7|x|query both the plain & the compressed form of each term ∴ a word kept long inside an identifier, inline code, path or compound (`src/middleware.rs`) is found again (R3); semantic re-rank embeds the same text it scores|V5
+T8|x|`embedding.provider` w/o a v1 client (openai) → keyword ranking w/ 1 log warning, ⊥ every search an error (mcp passes `semantic = true`)|V3
 
 ## §B BUGS
 

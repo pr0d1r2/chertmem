@@ -1,8 +1,12 @@
 use std::error::Error as StdError;
 use std::net::TcpListener;
+use std::sync::{Arc, Mutex};
+
+use serde_json::Value;
 
 use super::{Embed, blend, cosine, rerank};
-use crate::config::{Config, Provider};
+use crate::config::{Config, Grammar, Provider};
+use crate::grammar::{Intensity, compress};
 use crate::search::rank::Scored;
 use crate::search::tests::{
     BASE, DAY, Scratch, Test, event, fresh, lengths, query, serve,
@@ -115,13 +119,48 @@ fn ollama_and_semantic_re_rank_by_the_vectors() -> Test {
 }
 
 #[test]
-fn openai_is_refused_in_v1_only_when_semantic() -> Test {
+fn the_re_rank_embeds_the_compressed_query_it_scores() -> Test {
+    let (s, _, mut store) = fresh("blend-text")?;
+    store.append(&event(BASE, "s", "fix mw now"))?;
+    let (addr, server) = serve(lengths)?;
+    let (mut e, _) = engine_at(&s, Provider::Ollama, &addr)?;
+    e.cfg.compression.grammar = Grammar::Full;
+    let text = "fix the middleware now";
+    assert_eq!(e.run(&semantic(text), None)?.len(), 1);
+    let sent = server.join().map_err(|_| "server panicked")?;
+    let first = sent.as_ref().and_then(|j| j.get("input")?.get(0).cloned());
+    let want = compress(text, Intensity::Full);
+    assert_eq!(first.as_ref().and_then(Value::as_str), Some(want.as_str()));
+    assert_ne!(want, text);
+    Ok(())
+}
+
+/// Every warning `e` logs from now on, collected.
+fn collect(e: &mut Engine) -> Arc<Mutex<Vec<String>>> {
+    let logs: Arc<Mutex<Vec<String>>> = Arc::default();
+    let sink = Arc::clone(&logs);
+    e.warn.log = Arc::new(move |text: &str| {
+        if let Ok(mut all) = sink.lock() {
+            all.push(text.to_owned());
+        }
+    });
+    logs
+}
+
+#[test]
+fn openai_falls_back_to_keyword_ranking() -> Test {
     let (s, _, mut store) = fresh("blend-openai")?;
     store.append(&event(BASE, "s", "cargo"))?;
     let (mut e, _) = engine_at(&s, Provider::Openai, "")?;
-    assert_eq!(e.run(&query("cargo"), None)?.len(), 1);
-    let refused = e.run(&semantic("cargo"), None);
-    assert_eq!(refused, Err(Error::Unsupported { provider: "openai" }));
+    let logs = collect(&mut e);
+    let keyword = e.run(&query("cargo"), None)?;
+    assert_eq!(keyword.len(), 1);
+    assert!(logs.lock().map_err(|_| "poisoned")?.is_empty());
+    assert_eq!(e.run(&semantic("cargo"), None)?, keyword);
+    assert_eq!(e.run(&semantic("cargo"), None)?, keyword);
+    let said = logs.lock().map_err(|_| "poisoned")?.clone();
+    let want = Error::Unsupported { provider: "openai" }.to_string();
+    assert_eq!(said, [want]);
     Ok(())
 }
 
