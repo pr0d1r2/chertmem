@@ -75,6 +75,27 @@ impl Cache {
         handle.spawn(true);
         handle
     }
+
+    /// The plan of `store`'s window on the system clock (`chert cache
+    /// plan`): no cache started, no thread, no row loaded.
+    ///
+    /// # Errors
+    /// A failed catalog read.
+    pub fn plan(store: &Store, cfg: &Config) -> Result<Plan, Error> {
+        Self::plan_at(store, cfg, clock())
+    }
+
+    /// [`Cache::plan`] for the window ending at `now`.
+    ///
+    /// # Errors
+    /// A failed catalog read.
+    pub fn plan_at(
+        _store: &Store,
+        _cfg: &Config,
+        _now: u64,
+    ) -> Result<Plan, Error> {
+        Err(Error::Poisoned)
+    }
 }
 
 /// Which side answered a query.

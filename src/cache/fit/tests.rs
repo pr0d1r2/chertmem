@@ -241,3 +241,26 @@ fn start_warns_when_max_bytes_is_over_a_quarter_of_memory() -> Test {
     assert!(all.iter().all(|l| l.contains("over 25%")), "{all:?}");
     Ok(())
 }
+
+#[test]
+fn plan_alone_equals_the_handle_plan_under_every_policy() -> Test {
+    let (s, mut cfg) = crowded("plan-alone")?;
+    for policy in [Overflow::Warn, Overflow::Shrink, Overflow::Fail] {
+        cfg.cache.on_overflow = policy;
+        let cold = s.cold(&cfg)?;
+        let alone = Cache::plan_at(&s.open(Mode::Read)?, &cfg, NOW)?;
+        assert!(alone.estimate > alone.limit, "{alone}");
+        assert_eq!(alone, cold.handle.plan()?, "{policy:?}");
+        assert!(logged(&cold.logs)?.is_empty(), "{policy:?}");
+    }
+    Ok(())
+}
+
+#[test]
+fn plan_alone_runs_on_the_system_clock() -> Test {
+    let (s, cfg) = crowded("plan-system")?;
+    let plan = Cache::plan(&s.open(Mode::Read)?, &cfg)?;
+    let got = (plan.estimate, plan.limit, plan.days_kept);
+    assert_eq!(got, (0, 20_000, 28), "the rows are long past: {plan}");
+    Ok(())
+}
