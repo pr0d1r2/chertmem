@@ -87,6 +87,7 @@ T15|x|ULIDs monotonic within 1 ms per process ∴ same-ms events keep insert ord
 T16|x|`Store::sessions(limit) -> Vec<Session{id, ide, cwd, started_at, ended_at}>` for the current project, newest first (`src/mcp` T2 list_sessions); write API for `src/hook` T10 (R7)|V1,V10
 T17|x|FTS5 candidates per partition for `src/search` T6: `matches`, `frequencies` (R8)|V4
 T18|x|V13: refuse to seal or compact an open bucket; route an append past a sealed or dropped bucket (B3)|V13
+T19|.|for `src/hook` T11: `summaries_in(path, scope)` reads 1 partition; time bounds written so SQLite uses `observations_ts` ⊥ `(? IS NULL OR ts >= ?)`; index `summaries (project, scope, ts)`; `seal` & `compact` check the system clock as `seal_at` does (R9 follow-up)|V7,V13
 
 ## §B BUGS
 
