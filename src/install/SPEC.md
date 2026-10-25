@@ -49,8 +49,10 @@ id|status|task|cites
 T1|x|Claude Code settings: hooks & MCP entry|V1,V2
 T2|x|status & doctor|V3
 T3|x|MCP entry goes to `~/.claude.json` `mcpServers.chert` (user scope), ⊥ `settings.json`, under V1 & V2 (B1)|V1,V2,V4
+T4|.|V1 when `settings.json` already holds `"hooks": {}`: uninstall keeps the empty key (B2)|V1
 
 ## §B BUGS
 
 id|date|cause|fix
 B1|2026-10-25|install wrote `mcpServers.chert` into `settings.json` as cavemem 0.2.1 does, but Claude Code's settings schema has no `mcpServers` key (MCP servers live in `~/.claude.json` or `.mcp.json`) ∴ the server is never launched|V4
+B2|2026-10-25|docs worker, release build: `settings.json` holding `"hooks": {}` → install then uninstall drops the empty `hooks` key ∴ bytes differ from the backup|V1
