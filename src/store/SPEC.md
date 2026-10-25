@@ -63,6 +63,7 @@ V9: same event identity twice → 1 row, 2nd append returns 1st ref; event w/o i
 V10: lock timeout → event in spool & `append` returns Ok. write-only open (hook) ⊥ replays spool ∴ hook latency ⊥ grows w/ spool; ∀ reading open replays whole spool before first read ∴ reads complete (`.:V2`, `.:V1`, `.:B3`).
 V11: `generation` never repeats a value, across `rebuild` too ∴ a cache holding an old value ⊥ reads stale as fresh (B1).
 V12: a dropped ref stays dropped across catalog loss: drop writes a tombstone outside `catalog.db` that `rebuild` reads ∴ ⊥ reissued (B2).
+V13: an event whose bucket is sealed, compacted or dropped is stored ⊥ lost: `seal` & `compact` refuse a bucket whose end > now, & an append to a dropped or sealed bucket lands in a fresh partition ⊥ `spool/unreadable/` (B3).
 
 ## §T TASKS
 
@@ -84,9 +85,11 @@ T14|x|`Store::spool_raw(bytes)` for unparsable hook payloads (owner 2026-10-24);
 T15|x|ULIDs monotonic within 1 ms per process ∴ same-ms events keep insert order in `(ts, id)` order (wave 4 hook report)|V1
 T16|x|`Store::sessions(limit) -> Vec<Session{id, ide, cwd, started_at, ended_at}>` for the current project, newest first (`src/mcp` T2 list_sessions); write API for `src/hook` T10 (R7)|V1,V10
 T17|x|FTS5 candidates per partition for `src/search` T6: `matches`, `frequencies` (R8)|V4
+T18|.|V13: refuse to seal or compact an open bucket; route an append past a sealed or dropped bucket (B3)|V13
 
 ## §B BUGS
 
 id|date|cause|fix
 B1|2026-10-24|wave 3 report: `rebuild` after a deleted catalog restarts `generation` at 1 ∴ a running cache that saw 1 earlier takes changed data as fresh, breaking `.:V1`|V11
 B2|2026-10-24|wave 3 report: deleted catalog loses dropped markers ∴ a dropped ref's text could be issued again for a new row in the same ms window, breaking `.:V15`|V12
+B3|2026-10-25|docs worker, release build: after `chert partitions compact` (then `drop`) on the current week, `session-start` fails "partition … is sealed", the event goes to `spool/unreadable/` & is never stored|V13
