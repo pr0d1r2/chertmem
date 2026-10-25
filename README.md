@@ -1,6 +1,6 @@
 # chertmem
 
-> Read the [LLM disclaimer](docs/LLM-DISCLAIMER.md) first: this
+> Read the [LLM disclaimer] first: this
 > repository was written mostly by an LLM, and that page says how it was
 > built and what to check before trusting it.
 
@@ -191,22 +191,32 @@ skill written from chert's memory can point back at the exact event.
 
 ## Documentation
 
-- [Integration](docs/INTEGRATION.md): wiring chert into Claude Code, the
-  MCP tools, importing from cavemem, and exporting.
-- [Configuration](docs/CONFIG.md): every `chert.toml` key, its default
-  and its meaning.
-- [Benchmarks](docs/BENCHMARKS.md): how chert's speed is measured, the
-  targets and why; [Performance](docs/PERFORMANCE.md): the latest
-  measured numbers, generated from the baseline.
+- [Integration]: wiring chert into Claude Code, the MCP tools,
+  importing from cavemem, and exporting.
+- [Configuration]: every `chert.toml` key, its default and its meaning.
+- [Benchmarks]: how chert's speed is measured, the targets and why;
+  [Performance]: the latest measured numbers, generated from the
+  baseline.
 - `chert --help` and `chert man`: every command and flag;
   `chert completions <shell>` prints shell completions.
-- [Contributing](CONTRIBUTING.md), [security](SECURITY.md), the
-  [code of conduct](CODE_OF_CONDUCT.md), the
-  [LLM disclaimer](docs/LLM-DISCLAIMER.md) and the
+- [Contributing], [security], the [code of conduct], the
+  [LLM disclaimer] and the
   [third-party notices](THIRD-PARTY-NOTICES.md).
 
-The design lives in [`SPEC.md`](SPEC.md) and one `SPEC.md` per node
-under `src/`, `benches/`, `dev/` and `docs/`.
+The design lives in [`SPEC.md`][spec] and one `SPEC.md` per node under
+`src/`, `benches/`, `dev/` and `docs/`.
+
+<!-- Absolute links: these pages are not in the crates.io package. -->
+
+[Integration]: https://github.com/pr0d1r2/chertmem/blob/main/docs/INTEGRATION.md
+[Configuration]: https://github.com/pr0d1r2/chertmem/blob/main/docs/CONFIG.md
+[Benchmarks]: https://github.com/pr0d1r2/chertmem/blob/main/docs/BENCHMARKS.md
+[Performance]: https://github.com/pr0d1r2/chertmem/blob/main/docs/PERFORMANCE.md
+[Contributing]: https://github.com/pr0d1r2/chertmem/blob/main/CONTRIBUTING.md
+[security]: https://github.com/pr0d1r2/chertmem/blob/main/SECURITY.md
+[code of conduct]: https://github.com/pr0d1r2/chertmem/blob/main/CODE_OF_CONDUCT.md
+[LLM disclaimer]: https://github.com/pr0d1r2/chertmem/blob/main/docs/LLM-DISCLAIMER.md
+[spec]: https://github.com/pr0d1r2/chertmem/blob/main/SPEC.md
 
 ## License
 

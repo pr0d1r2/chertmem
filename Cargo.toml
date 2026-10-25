@@ -11,6 +11,19 @@ repository = "https://github.com/pr0d1r2/chertmem"
 readme = "README.md"
 keywords = ["memory", "mcp", "agents", "sqlite", "claude-code"]
 categories = ["development-tools", "command-line-utilities"]
+# The crates.io tarball (dev T11): what building and licensing need, no
+# spec, hook, gate or bench file. `cargo package` verifies by building
+# only; the unit tests read fixtures and docs outside src/, so they run
+# from the repository, not the tarball. `chertmem-dev package-list`
+# gates this list.
+include = [
+  "src/**/*.rs",
+  "Cargo.toml",
+  "Cargo.lock",
+  "LICENSE",
+  "README.md",
+  "THIRD-PARTY-NOTICES.md",
+]
 
 [[bin]]
 name = "chert"
