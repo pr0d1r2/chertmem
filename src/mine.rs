@@ -1,8 +1,9 @@
 //! Behaviour findings with evidence refs (src/mine G): repeated failing
 //! commands and errors, command sequences, hot files and token sinks,
 //! mined from the `post-tool-use` and `post-tool-use-failure`
-//! observations `src/hook` stores. Mining only reads the store; it changes nothing
-//! by itself (root C) and never writes under `.rekall/` (V3).
+//! observations `src/hook` stores. Mining only reads the store; it
+//! changes nothing by itself (root C) and never writes under `.rekall/`
+//! (V3).
 
 #[cfg(test)]
 mod tests;
