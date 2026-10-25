@@ -1,6 +1,7 @@
-//! Behaviour findings with evidence refs (src/mine G): repeated command
-//! sequences, hot files and token sinks, mined from the `post-tool-use` observations
-//! `src/hook` stores. Mining only reads the store; it changes nothing
+//! Behaviour findings with evidence refs (src/mine G): repeated failing
+//! commands and errors, command sequences, hot files and token sinks,
+//! mined from the `post-tool-use` and `post-tool-use-failure`
+//! observations `src/hook` stores. Mining only reads the store; it changes nothing
 //! by itself (root C) and never writes under `.rekall/` (V3).
 
 #[cfg(test)]
@@ -43,7 +44,8 @@ pub enum Kind {
     TokenSink,
 }
 
-const KINDS: [(Kind, &str); 3] = [
+const KINDS: [(Kind, &str); 4] = [
+    (Kind::Failure, "failure"),
     (Kind::Sequence, "sequence"),
     (Kind::HotFile, "hot_file"),
     (Kind::TokenSink, "token_sink"),
@@ -59,7 +61,7 @@ impl Kind {
             .map_or("sequence", |&(_, name)| name)
     }
 
-    /// `sequence`, `hot_file` or `token_sink`.
+    /// `failure`, `sequence`, `hot_file` or `token_sink`.
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
         KINDS.iter().find(|(_, n)| *n == text).map(|&(k, _)| k)

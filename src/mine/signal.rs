@@ -15,6 +15,10 @@ use crate::store::Observation;
 /// The observation kind `src/hook` stores a tool call under.
 const TOOL_KIND: &str = "post-tool-use";
 
+/// The observation kind `src/hook` stores a failed tool call under
+/// (src/hook R5).
+const FAILURE_KIND: &str = "post-tool-use-failure";
+
 /// Characters of 1 command or path a summary shows at most.
 const SHOWN: usize = 80;
 
@@ -44,11 +48,12 @@ struct Call<'a> {
 /// The findings of `rows`, the observations of 1 partition, by count
 /// (most first), then kind, then id (V1).
 pub(super) fn findings(rows: &[Observation], min: u32) -> Vec<Finding> {
-    let calls = calls(rows);
+    let (done, failed) = (calls(rows, TOOL_KIND), calls(rows, FAILURE_KIND));
     let mut tally = Tally::new();
-    sequences(&calls, &mut tally);
-    hot_files(&calls, &mut tally);
-    token_sinks(&calls, &mut tally);
+    failures(&failed, &mut tally);
+    sequences(&done, &mut tally);
+    hot_files(&done, &mut tally);
+    token_sinks(&done, &mut tally);
     let least = usize::try_from(min).unwrap_or(usize::MAX).max(1);
     let kept = tally.into_iter().filter(|(_, seen)| seen.len() >= least);
     let mut found: Vec<Finding> = kept
@@ -74,15 +79,26 @@ pub(super) fn id(pattern: &str) -> String {
     format!("{hash:016x}")
 }
 
-/// The tool calls of `rows`, by time then id.
-fn calls(rows: &[Observation]) -> Vec<Call<'_>> {
+/// The tool calls of `rows` stored as `kind`, by time then id.
+fn calls<'a>(rows: &'a [Observation], kind: &str) -> Vec<Call<'a>> {
     let mut picked: Vec<&Observation> =
-        rows.iter().filter(|o| o.kind == TOOL_KIND).collect();
+        rows.iter().filter(|o| o.kind == kind).collect();
     picked.sort_by(|a, b| (a.ts, &a.id).cmp(&(b.ts, &b.id)));
     let parsed = picked.into_iter().map(|row| (row, tool::parse(&row.body)));
     parsed
         .filter_map(|(row, tool)| tool.map(|tool| Call { row, tool }))
         .collect()
+}
+
+/// Each failed call pattern (as a token sink's, src/mine R5) with the
+/// error it failed with (`tool::error`), shown by the failed call's row.
+fn failures<'a>(failed: &[Call<'a>], tally: &mut Tally<'a>) {
+    for call in failed {
+        let error = tool::error(&call.row.body);
+        let pattern = format!("{}{JOIN}{error}", cost_pattern(&call.tool));
+        let seen = tally.entry((Kind::Failure, pattern));
+        seen.or_default().push(call.row);
+    }
 }
 
 /// Each Bash command right after another in 1 session, shown by the
@@ -174,12 +190,9 @@ fn finding(kind: Kind, pattern: &str, mut seen: Vec<&Observation>) -> Finding {
 
 /// 1 line naming `pattern`.
 fn summary(kind: Kind, pattern: &str) -> String {
-    let parts: Vec<String> = pattern
-        .split(JOIN)
-        .map(|p| format!("`{}`", shown(p)))
-        .collect();
+    let parts = quoted(pattern);
     match kind {
-        Kind::Failure => String::new(),
+        Kind::Failure => failure_summary(pattern),
         Kind::Sequence => parts.join(" then "),
         Kind::HotFile => format!("hot file {}", parts.join(" ")),
         Kind::TokenSink => format!(
@@ -187,6 +200,18 @@ fn summary(kind: Kind, pattern: &str) -> String {
             parts.join(" ")
         ),
     }
+}
+
+/// Each part of `pattern`, shown and in backquotes.
+fn quoted(pattern: &str) -> Vec<String> {
+    let each = pattern.split(JOIN);
+    each.map(|p| format!("`{}`", shown(p))).collect()
+}
+
+/// `failing <call>: <error>` of a failure pattern, its error last.
+fn failure_summary(pattern: &str) -> String {
+    let (call, error) = pattern.rsplit_once(JOIN).unwrap_or((pattern, ""));
+    format!("failing {}: `{}`", quoted(call).join(" "), shown(error))
 }
 
 /// `text` on 1 line, cut at [`SHOWN`] characters.
