@@ -49,6 +49,7 @@ fn body(kind: Kind, obj: &Object) -> String {
         Kind::SessionStart => field("source"),
         Kind::UserPromptSubmit => field("prompt"),
         Kind::PostToolUse => tool(obj),
+        Kind::PostToolUseFailure => String::new(),
         Kind::Stop => field("last_assistant_message"),
         Kind::SessionEnd => field("reason"),
     }

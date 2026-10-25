@@ -1,4 +1,4 @@
-//! The 5 hook events and the IDEs whose dialect `chert` reads (src/hook
+//! The 6 hook events and the IDEs whose dialect `chert` reads (src/hook
 //! I, C).
 
 #[cfg(test)]
@@ -10,16 +10,20 @@ pub enum Kind {
     SessionStart,
     UserPromptSubmit,
     PostToolUse,
+    /// A tool call that failed: Claude Code fires this, not
+    /// `PostToolUse` (src/hook T9).
+    PostToolUseFailure,
     Stop,
     SessionEnd,
 }
 
 impl Kind {
     /// Every event, in a session's order.
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::SessionStart,
         Self::UserPromptSubmit,
         Self::PostToolUse,
+        Self::PostToolUseFailure,
         Self::Stop,
         Self::SessionEnd,
     ];
@@ -31,6 +35,7 @@ impl Kind {
             Self::SessionStart => "session-start",
             Self::UserPromptSubmit => "user-prompt-submit",
             Self::PostToolUse => "post-tool-use",
+            Self::PostToolUseFailure => "post-tool-use-failure",
             Self::Stop => "stop",
             Self::SessionEnd => "session-end",
         }
@@ -48,6 +53,7 @@ impl Kind {
             Self::SessionStart => "SessionStart",
             Self::UserPromptSubmit => "UserPromptSubmit",
             Self::PostToolUse => "PostToolUse",
+            Self::PostToolUseFailure => "PostToolUseFailure",
             Self::Stop => "Stop",
             Self::SessionEnd => "SessionEnd",
         }

@@ -22,6 +22,29 @@ pub(super) const SESSION: &str = "00000000-0000-4000-8000-000000000001";
 /// The session of the second recorded session's fixtures.
 pub(super) const SESSION_2: &str = "00000000-0000-4000-8000-000000000002";
 
+/// The session of the recorded `post-tool-use-failure`, a session of
+/// its own (src/hook T9).
+pub(super) const SESSION_FAILURE: &str = "00000000-0000-4000-8000-000000000003";
+
+/// The events recorded in both sessions of R1; the failure was
+/// recorded once, later.
+pub(super) const TWICE: [Kind; 5] = [
+    Kind::SessionStart,
+    Kind::UserPromptSubmit,
+    Kind::PostToolUse,
+    Kind::Stop,
+    Kind::SessionEnd,
+];
+
+/// The session of `kind`'s first fixture.
+pub(super) fn session_of(kind: Kind) -> &'static str {
+    if kind == Kind::PostToolUseFailure {
+        SESSION_FAILURE
+    } else {
+        SESSION
+    }
+}
+
 /// The recorded payload of `kind` from the first session (src/hook I).
 pub(super) fn fixture(kind: Kind) -> Res<Vec<u8>> {
     recorded(kind, "")
@@ -125,9 +148,56 @@ fn stores_one(kind: Kind, stdin: &[u8], session: &str) -> Test {
 #[test]
 fn every_fixture_stores_exactly_one_observation() -> Test {
     for kind in Kind::ALL {
-        stores_one(kind, &fixture(kind)?, SESSION)?;
+        stores_one(kind, &fixture(kind)?, session_of(kind))?;
+    }
+    for kind in TWICE {
         stores_one(kind, &fixture_2(kind)?, SESSION_2)?;
     }
+    Ok(())
+}
+
+/// The `tool_use_id` of the recorded failed call.
+const TOOL_FAILURE: &str = "toolu_01FIXTURE000000000000003";
+
+/// A failed call is its own kind, its body the tool name, input and
+/// error, redacted and compressed like any body (T9, V1).
+#[test]
+fn a_failed_tool_call_stores_its_error_as_its_own_kind() -> Test {
+    let scratch = Scratch::new("failure")?;
+    let kind = Kind::PostToolUseFailure;
+    let out = scratch.run(kind, &fixture(kind)?);
+    assert_eq!((out.exit, out.stdout, out.note), (0, None, None));
+    let found = scratch.observations()?;
+    let obs = found.first().ok_or("no observation")?;
+    let input = r#"{"command":"false","description":"Run the false command"}"#;
+    let body = format!("Bash\n{input}\nExit code 1");
+    let grammar = scratch.config.compression.grammar.intensity();
+    assert_eq!(obs.kind, "post-tool-use-failure");
+    assert_eq!(obs.identity.as_deref(), Some(TOOL_FAILURE));
+    assert_eq!(obs.body, compress(&body, grammar));
+    Ok(())
+}
+
+#[test]
+fn a_failure_resent_is_stored_once() -> Test {
+    let scratch = Scratch::new("failure-twice")?;
+    let kind = Kind::PostToolUseFailure;
+    scratch.run(kind, &fixture(kind)?);
+    scratch.run_at(kind, &fixture(kind)?, NOW + 5);
+    assert_eq!(scratch.observations()?.len(), 1);
+    Ok(())
+}
+
+#[test]
+fn a_failure_error_loses_its_private_spans() -> Test {
+    let scratch = Scratch::new("failure-private")?;
+    let stdin = br#"{"session_id":"s","tool_name":"Bash",
+        "error":"denied <private>token=hunter2</private>"}"#;
+    scratch.run(Kind::PostToolUseFailure, stdin);
+    let found = scratch.observations()?;
+    let body = found.first().map(|o| o.body.clone()).ok_or("none")?;
+    assert!(!body.contains("hunter2"), "{body}");
+    assert!(body.contains("denied"), "{body}");
     Ok(())
 }
 
