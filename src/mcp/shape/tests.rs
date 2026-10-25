@@ -5,10 +5,10 @@ use std::error::Error as StdError;
 
 use serde_json::json;
 
-use super::{content, entries, error, hits, observations};
+use super::{content, entries, error, hits, observations, sessions};
 use crate::grammar;
 use crate::search::{Entry, Hit};
-use crate::store::{Lookup, Observation, Ref};
+use crate::store::{Lookup, Observation, Ref, Session};
 
 type Test = Result<(), Box<dyn StdError>>;
 
@@ -81,6 +81,29 @@ fn get_observations_expands_on_request() -> Test {
     assert_eq!(text, Some(&json!(grammar::expand(body))));
     assert_ne!(grammar::expand(body), body);
     Ok(())
+}
+
+fn row(id: &str, ended_at: Option<u64>) -> Session {
+    Session {
+        id: id.into(),
+        ide: "claude-code".into(),
+        cwd: "/work/p".into(),
+        started_at: 7,
+        ended_at,
+    }
+}
+
+#[test]
+fn list_sessions_golden_ended_at_null_while_running() {
+    let found = [row("s2", None), row("s1", Some(9))];
+    let want = json!([
+        {"id": "s2", "ide": "claude-code", "cwd": "/work/p",
+         "started_at": 7, "ended_at": null},
+        {"id": "s1", "ide": "claude-code", "cwd": "/work/p",
+         "started_at": 7, "ended_at": 9},
+    ]);
+    assert_eq!(sessions(&found), want);
+    assert_eq!(sessions(&[]), json!([]));
 }
 
 #[test]

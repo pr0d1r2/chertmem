@@ -74,6 +74,10 @@ impl Server {
             Call::Get { ids, expand } => {
                 Ok(shape::observations(&self.store.get(&ids)?, expand))
             }
+            Call::Sessions { limit } => {
+                let limit = usize::try_from(limit).unwrap_or(usize::MAX);
+                Ok(shape::sessions(&self.store.sessions(limit)?))
+            }
         }
     }
 

@@ -4,6 +4,7 @@
 use serde_json::{Value, json};
 
 use crate::mcp::tests::{BASE, Boxed, Scratch, Test, req, session};
+use crate::store::{Mode, SessionStart, Store};
 
 /// The result of calling tool `name` with `arguments` in a session.
 fn tool(s: &Scratch, name: &str, arguments: &Value) -> Boxed<Value> {
@@ -27,7 +28,7 @@ fn keys(v: &Value) -> Vec<Vec<String>> {
 }
 
 #[test]
-fn tools_list_names_the_3_built_tools() -> Test {
+fn tools_list_names_cavemems_4_tools() -> Test {
     let s = Scratch::new("list")?;
     let got = session(&s, &[req(1, "tools/list", &Value::Null)])?;
     let tools = got.first().and_then(|r| r.pointer("/result/tools"));
@@ -35,7 +36,8 @@ fn tools_list_names_the_3_built_tools() -> Test {
         .and_then(Value::as_array)
         .map(|t| t.iter().filter_map(|t| t.get("name")?.as_str()).collect())
         .unwrap_or_default();
-    assert_eq!(names, ["search", "timeline", "get_observations"]);
+    let want = ["search", "timeline", "get_observations", "list_sessions"];
+    assert_eq!(names, want);
     Ok(())
 }
 
@@ -94,11 +96,49 @@ fn a_bad_call_is_a_tool_error_not_a_protocol_error() -> Test {
     let gone = json!({"session_id": "s1", "around_id": "chert:01KZZZZZ"});
     for (name, args) in [
         ("get_observations", json!({"ids": ["nope"]})),
-        ("list_sessions", json!({})),
+        ("list_sessions", json!({"limit": 201})),
         ("timeline", gone),
     ] {
         let got = tool(&s, name, &args)?;
         assert_eq!(got.get("isError"), Some(&json!(true)), "{name}: {got}");
     }
+    Ok(())
+}
+
+/// When `s2` starts, a second after `s1` at [`BASE`].
+const LATER: u64 = BASE + 1000;
+/// When `s1` ends.
+const ENDED: u64 = BASE + 500;
+
+/// Start sessions `s1` at [`BASE`] and `s2` at [`LATER`]; end `s1`.
+fn start_two(s: &Scratch) -> Test {
+    let mut store = Store::open(&s.cfg, &s.root(), Mode::Read)?;
+    for (id, ts) in [("s1", BASE), ("s2", LATER)] {
+        let start = SessionStart {
+            id: id.into(),
+            ide: "claude-code".into(),
+            cwd: "/work/p".into(),
+            ts,
+        };
+        store.session_started(&start)?;
+    }
+    store.session_ended("s1", ENDED)?;
+    Ok(())
+}
+
+fn row(id: &str, started_at: u64, ended_at: Option<u64>) -> Value {
+    json!({"id": id, "ide": "claude-code", "cwd": "/work/p",
+        "started_at": started_at, "ended_at": ended_at})
+}
+
+#[test]
+fn list_sessions_answers_newest_first_ended_at_null_while_running() -> Test {
+    let s = Scratch::new("sessions")?;
+    start_two(&s)?;
+    let got = payload(&tool(&s, "list_sessions", &json!({}))?)?;
+    let want = json!([row("s2", LATER, None), row("s1", BASE, Some(ENDED))]);
+    assert_eq!(got, want);
+    let one = payload(&tool(&s, "list_sessions", &json!({"limit": 1}))?)?;
+    assert_eq!(one, json!([row("s2", LATER, None)]));
     Ok(())
 }
