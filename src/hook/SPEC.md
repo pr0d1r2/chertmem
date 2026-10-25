@@ -71,6 +71,7 @@ T10|x|store each session's `cwd`, `started_at` (session-start) & `ended_at` (ses
 T11|x|`session-start` injection < 5 ms in process at 1k–1M rows & 1–520 partitions (benches `session_start`): read newest partitions only until `inject.max_tokens` is filled ⊥ every partition; today 26 ms at 1k, 241 ms at 520 partitions; after `src/store:T19`|V5
 T12|.|structured estimate ⊥ flat bytes/4 (B1, owner 2026-10-25): header & each `chert:` ref counted exactly by formula, gist estimated by character class (letters, digits, punctuation, spaces), integer arithmetic; `bpe` test over the committed corpus (1233 texts, R7): estimate ≥ exact ∀ text, report worst over; gate runs `bpe` tests|V5
 T13|.|exact counts off the hook path: `chert mcp` counts new rows w/ o200k in background, store keeps a `tokens` column, injection uses stored counts & T12 for the rest; needs `bpe` in default build = owner decision (step 2)|V5
+T14|.|format-aware memory tokenizer (owner 2026-10-25, "format is known"): chert writes header, refs, separators & gists ∴ fixed parts are constants, ref form chosen so its count is constant (checked ∀ length 8–14), gist split like o200k pretokenizer & each piece counted from a compiled-in table built from grammar outputs + memory corpus, unknown pieces rounded up; offline reference o200k; target ≤ 3% over, ⊥ under; win → drop `bpe` & T13|V5
 
 ## §B BUGS
 
