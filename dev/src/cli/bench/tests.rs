@@ -69,3 +69,31 @@ fn bench_record_without_a_run_is_unreadable_input() -> Res {
     assert_eq!(run(&args(&["bench-record"]), &root), 2);
     Ok(())
 }
+
+#[test]
+fn bench_gate_fails_a_planted_regression_and_holds_its_twin() -> Res {
+    // dev V6: 1 ms recorded; 1.4 ms holds, 1.6 ms is over 1 ms x 1.5.
+    let root = recorded("gate")?;
+    plant(&root, "get_observations", "1k-p52", 1_400_000)?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 0);
+    plant(&root, "get_observations", "1k-p52", 1_600_000)?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 1);
+    let unmeasured = args(&["bench-gate", "10k-p52"]);
+    assert_eq!(run(&unmeasured, &root), 2, "no fresh median to compare");
+    Ok(())
+}
+
+#[test]
+fn bench_gate_holds_on_another_machine_and_without_a_baseline() -> Res {
+    let root = recorded("other")?;
+    let text = fs::read_to_string(root.join(BASELINE))?;
+    let host = crate::host::this().ok_or("no host")?;
+    let other = text.replace(&host.machine, "Other CPU");
+    fs::write(root.join(BASELINE), other)?;
+    plant(&root, "get_observations", "1k-p52", 9_000_000)?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 0);
+    assert_eq!(run(&args(&["bench-gate"]), &scratch("none")?), 0);
+    fs::write(root.join(BASELINE), "not toml [")?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 2);
+    Ok(())
+}

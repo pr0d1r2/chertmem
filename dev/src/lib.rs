@@ -2,6 +2,7 @@
 //! nobody (`publish = false`).
 
 pub mod baseline;
+pub mod bench_gate;
 pub mod cli;
 pub mod criterion;
 pub mod host;

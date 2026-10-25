@@ -1,5 +1,6 @@
-//! The bench verbs: `bench-record` (benches T4). Paths are the
-//! repository's own; criterion's output is read from `target/criterion`.
+//! The bench verbs: `bench-record` (benches T4) and `bench-gate` (dev
+//! T2). Paths are the repository's own; criterion's output is read from
+//! `target/criterion`.
 
 #[cfg(test)]
 mod tests;
@@ -7,6 +8,7 @@ mod tests;
 use std::path::{Path, PathBuf};
 
 use crate::baseline::{self, Row};
+use crate::bench_gate::{self, Verdict};
 use crate::{criterion, host, record};
 
 pub(super) const BASELINE: &str = "benches/baseline.toml";
@@ -16,6 +18,7 @@ pub(super) const INDEX: &str = "chert-suites.tsv";
 /// The bench verb `verb` with `rest`; `None` when it is not one.
 pub(super) fn run(verb: &str, rest: &[String], root: &Path) -> Option<u8> {
     match (verb, rest) {
+        ("bench-gate", only) => Some(gate(root, only)),
         ("bench-record", []) => Some(recorded(root)),
         _ => None,
     }
@@ -44,6 +47,43 @@ fn rows(root: &Path) -> Result<Vec<Row>, String> {
 fn broken(verb: &str, why: &str) -> u8 {
     eprintln!("{verb}: {why}");
     2
+}
+
+/// The baseline and this machine, or why not.
+fn gate_inputs(root: &Path) -> Result<(Vec<Row>, record::Host), String> {
+    let host = host::this().ok_or("cannot read the CPU model or OS")?;
+    Ok((rows(root)?, host))
+}
+
+/// `bench-gate [fixture...]`: the baseline rows of this machine class,
+/// and of the named fixtures if any, against criterion's last run. A
+/// machine the baseline has no row for holds: another CPU is not a
+/// slowdown.
+fn gate(root: &Path, only: &[String]) -> u8 {
+    let (rows, host) = match gate_inputs(root) {
+        Ok(inputs) => inputs,
+        Err(why) => return broken("bench-gate", &why),
+    };
+    let class = (host.machine.as_str(), baseline::os_name(&host.os));
+    if !rows.iter().any(|r| r.class() == class) {
+        let (cpu, os) = class;
+        eprintln!("bench-gate: no baseline row for {cpu}, {os}; held");
+        return 0;
+    }
+    let now = criterion::read(&criterion_dir(root), host::date_of);
+    verdict(&bench_gate::verdict(&rows, class, only, &now))
+}
+
+fn verdict(v: &Verdict) -> u8 {
+    if v.compared == 0 {
+        let why = "no baseline row has a median under target/criterion; \
+                   run `cargo bench -p chertmem --bench latency` first";
+        return broken("bench-gate", why);
+    }
+    for line in &v.regressions {
+        eprintln!("bench-gate: {line}");
+    }
+    u8::from(!v.regressions.is_empty())
 }
 
 /// `bench-record`: criterion's last run into `benches/baseline.toml`.
