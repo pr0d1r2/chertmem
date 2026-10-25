@@ -66,6 +66,8 @@ pub struct Engine {
     root: PathBuf,
     store: Store,
     terms: Terms,
+    /// The disk path's worker stores, kept across queries (T6).
+    pool: merge::Pool,
     /// `OLLAMA_HOST`, read only when `embedding.provider = "ollama"`.
     host: String,
     warn: Warn,
@@ -131,6 +133,7 @@ impl Engine {
             root: project_root.to_path_buf(),
             store,
             terms,
+            pool: merge::Pool::default(),
             host,
             warn: Warn::stderr(),
         })
@@ -207,10 +210,11 @@ impl Engine {
         let job = merge::Job {
             cfg: &self.cfg,
             root: &self.root,
+            generation: self.store.generation()?,
             filter,
             rater,
         };
-        merge::parallel(&job, &paths)
+        merge::parallel(&job, &mut self.pool, &paths)
     }
 
     /// The provider a query may call; `None` = no network (V3).

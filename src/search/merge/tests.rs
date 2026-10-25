@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::{Job, candidates, parallel, split, workers};
+use super::{Job, Pool, candidates, parallel, split, workers};
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::search::rank::{Rater, top};
 use crate::search::terms::{Stats, Terms};
@@ -78,8 +78,9 @@ fn the_parallel_best_equal_the_best_of_all_rows() -> Test {
     let mut terms = Terms::open(&s.data())?;
     terms.refresh(&mut store)?;
     let rater = rater(terms.stats(&["cargo".into()])?, 5);
-    let (filter, root) = (Filter::default(), s.root());
-    let got = parallel(&job(&cfg, &root, &filter, &rater), &paths)?;
+    let (filter, root, pool) =
+        (Filter::default(), s.root(), &mut Pool::default());
+    let got = parallel(&job(&cfg, &root, &filter, &rater), pool, &paths)?;
     let all = store.observations(&filter)?;
     let one = top(all.into_iter().filter_map(|r| rater.rate(r)).collect(), 5);
     assert_eq!((got.len(), got), (5, one));
@@ -95,9 +96,39 @@ fn job<'a>(
     Job {
         cfg,
         root,
+        generation: 0,
         filter,
         rater,
     }
+}
+
+#[test]
+fn the_pool_keeps_its_stores_until_the_generation_moves() -> Test {
+    let (s, cfg, _) = fresh("merge-pool")?;
+    let (filter, root) = (Filter::default(), s.root());
+    let rater = rater(empty(), 1);
+    let mut j = job(&cfg, &root, &filter, &rater);
+    let mut pool = Pool::default();
+    pool.fill(&j, 2)?;
+    pool.fill(&j, 1)?;
+    assert_eq!((pool.generation, pool.stores.len()), (0, 2));
+    j.generation = 7;
+    pool.fill(&j, 1)?;
+    assert_eq!((pool.generation, pool.stores.len()), (7, 1));
+    Ok(())
+}
+
+#[test]
+fn a_query_after_a_drop_misses_only_the_dropped_rows() -> Test {
+    let (s, cfg, mut store) = fresh("merge-drop")?;
+    let paths = twelve(&mut store)?;
+    let mut e = engine(&s, &cfg)?;
+    let mut q = query("cargo");
+    q.limit = Some(20);
+    assert_eq!(e.run(&q, None)?.len(), 12);
+    store.drop(paths.first().ok_or("none")?)?;
+    assert_eq!(e.run(&q, None)?.len(), 11);
+    Ok(())
 }
 
 #[test]
@@ -107,7 +138,11 @@ fn a_worker_that_cannot_open_its_store_fails_the_query() -> Test {
     cfg.storage.data_dir = None;
     let (filter, root, rater) =
         (Filter::default(), s.root(), rater(empty(), 1));
-    let found = parallel(&job(&cfg, &root, &filter, &rater), &paths(2));
+    let found = parallel(
+        &job(&cfg, &root, &filter, &rater),
+        &mut Pool::default(),
+        &paths(2),
+    );
     assert!(found.is_err());
     Ok(())
 }
