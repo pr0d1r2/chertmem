@@ -50,6 +50,7 @@ T1|x|harness choice, §R row: criterion (R1)|-
 T2|x|seeded fixture generator, cached under `target/bench-fixtures/` (R2)|V2
 T3|~|suites ∀ target (R3): 11 ready; hook write registered pending, waits for `src/cli` (`chert hook run` spawned, V4)|V1,V4
 T4|.|baseline file & `bench-gate`|V3
+T5|.|ids advance per run (⊥ id exhaustion at 1 ms) & fixtures movable (project id ⊥ build path)|V2
 
 ## §B BUGS
 
