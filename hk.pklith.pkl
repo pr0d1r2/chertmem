@@ -214,6 +214,6 @@ push: Mapping<String, Config.Step> = new {
   }
   ["package-verify"] {
     glob = List("**/*.rs", "**/*.bin", "Cargo.toml", "Cargo.lock")
-    check = "command -v cargo >/dev/null 2>&1 || { echo 'package-verify: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo package -q -p chertmem --locked --allow-dirty || { echo 'package-verify: the crates.io tarball does not build: a file the crate reads is not in Cargo.toml include' >&2; exit 1; }"
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'package-verify: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo package -q -p chertmem --locked --allow-dirty || { echo 'package-verify: the packaged crate failed to build (cargo package); one cause: a file it reads is missing from Cargo.toml include' >&2; exit 1; }"
   }
 }

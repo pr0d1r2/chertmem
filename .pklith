@@ -82,7 +82,7 @@ bench-gate|coverage|-|**/*.rs, Cargo.toml, Cargo.lock, benches/baseline.toml|car
 # The crates.io tarball must build on its own: package-list checks the
 # file list only, and missed vocab.bin (T14). Push only, alone: it
 # compiles the packaged crate under target/package.
-package-verify|coverage|-|**/*.rs, **/*.bin, Cargo.toml, Cargo.lock|cargo package -q -p chertmem --locked --allow-dirty|-|-|the crates.io tarball does not build: a file the crate reads is not in Cargo.toml include
+package-verify|coverage|-|**/*.rs, **/*.bin, Cargo.toml, Cargo.lock|cargo package -q -p chertmem --locked --allow-dirty|-|-|the packaged crate failed to build (cargo package); one cause: a file it reads is missing from Cargo.toml include
 ## types
 type|checks|min|exempt
 *|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard, no-core-worktree|-|-
