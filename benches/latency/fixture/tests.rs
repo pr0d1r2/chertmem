@@ -93,3 +93,22 @@ fn fixtures_are_cached_under_the_target_dir() {
     let base = super::base();
     assert!(base.ends_with("bench-fixtures"), "{}", base.display());
 }
+
+#[test]
+fn a_copied_fixture_finds_its_rows_unbuilt() -> super::Res<()> {
+    // benches T5: the project id must not hash the path it was built at.
+    use super::{Scratch, Spec, cached_in, copy_tree};
+    use crate::ops::read::newest;
+    let (from, to) = (Scratch::new("fx-from")?, Scratch::new("fx-to")?);
+    let spec = Spec::new(6, 200, 2);
+    let built = cached_in(from.path(), spec)?;
+    std::fs::write(built.dir.join("marker"), "kept")?;
+    copy_tree(&built.dir, &to.path().join(spec.key()))?;
+    drop(from);
+    let fx = cached_in(to.path(), spec)?;
+    assert!(fx.dir.join("marker").exists(), "a copy is not rebuilt");
+    let mut store = fx.store()?;
+    let rows = store.observations(&newest(&store))?;
+    assert!(!rows.is_empty(), "the copy has rows");
+    Ok(())
+}
