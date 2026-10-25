@@ -10,6 +10,70 @@
 self = "pr0d1r2/chertmem"
 
 [[repo]]
+name = "bitflags/bitflags"
+public = "2026-10-25"
+
+[[repo]]
+name = "BurntSushi/aho-corasick"
+public = "2026-10-25"
+
+[[repo]]
+name = "BurntSushi/bstr"
+public = "2026-10-25"
+
+[[repo]]
+name = "BurntSushi/memchr"
+public = "2026-10-25"
+
+[[repo]]
+name = "clap-rs/clap"
+public = "2026-10-25"
+
+[[repo]]
+name = "comex/rust-shlex"
+public = "2026-10-25"
+
+[[repo]]
+name = "contain-rs/bit-set"
+public = "2026-10-25"
+
+[[repo]]
+name = "contain-rs/bit-vec"
+public = "2026-10-25"
+
+[[repo]]
+name = "dtolnay/anyhow"
+public = "2026-10-25"
+
+[[repo]]
+name = "dtolnay/itoa"
+public = "2026-10-25"
+
+[[repo]]
+name = "dtolnay/zmij"
+public = "2026-10-25"
+
+[[repo]]
+name = "dylanhart/ulid-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "fancy-regex/fancy-regex"
+public = "2026-10-25"
+
+[[repo]]
+name = "gyscos/zstd-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "indexmap-rs/equivalent"
+public = "2026-10-25"
+
+[[repo]]
+name = "indexmap-rs/indexmap"
+public = "2026-10-25"
+
+[[repo]]
 name = "jdx/expr-rs"
 public = "2026-10-25"
 
@@ -18,7 +82,19 @@ name = "jdx/hk"
 public = "2026-10-25"
 
 [[repo]]
+name = "JuliusBrussee/cavekit"
+public = "2026-10-25"
+
+[[repo]]
 name = "JuliusBrussee/cavemem"
+public = "2026-10-25"
+
+[[repo]]
+name = "marshallpierce/rust-base64"
+public = "2026-10-25"
+
+[[repo]]
+name = "mcgoo/vcpkg-rs"
 public = "2026-10-25"
 
 [[repo]]
@@ -74,5 +150,109 @@ name = "pr0d1r2/xenolith"
 public = "2026-10-25"
 
 [[repo]]
+name = "rapidfuzz/strsim-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "rhysd/tinyjson"
+public = "2026-10-25"
+
+[[repo]]
+name = "rusqlite/rusqlite"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-cli/anstyle"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-cli/roff-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/cc-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/cfg-if"
+public = "2026-10-25"
+
+[[repo]]
 name = "rust-lang/crates.io-index"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/hashbrown"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/jobserver-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/libc"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/pkg-config-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/regex"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/rustc-hash"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-random/getrandom"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-random/rand"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-random/rand_core"
+public = "2026-10-25"
+
+[[repo]]
+name = "RustCrypto/stream-ciphers"
+public = "2026-10-25"
+
+[[repo]]
+name = "RustCrypto/utils"
+public = "2026-10-25"
+
+[[repo]]
+name = "serde-rs/json"
+public = "2026-10-25"
+
+[[repo]]
+name = "serde-rs/serde"
+public = "2026-10-25"
+
+[[repo]]
+name = "servo/rust-smallvec"
+public = "2026-10-25"
+
+[[repo]]
+name = "sfackler/fallible-streaming-iterator"
+public = "2026-10-25"
+
+[[repo]]
+name = "sfackler/rust-fallible-iterator"
+public = "2026-10-25"
+
+[[repo]]
+name = "toml-rs/toml"
+public = "2026-10-25"
+
+[[repo]]
+name = "winnow-rs/winnow"
+public = "2026-10-25"
+
+[[repo]]
+name = "zurawiki/tiktoken-rs"
 public = "2026-10-25"
