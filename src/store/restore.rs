@@ -22,7 +22,8 @@ impl Store {
     ///
     /// # Errors
     /// [`Error::RefTaken`] when another id holds its ref in its project
-    /// (root V15); [`Error::ReadOnly`] for a sealed partition (V7).
+    /// (root V15); otherwise as [`Store::append`]: a sealed target
+    /// routes to its bucket's fresh partition (V13).
     pub fn restore(
         &mut self,
         observation: &Observation,

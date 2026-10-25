@@ -64,6 +64,18 @@ fn default_plan_puts_a_row_under_its_project_and_bucket() -> Test {
 }
 
 #[test]
+fn a_fresh_partition_keeps_the_bucket_and_shard_of_its_place() -> Test {
+    let p = plan(DEFAULT, 7, 4).place(key(0, "A"))?;
+    let shard = p.shard.ok_or("no shard")?;
+    assert_eq!(p.nth(0), p);
+    let next = p.nth(2);
+    let want = format!("chunks/proj-1/19700101-7d.{shard}~2.db");
+    assert_eq!(next.path, want);
+    assert_eq!((next.t0, next.t1, next.shard), (p.t0, p.t1, p.shard));
+    Ok(())
+}
+
+#[test]
 fn dims_shape_the_dir() -> Test {
     let by = [Dimension::Time, Dimension::Ide, Dimension::Project];
     let p = plan(&by, 1, 1).place(key(0, "01ID"))?;

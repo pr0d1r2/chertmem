@@ -1,4 +1,4 @@
-use super::{MAX_TS, bounds, bucket_name, civil, days_from_civil};
+use super::{MAX_TS, bounds, bucket_name, civil, days_from_civil, utc};
 use crate::config::{Span, Unit};
 
 const DAY: u64 = 86_400_000;
@@ -23,6 +23,12 @@ fn civil_and_days_from_civil_agree_every_first_of_month() {
             assert_eq!(days_from_civil(y, m), days, "{y}-{m}");
         }
     }
+}
+
+#[test]
+fn utc_reads_as_an_iso_instant() {
+    assert_eq!(utc(0), "1970-01-01T00:00:00Z");
+    assert_eq!(utc(LEAP_NOON + 61_999), "2024-02-29T13:01:01Z");
 }
 
 #[test]

@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::ErrorCode;
 
+use super::calendar;
+
 /// A store failure (src/store I); local until the `src` crate error enum
 /// lands, as `config::Error` is.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +42,9 @@ pub enum Error {
     /// No new id at `ts`: its ids ran out in this process, or the id
     /// lock is poisoned (src/store T15).
     NoId { ts: u64, reason: String },
+    /// A seal or compaction of a partition whose bucket ends at `end`
+    /// (ms), after now: rows still land there (src/store V13).
+    Open { path: String, end: u64 },
 }
 
 impl fmt::Display for Error {
@@ -93,6 +98,10 @@ impl Error {
                 format!("chert:{r} is issued to another row than {id}")
             }
             Self::NoId { ts, reason } => format!("no new id at {ts}: {reason}"),
+            Self::Open { path, end } => {
+                let at = calendar::utc(*end);
+                format!("partition {path} is open until {at} ({end} ms)")
+            }
             _ => String::new(),
         }
     }
@@ -110,6 +119,7 @@ impl Error {
             Self::BadTime { .. } => "give milliseconds below 2^48",
             Self::RefTaken { .. } => "restore into a store without that ref",
             Self::NoId { .. } => "retry in a new process",
+            Self::Open { .. } => "seal or compact it once its bucket ends",
         }
     }
 }

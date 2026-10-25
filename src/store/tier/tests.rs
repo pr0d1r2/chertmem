@@ -34,6 +34,123 @@ fn some(names: &[&str]) -> Vec<Option<String>> {
     names.iter().map(|n| Some((*n).to_owned())).collect()
 }
 
+/// `path` with `~<n>` before `.db`: the `n`-th fresh partition of its
+/// bucket (src/store V13).
+fn fresh(path: &str, n: u32) -> String {
+    let stem = path.strip_suffix(".db").unwrap_or(path);
+    format!("{stem}~{n}.db")
+}
+
+/// The rows in the partition file at `path`.
+fn count(s: &Scratch, path: &str) -> Result<u64, Box<dyn StdError>> {
+    let sql = "SELECT count(*) FROM observations";
+    Ok(s.sql(path)?.query_row(sql, [], |r| r.get(0))?)
+}
+
+/// A move of the partition at a path down the tiers.
+type Retire = fn(&mut Store, &str) -> Result<(), Error>;
+
+/// Fill, `retire` week 0, then append 1 more event in week 0 from a
+/// reader and 1 from a hook: both are stored in its fresh partition,
+/// hot, and every live ref still resolves (src/store V13, B3).
+fn lands_fresh(name: &str, retire: Retire, live: &[&str]) -> Test {
+    let s = Scratch::new(name)?;
+    let mut store = s.open(Mode::Read)?;
+    let (mut refs, path) = fill(&mut store)?;
+    retire(&mut store, &path)?;
+    refs.push(stored(store.append(&event(8, None, "late"))?)?);
+    let hook = s.open(Mode::Write)?.append(&event(9, None, "hook"));
+    refs.push(stored(hook?)?);
+    assert_eq!(state(&store, &fresh(&path, 1))?, Some(State::Hot));
+    assert_eq!(count(&s, &fresh(&path, 1))?, 2);
+    let mut reader = s.open(Mode::Read)?;
+    let found = bodies(&mut reader, &refs)?;
+    assert_eq!(found.iter().flatten().count(), live.len());
+    assert_eq!(texts(&mut reader, &Filter::default())?, live);
+    Ok(())
+}
+
+/// The body of every observation `filter` wants, in order.
+fn texts(
+    store: &mut Store,
+    filter: &Filter,
+) -> Result<Vec<String>, Box<dyn StdError>> {
+    let rows = store.observations(filter)?;
+    Ok(rows.into_iter().map(|o| o.body).collect())
+}
+
+#[test]
+fn an_append_past_a_sealed_bucket_lands_in_a_fresh_partition() -> Test {
+    let all = ["a", "b", "d", "late", "hook", "c"];
+    lands_fresh("tier-fresh-seal", Store::seal, &all)
+}
+
+#[test]
+fn an_append_past_a_compacted_bucket_lands_in_a_fresh_partition() -> Test {
+    let all = ["a", "b", "d", "late", "hook", "c"];
+    lands_fresh("tier-fresh-compact", Store::compact, &all)
+}
+
+#[test]
+fn an_append_past_a_dropped_bucket_lands_in_a_fresh_partition() -> Test {
+    let live = ["late", "hook", "c"];
+    lands_fresh("tier-fresh-drop", Store::drop, &live)
+}
+
+#[test]
+fn each_retired_fresh_partition_gives_way_to_the_next() -> Test {
+    let s = Scratch::new("tier-fresh-next")?;
+    let mut store = s.open(Mode::Read)?;
+    let (_, path) = fill(&mut store)?;
+    store.compact(&path)?;
+    store.append(&event(8, None, "first fresh"))?;
+    store.drop(&fresh(&path, 1))?;
+    store.append(&event(9, None, "second fresh"))?;
+    assert_eq!(count(&s, &fresh(&path, 2))?, 1);
+    store.rebuild()?;
+    let week = Filter {
+        until: Some(WEEK),
+        ..Filter::default()
+    };
+    assert_eq!(texts(&mut store, &week)?, ["a", "b", "d", "second fresh"]);
+    Ok(())
+}
+
+/// The refusal of a seal or compaction of `path` before `end`.
+fn open_until(path: &str, end: u64) -> Result<(), Error> {
+    let path = path.to_owned();
+    Err(Error::Open { path, end })
+}
+
+#[test]
+fn seal_and_compact_refuse_a_bucket_still_open() -> Test {
+    let s = Scratch::new("tier-open")?;
+    let mut store = s.open(Mode::Read)?;
+    let (_, path) = fill(&mut store)?;
+    let (open, end) = (open_until(&path, WEEK), WEEK);
+    assert_eq!(store.seal_at(&path, end - 1), open);
+    assert_eq!(store.compact_at(&path, 5), open);
+    assert_eq!(state(&store, &path)?, Some(State::Hot));
+    store.seal_at(&path, end)?;
+    assert_eq!(store.compact_at(&path, end - 1), open);
+    assert_eq!(state(&store, &path)?, Some(State::Warm));
+    store.compact_at(&path, end)?;
+    assert_eq!(state(&store, &path)?, Some(State::Cold));
+    Ok(())
+}
+
+#[test]
+fn seal_and_compact_without_a_clock_take_any_bucket() -> Test {
+    let s = Scratch::new("tier-no-clock")?;
+    let mut store = s.open(Mode::Read)?;
+    store.append(&event(1 << 47, None, "far ahead"))?;
+    let all = store.partitions(&Filter::default())?;
+    let path = all.first().ok_or("no partition")?.path.clone();
+    store.compact(&path)?;
+    assert_eq!(state(&store, &path)?, Some(State::Cold));
+    Ok(())
+}
+
 #[test]
 fn seal_makes_a_partition_warm_and_read_only() -> Test {
     let s = Scratch::new("tier-seal")?;
@@ -43,11 +160,10 @@ fn seal_makes_a_partition_warm_and_read_only() -> Test {
     store.seal(&path)?;
     store.seal(&path)?;
     assert_eq!(state(&store, &path)?, Some(State::Warm));
-    let late = store.append(&event(8, None, "too late"));
-    assert_eq!(late, Err(Error::ReadOnly { path: path.clone() }));
-    let mut other = s.open(Mode::Read)?;
-    let refused = other.append(&event(9, None, "elsewhere"));
-    assert_eq!(refused, Err(Error::ReadOnly { path }));
+    store.append(&event(8, None, "too late"))?;
+    s.open(Mode::Read)?.append(&event(9, None, "elsewhere"))?;
+    assert_eq!(count(&s, &path)?, 3);
+    assert_eq!(count(&s, &fresh(&path, 1))?, 2);
     assert_eq!(bodies(&mut store, &refs)?, some(&["a", "b", "c", "d"]));
     assert_eq!(store.generation()?, was);
     Ok(())
@@ -84,8 +200,6 @@ fn a_cold_partition_reads_through_its_thawed_copy() -> Test {
     assert_eq!(fresh.observations(&Filter::default())?, before);
     assert!(s.data().join("thawed").join(&path).is_file());
     assert_eq!(bodies(&mut fresh, &refs)?, some(&["a", "b", "c", "d"]));
-    let late = fresh.append(&event(8, None, "too late"));
-    assert_eq!(late, Err(Error::ReadOnly { path }));
     Ok(())
 }
 
@@ -115,8 +229,6 @@ fn drop_answers_dropped_never_another_row() -> Test {
     let c = Some("c".to_owned());
     assert_eq!(bodies(&mut store, &refs)?, [None, None, c, None]);
     let once = store.generation()?;
-    let again = store.append(&event(5, None, "same ms as a"));
-    assert_eq!(again, Err(Error::ReadOnly { path: path.clone() }));
     store.drop(&path)?;
     assert!(once > was && store.generation()? == once);
     Ok(())

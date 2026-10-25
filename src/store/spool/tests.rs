@@ -242,17 +242,33 @@ fn sealed_then_spooled(
 }
 
 #[test]
-fn a_spooled_item_for_a_sealed_partition_is_held_not_blocking() -> Test {
+fn a_spooled_item_for_a_sealed_partition_lands_in_a_fresh_one() -> Test {
     let s = Scratch::new("spool-sealed")?;
-    let (mut reader, file) = sealed_then_spooled(&s)?;
-    let text = fs::read_to_string(&file)?;
+    let (mut reader, _) = sealed_then_spooled(&s)?;
     reader.replay()?;
+    assert!(spooled(&s)?.is_empty());
+    assert!(!s.data().join("spool/sealed").exists());
+    assert_eq!(count(&s, &chunk(&reader, "19700101-7d"))?, 1);
+    assert_eq!(count(&s, &chunk(&reader, "19700101-7d~1"))?, 1);
+    Ok(())
+}
+
+#[test]
+fn a_spooled_item_for_a_file_sealed_past_a_lost_catalog_is_held() -> Test {
+    let s = Scratch::new("spool-sealed-lost")?;
+    let (reader, file) = sealed_then_spooled(&s)?;
+    let path = chunk(&reader, "19700101-7d");
+    drop(reader);
+    for end in ["", "-wal", "-shm"] {
+        let _ = fs::remove_file(s.data().join(format!("catalog.db{end}")));
+    }
+    let text = fs::read_to_string(&file)?;
     drop(s.open(Mode::Read)?);
     assert!(spooled(&s)?.is_empty());
     let name = file.file_name().ok_or("no name")?;
     let held = s.data().join("spool/sealed").join(name);
     assert_eq!(fs::read_to_string(held)?, text);
-    assert_eq!(count(&s, &chunk(&reader, "19700101-7d"))?, 1);
+    assert_eq!(count(&s, &path)?, 1);
     Ok(())
 }
 

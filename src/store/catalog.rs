@@ -73,6 +73,12 @@ pub(super) fn find(
     }))
 }
 
+/// The end `t1` of the bucket of the partition at `path`.
+pub(super) fn end(conn: &Connection, path: &str) -> Result<u64, Error> {
+    let sql = "SELECT t1 FROM partitions WHERE path = ?1";
+    Ok(conn.query_row(sql, [path], |r| r.get(0))?)
+}
+
 /// Move the partition at `path` to `state` (src/store T6).
 pub(super) fn set_state(
     conn: &Connection,

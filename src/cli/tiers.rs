@@ -56,11 +56,14 @@ pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
     }
 }
 
+/// A seal or compaction of a bucket not yet ended is exit 2 naming its
+/// end (`src/store:V13`).
 fn partitions(mut store: Store, action: &Partitions, io: &mut Io<'_>) -> Done {
+    let now = (io.now)();
     let done = match action {
         Partitions::List => return list(&store, io),
-        Partitions::Seal { path } => store.seal(path),
-        Partitions::Compact { path } => store.compact(path),
+        Partitions::Seal { path } => store.seal_at(path, now),
+        Partitions::Compact { path } => store.compact_at(path, now),
         Partitions::Drop { path } => store.drop(path),
         Partitions::Repartition => store.repartition(),
     };
