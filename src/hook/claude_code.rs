@@ -5,8 +5,8 @@
 //! (user-prompt-submit), `tool_name`, `tool_input`, `tool_response` and
 //! `tool_use_id` (post-tool-use), the same with `error` for
 //! `tool_response` (post-tool-use-failure), `last_assistant_message`
-//! (stop), `reason` (session-end). Only `tool_use_id` is an identity
-//! (root V16).
+//! (stop), `reason` (session-end), `cwd` (every event, kept on the
+//! session's row, T10). Only `tool_use_id` is an identity (root V16).
 
 #[cfg(test)]
 mod tests;
@@ -32,7 +32,7 @@ pub(super) fn parse(kind: Kind, raw: &[u8]) -> Option<Payload> {
         body: body(kind, obj),
         paths: paths(kind, obj),
         source: text(obj, "source").map(str::to_owned),
-        cwd: None,
+        cwd: text(obj, "cwd").map(str::to_owned),
     })
 }
 

@@ -8,7 +8,7 @@
 mod tests;
 
 use super::Kind;
-use crate::store::{Error, Event, Store};
+use crate::store::{Error, Event, SessionStart, Store};
 
 /// Record the session row `kind`'s stored `event` changes, if any;
 /// `cwd` is the working dir the payload reports.
@@ -16,10 +16,22 @@ pub(super) fn record(
     store: &mut Store,
     kind: Kind,
     event: &Event,
-    _cwd: Option<&str>,
+    cwd: Option<&str>,
 ) -> Result<(), Error> {
-    if kind == Kind::SessionEnd {
-        store.session_ended(&event.session, event.ts)?;
+    let written = match kind {
+        Kind::SessionStart => store.session_started(&start(event, cwd)),
+        Kind::SessionEnd => store.session_ended(&event.session, event.ts),
+        _ => return Ok(()),
+    };
+    written.map(drop)
+}
+
+/// The start `event` reports; no `cwd` reported records an empty one.
+fn start(event: &Event, cwd: Option<&str>) -> SessionStart {
+    SessionStart {
+        id: event.session.clone(),
+        ide: event.ide.clone(),
+        cwd: cwd.unwrap_or_default().to_owned(),
+        ts: event.ts,
     }
-    Ok(())
 }
