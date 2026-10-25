@@ -65,6 +65,7 @@ toml|taplo|-|-
 path:Cargo.lock|deny|-|-
 exempt|tdd-order|-|-
 coverage|coverage|-|-
+path:LICENSE|-|-|MIT license text, kept verbatim; the `*` checks still apply
 path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)
 mjs|-|-|test-only oracle runner for src/grammar, never in the chert binary
 txt|-|-|src/grammar corpus: input texts for the oracle and the grammar tests

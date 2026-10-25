@@ -109,7 +109,7 @@ T13|.|GitHub repo `pr0d1r2/chertmem` PUBLIC, first push, w/ approval; `gh repo v
 T14|.|issue in rekall proposing `chert` dialect for `catch`, w/ approval (D27)|V7,V13
 T15|.|owner review of agent-answered round 2 (D11–D26)|-
 T16|.|`docs/BENCHMARKS.md`: human page on benchmarks, first measured numbers|V14
-T17|.|`LICENSE` MIT (D26), before first push|V13
+T17|x|`LICENSE` MIT (D26), before first push|V13
 T18|.|release: flake `packages.default` = `chert` ∀ `paradigm/V28` system; crates.io `chertmem` via `cargo-release` & Keep a Changelog (`paradigm/V32`); publish only w/ owner approval|V13
 
 ## §B BUGS
