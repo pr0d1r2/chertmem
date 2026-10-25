@@ -79,6 +79,10 @@ coverage|coverage|sherd|**/*.rs, Cargo.toml, .coverage|sherd coverage --check|-|
 # push near 40 s once the release build is cached, every store suite
 # still measured; the larger ones run by hand before a re-record.
 bench-gate|coverage|-|**/*.rs, Cargo.toml, Cargo.lock, benches/baseline.toml|cargo bench -q -p chertmem --bench latency -- '/10?k-p52$' && cargo run -q -p chertmem-dev -- bench-gate 1k-p52 10k-p52|-|-|a bench median is over its baseline x (1 + tolerance) on this machine class; see docs/BENCHMARKS.md
+# The crates.io tarball must build on its own: package-list checks the
+# file list only, and missed vocab.bin (T14). Push only, alone: it
+# compiles the packaged crate under target/package.
+package-verify|coverage|-|**/*.rs, **/*.bin, Cargo.toml, Cargo.lock|cargo package -q -p chertmem --locked --allow-dirty|-|-|the crates.io tarball does not build: a file the crate reads is not in Cargo.toml include
 ## types
 type|checks|min|exempt
 *|trailing-whitespace, final-newline, line-endings, no-bom, no-merge-conflict, no-case-conflict, no-broken-symlinks, no-private-key, ripsecrets, typos, editorconfig-checker, no-local-paths, name-guard, no-core-worktree|-|-
@@ -97,11 +101,11 @@ envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
-rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test, test-bpe, coverage, bench-gate|-|-
+rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test, test-bpe, coverage, bench-gate, package-verify|-|-
 toml|taplo|-|-
 path:benches/baseline.toml|taplo, bench-gate, perf-doc|-|-
 path:docs/PERFORMANCE.md|markdownlint, perf-doc|-|-
-path:Cargo.lock|deny, notices|-|-
+path:Cargo.lock|deny, notices, package-verify|-|-
 path:THIRD-PARTY-NOTICES.md|markdownlint, notices|-|-
 path:README.md|markdownlint, package-list|-|-
 exempt|tdd-order|-|-
@@ -112,7 +116,9 @@ path:.actlith|actlith-gen-check, actlith-check|-|-
 path:.github/workflows/*.yml|yamllint, actionlint, zizmor, actlith-gen-check, actlith-check|-|-
 mjs|-|-|test-only oracle runner for src/grammar, never in the chert binary
 txt|-|-|src/grammar corpus: input texts for the oracle and the grammar tests; tests/hook/corpus: the frozen README and docs the src/hook corpus reads (T14)
-bin|-|-|src/hook T14 (R8): generated o200k subset for the memory tokenizer, read by include_bytes!; the test-bpe drift test checks it
+# src/hook T14 (R8): generated o200k subset, read by include_bytes!; the
+# test-bpe drift test checks its bytes, package-verify that it ships.
+bin|package-verify|-|-
 compressed|-|-|golden output of cavemem compress, compared byte for byte by src/grammar tests
 expanded|-|-|golden output of cavemem expand, compared byte for byte by src/grammar tests
 path:tests/hook/fixtures/**/*.json|-|-|src/hook fixtures read by its tests: Claude Code 2.1.302 hook payloads recorded 2026-10-24 (src/hook R1)
