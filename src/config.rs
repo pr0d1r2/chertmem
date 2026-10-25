@@ -6,11 +6,13 @@ mod tests;
 
 mod cache;
 mod compression;
+mod edit;
 mod error;
 mod inject;
 mod parse;
 mod partition;
 mod sections;
+mod show;
 mod source;
 mod storage;
 
@@ -18,11 +20,14 @@ use std::path::{Path, PathBuf};
 
 pub use cache::{Cache, Overflow};
 pub use compression::{Compression, Grammar, Zstd};
+pub use edit::set;
 pub use error::Error;
 pub use inject::{Inject, ON_PROMPT_DISCLAIMER};
 pub use parse::{Span, Unit, parse_size};
 pub use partition::{Dimension, Partition};
 pub use sections::{Embedding, Mining, Privacy, Provider, Search};
+pub use show::{Entry, Origin, get, show};
+pub use source::{Paths, paths};
 pub use storage::Storage;
 
 use cache::window_warning;

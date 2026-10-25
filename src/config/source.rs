@@ -14,7 +14,7 @@ use super::Error;
 use super::parse::name;
 
 /// Every key `chert.toml` accepts (src/config I); any other is an error.
-const KEYS: &[&str] = &[
+pub(super) const KEYS: &[&str] = &[
     "storage.data_dir",
     "partition.by",
     "partition.time_bucket",
@@ -38,30 +38,48 @@ const KEYS: &[&str] = &[
 
 /// Keys whose value is a table of keys of their own, each merged and
 /// defaulted on its own (root C `compression.zstd`).
-const TABLES: &[&str] = &["compression.zstd"];
+pub(super) const TABLES: &[&str] = &["compression.zstd"];
+
+/// The two `chert.toml` files (src/config I, `chert config path`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Paths {
+    /// `~/.config/chert/chert.toml`; `None` without a home.
+    pub user: Option<PathBuf>,
+    /// `<project_root>/chert.toml`.
+    pub project: PathBuf,
+}
+
+/// Where the user and project files live; `None` home has no user file.
+#[must_use]
+pub fn paths(home: Option<&Path>, project_root: &Path) -> Paths {
+    Paths {
+        user: home.map(|h| h.join(".config/chert/chert.toml")),
+        project: project_root.join("chert.toml"),
+    }
+}
 
 /// The user file (when there is a home), then the project file: the
 /// later wins (V1).
 pub(super) fn files(home: Option<&Path>, project_root: &Path) -> Vec<PathBuf> {
-    let user = home.map(|h| h.join(".config/chert/chert.toml"));
-    let project = project_root.join("chert.toml");
+    let Paths { user, project } = paths(home, project_root);
     user.into_iter().chain(std::iter::once(project)).collect()
 }
 
-/// The file's table; `None` when it does not exist.
-fn read(file: &Path) -> Result<Option<Table>, Error> {
-    let text = match std::fs::read_to_string(file) {
-        Ok(text) => text,
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-        Err(e) => {
-            let reason = e.to_string();
-            return Err(Error::Read {
-                file: file.to_path_buf(),
-                reason,
-            });
-        }
-    };
-    text.parse::<Table>().map(Some).map_err(|e| Error::Parse {
+/// The file's text; `None` when it does not exist.
+pub(super) fn read_text(file: &Path) -> Result<Option<String>, Error> {
+    match std::fs::read_to_string(file) {
+        Ok(text) => Ok(Some(text)),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(Error::Read {
+            file: file.to_path_buf(),
+            reason: e.to_string(),
+        }),
+    }
+}
+
+/// `text` as the table of `file`.
+fn parse(file: &Path, text: &str) -> Result<Table, Error> {
+    text.parse::<Table>().map_err(|e| Error::Parse {
         file: file.to_path_buf(),
         reason: e.to_string().trim().to_owned(),
     })
@@ -84,8 +102,8 @@ impl Source {
     pub(super) fn gather(files: &[PathBuf]) -> Result<Self, Error> {
         let mut source = Self::default();
         for file in files {
-            if let Some(table) = read(file)? {
-                source.merge(file, table)?;
+            if let Some(text) = read_text(file)? {
+                source.merge(file, parse(file, &text)?)?;
             }
         }
         Ok(source)
