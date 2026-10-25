@@ -85,20 +85,22 @@ pub fn mcp_path(home: &Path, ide: Ide) -> PathBuf {
     }
 }
 
-/// An edit of 1 file's JSON with the `chert` program; `Err` names the
-/// wrong-typed key.
+/// Install's edit of 1 file's JSON with the `chert` program; `Err`
+/// names the wrong-typed key.
 type Edit = fn(&mut Value, &str) -> Result<(), String>;
 
+/// Uninstall's edit of 1 file's JSON, given the file's JSON before
+/// chert's first write, so a key the user had stays (B2); `Err` names
+/// the wrong-typed key.
+type Undo = fn(&mut Value, &Value) -> Result<(), String>;
+
 /// The edits of `ide`'s 2 files: install's, then uninstall's.
-fn edits(ide: Ide) -> [(Edit, Edit); 2] {
+fn edits(ide: Ide) -> ([Edit; 2], [Undo; 2]) {
     match ide {
-        Ide::ClaudeCode => [
-            (claude_code::wire, claude_code::serve),
-            (
-                |v, _| claude_code::unwire(v),
-                |v, _| claude_code::unserve(v),
-            ),
-        ],
+        Ide::ClaudeCode => (
+            [claude_code::wire, claude_code::serve],
+            [claude_code::unwire, claude_code::unserve],
+        ),
     }
 }
 
@@ -110,8 +112,8 @@ fn edits(ide: Ide) -> [(Edit, Edit); 2] {
 /// A file is unreadable, not JSON, holds a wrong-typed key chert edits,
 /// or cannot be written.
 pub fn install(target: &Target<'_>, ide: Ide) -> Result<Changes, Error> {
-    let [(hooks, server), _] = edits(ide);
-    edited(target.mcp, server, target.chert)?;
+    let ([hooks, server], _) = edits(ide);
+    edited(target.mcp, |v| server(v, target.chert))?;
     Ok(Changes {
         settings: add(target.settings, hooks, target.chert)?,
         mcp: add(target.mcp, server, target.chert)?,
@@ -124,11 +126,11 @@ pub fn install(target: &Target<'_>, ide: Ide) -> Result<Changes, Error> {
 /// # Errors
 /// As [`install`].
 pub fn uninstall(target: &Target<'_>, ide: Ide) -> Result<Changes, Error> {
-    let [_, (hooks, server)] = edits(ide);
-    edited(target.mcp, server, target.chert)?;
+    let (_, [hooks, server]) = edits(ide);
+    undone(target.mcp, server)?;
     Ok(Changes {
-        settings: take(target.settings, hooks, target.chert)?,
-        mcp: take(target.mcp, server, target.chert)?,
+        settings: take(target.settings, hooks)?,
+        mcp: take(target.mcp, server)?,
     })
 }
 
@@ -136,21 +138,34 @@ pub fn uninstall(target: &Target<'_>, ide: Ide) -> Result<Changes, Error> {
 /// the edit changes nothing.
 fn edited(
     path: &Path,
-    edit: Edit,
-    chert: &str,
+    edit: impl FnOnce(&mut Value) -> Result<(), String>,
 ) -> Result<Option<(settings::Loaded, Value)>, Error> {
     let found = settings::load(path)?;
     let mut value = found.value.clone();
-    edit(&mut value, chert).map_err(|key| Error::Shape {
+    edit(&mut value).map_err(|key| Error::Shape {
         path: path.to_path_buf(),
         key,
     })?;
     Ok((value != found.value).then_some((found, value)))
 }
 
+/// [`edited`] by `undo`, given the JSON of `path`'s backup: the file
+/// before chert's first write; an empty object when there is none, or
+/// it is not JSON, as chert then made every key it finds.
+fn undone(
+    path: &Path,
+    undo: Undo,
+) -> Result<Option<(settings::Loaded, Value)>, Error> {
+    let bak = settings::backup(path);
+    let before = settings::bytes(&bak)?
+        .and_then(|b| settings::parse(&bak, &b).ok())
+        .unwrap_or_else(|| Value::Object(Map::new()));
+    edited(path, |v| undo(v, &before))
+}
+
 /// `edit` applied to `path` and written, the original backed up first.
 fn add(path: &Path, edit: Edit, chert: &str) -> Result<Change, Error> {
-    let Some((found, value)) = edited(path, edit, chert)? else {
+    let Some((found, value)) = edited(path, |v| edit(v, chert))? else {
         return Ok(Change::Unchanged);
     };
     if let Some(original) = &found.bytes {
@@ -160,10 +175,10 @@ fn add(path: &Path, edit: Edit, chert: &str) -> Result<Change, Error> {
     Ok(Change::Wrote)
 }
 
-/// `edit` applied to `path`, then put back as the byte-identity rule
+/// `undo` applied to `path`, then put back as the byte-identity rule
 /// says.
-fn take(path: &Path, edit: Edit, chert: &str) -> Result<Change, Error> {
-    match edited(path, edit, chert)? {
+fn take(path: &Path, undo: Undo) -> Result<Change, Error> {
+    match undone(path, undo)? {
         Some((_, value)) => put_back(path, &value),
         None => Ok(Change::Unchanged),
     }

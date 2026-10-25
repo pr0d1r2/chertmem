@@ -5,6 +5,9 @@
 //! An entry is chert's when it is what chert writes: a hook command
 //! `<chert> hook run <event> --ide claude-code` whose program is named
 //! `chert`, and the server `mcpServers.chert`. Nothing else is touched.
+//! Removing them drops a key or list they leave empty only when it was
+//! not in the file before chert's first write, so a user's own empty
+//! `hooks` or `mcpServers` stays (B2).
 //! A server under `mcpServers.chert` in `settings.json`, where chert
 //! once put it (B1), goes on install: Claude Code never read it there.
 
@@ -118,7 +121,7 @@ pub(super) fn wire(root: &mut Value, chert: &str) -> Result<(), String> {
         let groups = entry.as_array_mut().ok_or_else(|| name.to_owned())?;
         hook_in(groups, &command(chert, event), event);
     }
-    drop_server(top);
+    drop_server(top, &Value::Null);
     Ok(())
 }
 
@@ -133,21 +136,23 @@ pub(super) fn serve(root: &mut Value, chert: &str) -> Result<(), String> {
 }
 
 /// Drop chert's server from `~/.claude.json` `root`, and `mcpServers`
-/// when that emptied it.
+/// when that emptied it and `before`, the file before chert's first
+/// write, had none.
 ///
 /// # Errors
 /// The top is not an object.
-pub(super) fn unserve(root: &mut Value) -> Result<(), String> {
-    drop_server(object(root, MCP_FILE)?);
+pub(super) fn unserve(root: &mut Value, before: &Value) -> Result<(), String> {
+    drop_server(object(root, MCP_FILE)?, before);
     Ok(())
 }
 
 /// Drop `mcpServers.chert` from `top`, and `mcpServers` when that
-/// emptied it; a wrong-typed `mcpServers` is left alone.
-fn drop_server(top: &mut Map<String, Value>) {
+/// emptied it and `before` had none; a wrong-typed `mcpServers` is left
+/// alone.
+fn drop_server(top: &mut Map<String, Value>, before: &Value) {
     let servers = top.get_mut("mcpServers").and_then(Value::as_object_mut);
     let gone = servers.is_some_and(|s| s.remove(SERVER).is_some());
-    prune(top, "mcpServers", gone);
+    prune(top, "mcpServers", gone, before);
 }
 
 /// Append a group running `cmd` unless 1 runs it already.
@@ -182,48 +187,56 @@ fn keep_group(group: &mut Value, event: &str, changed: &mut bool) -> bool {
 }
 
 /// Remove every entry chert wrote from settings `root`, and each
-/// container only that removal left empty; nothing else.
+/// container only that removal left empty that `before`, the file
+/// before chert's first write, did not hold; nothing else.
 ///
 /// # Errors
 /// The key whose value is of the wrong JSON type.
-pub(super) fn unwire(root: &mut Value) -> Result<(), String> {
+pub(super) fn unwire(root: &mut Value, before: &Value) -> Result<(), String> {
     let top = object(root, "settings")?;
     let mut changed = false;
     if let Some(hooks) = top.get_mut("hooks") {
         let hooks = object(hooks, "hooks")?;
+        let had = before.get("hooks").unwrap_or(&Value::Null);
         for (event, name) in EVENTS {
-            changed |= unhook(hooks, name, event)?;
+            changed |= unhook(hooks, (name, event), had)?;
         }
     }
-    prune(top, "hooks", changed);
-    drop_server(top);
+    prune(top, "hooks", changed, before);
+    drop_server(top, before);
     Ok(())
 }
 
 /// Drop chert's hooks of event `name`, and the list when that emptied
-/// it; whether any went.
+/// it and `had`, the `hooks` before, held none; whether any went.
 fn unhook(
     hooks: &mut Map<String, Value>,
-    name: &str,
-    event: &str,
+    (name, event): (&str, &str),
+    had: &Value,
 ) -> Result<bool, String> {
     let Some(entry) = hooks.get_mut(name) else {
         return Ok(false);
     };
     let groups = entry.as_array_mut().ok_or_else(|| name.to_owned())?;
     let changed = drop_owned(groups, event);
-    prune(hooks, name, changed);
+    prune(hooks, name, changed, had);
     Ok(changed)
 }
 
-/// Remove `key` when `changed` left its object or list empty.
-fn prune(map: &mut Map<String, Value>, key: &str, changed: bool) {
+/// Remove `key` when `changed` left its object or list empty and
+/// `before` held no `key`: chert made it, so chert takes it (B2).
+fn prune(
+    map: &mut Map<String, Value>,
+    key: &str,
+    changed: bool,
+    before: &Value,
+) {
     let empty = map.get(key).is_some_and(|v| match v {
         Value::Object(o) => o.is_empty(),
         Value::Array(a) => a.is_empty(),
         _ => false,
     });
-    if changed && empty {
+    if changed && empty && before.get(key).is_none() {
         map.remove(key);
     }
 }
