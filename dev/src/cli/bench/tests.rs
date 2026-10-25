@@ -1,4 +1,4 @@
-use super::{BASELINE, INDEX};
+use super::{BASELINE, INDEX, PAGE};
 use crate::cli::run;
 use std::error::Error;
 use std::fs;
@@ -95,5 +95,34 @@ fn bench_gate_holds_on_another_machine_and_without_a_baseline() -> Res {
     assert_eq!(run(&args(&["bench-gate"]), &scratch("none")?), 0);
     fs::write(root.join(BASELINE), "not toml [")?;
     assert_eq!(run(&args(&["bench-gate"]), &root), 2);
+    Ok(())
+}
+
+#[test]
+fn perf_doc_writes_the_page_and_check_finds_a_hand_edit() -> Res {
+    // dev V6: the planted hand edit fails --check; the written page holds.
+    let root = recorded("doc")?;
+    let spec = "- latency targets (D20), x: `get_observations` < 2 ms.\n";
+    fs::write(root.join("SPEC.md"), spec)?;
+    let check = args(&["perf-doc", "--check"]);
+    assert_eq!(run(&check, &root), 1, "no page yet");
+    assert_eq!(run(&args(&["perf-doc"]), &root), 0);
+    assert_eq!(run(&check, &root), 0);
+    let page = fs::read_to_string(root.join(PAGE))?;
+    let line = "| 1k-p52 | 1.000 ms | 1.000 ms | 2 ms | yes |";
+    assert!(page.contains(line), "{page}");
+    fs::write(root.join(PAGE), page.replace("1.000 ms", "0.500 ms"))?;
+    assert_eq!(run(&check, &root), 1);
+    Ok(())
+}
+
+#[test]
+fn perf_doc_without_inputs_or_with_a_bad_flag_exits_2() -> Res {
+    let root = recorded("doc-inputs")?;
+    assert_eq!(run(&args(&["perf-doc"]), &root), 2, "no SPEC.md");
+    assert_eq!(run(&args(&["perf-doc"]), &scratch("doc-empty")?), 2);
+    assert_eq!(run(&args(&["perf-doc", "--fix"]), &root), 2);
+    fs::write(root.join("SPEC.md"), "- latency targets: none\n")?;
+    assert_eq!(run(&args(&["perf-doc"]), &root), 2);
     Ok(())
 }

@@ -1,6 +1,6 @@
-//! The bench verbs: `bench-record` (benches T4) and `bench-gate` (dev
-//! T2). Paths are the repository's own; criterion's output is read from
-//! `target/criterion`.
+//! The bench verbs: `bench-record` (benches T4), `bench-gate` (dev T2)
+//! and `perf-doc [--check]` (dev T9). Paths are the repository's own;
+//! criterion's output is read from `target/criterion`.
 
 #[cfg(test)]
 mod tests;
@@ -9,9 +9,11 @@ use std::path::{Path, PathBuf};
 
 use crate::baseline::{self, Row};
 use crate::bench_gate::{self, Verdict};
-use crate::{criterion, host, record};
+use crate::{criterion, host, perf_doc, record};
 
 pub(super) const BASELINE: &str = "benches/baseline.toml";
+pub(super) const PAGE: &str = "docs/PERFORMANCE.md";
+const SPEC: &str = "SPEC.md";
 /// The suite index the bench run writes beside its group dirs.
 pub(super) const INDEX: &str = "chert-suites.tsv";
 
@@ -20,6 +22,8 @@ pub(super) fn run(verb: &str, rest: &[String], root: &Path) -> Option<u8> {
     match (verb, rest) {
         ("bench-gate", only) => Some(gate(root, only)),
         ("bench-record", []) => Some(recorded(root)),
+        ("perf-doc", []) => Some(perf(root, false)),
+        ("perf-doc", [flag]) if flag == "--check" => Some(perf(root, true)),
         _ => None,
     }
 }
@@ -110,4 +114,30 @@ fn write(root: &Path, path: &str, text: &str) -> u8 {
         Ok(()) => 0,
         Err(e) => broken(path, &format!("cannot write: {e}")),
     }
+}
+
+/// `perf-doc [--check]`: write the page, or exit 1 when it differs.
+fn perf(root: &Path, check: bool) -> u8 {
+    let page = match page(root) {
+        Ok(page) => page,
+        Err(why) => return broken("perf-doc", &why),
+    };
+    if !check {
+        return write(root, PAGE, &page);
+    }
+    if std::fs::read_to_string(root.join(PAGE)).ok() == Some(page) {
+        return 0;
+    }
+    eprintln!(
+        "perf-doc: {PAGE} is not the page {BASELINE} and {SPEC} make; run \
+         cargo run -q -p chertmem-dev -- perf-doc"
+    );
+    1
+}
+
+fn page(root: &Path) -> Result<String, String> {
+    let rows = baseline::parse(&read(root, BASELINE)?)
+        .map_err(|e| format!("{BASELINE}: {e}"))?;
+    let targets = perf_doc::targets(&read(root, SPEC)?)?;
+    perf_doc::render(&rows, &targets)
 }
