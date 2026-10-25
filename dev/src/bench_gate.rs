@@ -26,9 +26,40 @@ pub fn verdict(
     only: &[String],
     now: &[Bench],
 ) -> Verdict {
-    let _ = (rows, class, only, now);
+    let wanted = |r: &&Row| {
+        r.class() == class && (only.is_empty() || only.contains(&r.fixture))
+    };
+    let pairs: Vec<(&Row, &Bench)> = rows
+        .iter()
+        .filter(wanted)
+        .filter_map(|r| Some((r, now.iter().find(|b| measures(b, r))?)))
+        .collect();
+    let regressions = pairs.iter().filter_map(|(r, b)| regression(r, b));
     Verdict {
-        compared: 0,
-        regressions: Vec::new(),
+        regressions: regressions.collect(),
+        compared: pairs.len(),
     }
+}
+
+fn measures(b: &Bench, r: &Row) -> bool {
+    b.suite == r.suite && b.fixture == r.fixture
+}
+
+/// The line for `b` when it regressed against `r`.
+fn regression(r: &Row, b: &Bench) -> Option<String> {
+    let limit = r.median_ms * (1.0 + r.tolerance);
+    (b.median_ms > limit).then(|| {
+        format!(
+            "{}/{}: median {:.3} ms > {:.3} ms, baseline {:.3} ms x (1 + \
+             {}) of {}; recount: {}",
+            r.suite,
+            r.fixture,
+            b.median_ms,
+            limit,
+            r.median_ms,
+            r.tolerance,
+            r.date,
+            r.recount
+        )
+    })
 }
