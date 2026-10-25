@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::fmt::Display;
+use std::fmt::{Display, Write as _};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -145,8 +145,14 @@ pub(crate) fn criterion_dir() -> PathBuf {
 /// The suite index `chertmem-dev bench-record` reads (benches T4): 1
 /// line per ready suite, `<id>\t<root C target>`, `-` for none.
 pub(crate) fn index(suites: &[Suite]) -> String {
-    let _ = suites;
-    String::new()
+    let ready = suites
+        .iter()
+        .filter(|s| matches!(s.status, Status::Ready(_)));
+    ready.fold(String::new(), |mut text, s| {
+        let target = s.target.map_or("-", |t| t.name);
+        let _ = writeln!(text, "{}\t{target}", s.id);
+        text
+    })
 }
 
 /// [`index`] written to `dir`/[`INDEX`].
