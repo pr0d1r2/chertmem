@@ -40,6 +40,7 @@ R2|ranking, wave 4|BM25 k1 1.2 b 0.75, idf `ln(1+(N-df+.5)/(df+.5))`; ties ts de
 R3|query grammar, wave 6|query `q.text` compressed at `compression.grammar.intensity()` before `token::terms` ∴ stats & score see stored form; snippet cuts stored body. lone word compresses ≡ inside prose, but kept spans keep long form (`middleware_x`, inline code, `src/middleware.rs`, `middleware-based`) & dropped phrases remove words (`kind` in `kind of`, `think` in `i think that`) ∴ such rows miss the lone word; kept spans fixed by R4|`search.rs`, `tests.rs`
 R4|both forms, wave 7|`Asked`: terms = compressed query's ∪ plain token whose lone compression keeps ≥1 token, sorted, deduped ∴ alike form counts once, a row w/ `mw` & `middleware` scores each once; `the`, `a` stay out, lone `i`, `that` stay in. re-rank embeds compressed query (≡ form of stored bodies), raw text when it holds ⊥ term|`search.rs`, `tests.rs`
 R5|no v1 client, wave 7|openai & `semantic` → `None` embedder, `Unsupported` text logged once per `Engine` via private `Warn` (`cache::Log`, stderr default); ⊥ public API change|`search.rs`, `blend/tests.rs`
+R6|FTS5 candidates, wave 8|disk path: ∀ pruned partition `Store::matches(path, terms, filter)` (any term) ⊥ `tail` of every row; worker stores pooled in `Engine` across queries, dropped when `generation` moves. terms.db kept (R1): `Store::frequencies` gives rows & df, ⊥ token total ∴ ⊥ BM25 avgdl (R2); its df counts `unicode61` tokens (diacritics stripped, `café` looks up 0) while tf counts search tokens. tokenizers ≡ on ASCII (`[a-z0-9]` runs, lowercased; ∀ ASCII char tested) ∴ candidates ⊇ rows scoring > 0, V1 V2 hold. non-ASCII: unicode61 joins over chars search splits on (marks it strips like U+0301, private use, unassigned) ∴ a fragment of such a run (`e` in `e`+U+0301+`x`) found from cache, ⊥ from disk. bench, release, M1 Pro, 10^5 rows, ~10 weekly partitions, 10 of 1000 words/row, `w1 w2`, median of 21 warm runs: full scan 33.4 ms → FTS 13.9 ms → + pool 2.8 to 3.4 ms|`merge.rs`, `merge/tests.rs`, `token/tests.rs`
 
 ## §V INVARIANTS
 
@@ -57,7 +58,7 @@ T2|x|parallel per-partition query & merge|V2,V4
 T3|x|scoring fn shared w/ cache|V1
 T4|x|ollama provider, alpha blend|V3
 T5|x|compress query terms w/ `compression.grammar` before tokenizing; test plain word finds compressed body|V5
-T6|.|candidate rows via store FTS5 MATCH per partition (needs store API), ⊥ full scan per query ∴ `.:§C` search < 10 ms holds at 10^5 rows; benchmark it|V2
+T6|x|candidate rows via store FTS5 MATCH per partition, ⊥ full scan per query ∴ `.:§C` search < 10 ms holds at 10^5 rows; benchmark it: median ~3 ms (R6)|V1,V2
 T7|x|query both the plain & the compressed form of each term ∴ a word kept long inside an identifier, inline code, path or compound (`src/middleware.rs`) is found again (R3); semantic re-rank embeds the same text it scores|V5
 T8|x|`embedding.provider` w/o a v1 client (openai) → keyword ranking w/ 1 log warning, ⊥ every search an error (mcp passes `semantic = true`)|V3
 
