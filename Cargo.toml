@@ -93,3 +93,25 @@ members = ["dev"]
 # that dependency, so our own code keeps debug builds (reconcile 2).
 [profile.dev.package.libsqlite3-sys]
 opt-level = 3
+
+[dev-dependencies]
+# The benchmark harness (benches T1, R1): Apache-2.0 OR MIT; its tree is
+# MIT, Apache-2.0 or both, zerocopy adding BSD-2-Clause as a 3rd choice.
+# Default features off: no rayon, no plotters; reports stay JSON under
+# target/criterion, which benches T4's gate reads.
+criterion = { version = "0.8.2", default-features = false }
+
+# `cargo bench -p chertmem` (benches I): every suite under criterion.
+[[bench]]
+name = "latency"
+path = "benches/latency/main.rs"
+harness = false
+
+# The same modules under libtest, so `cargo nextest run` runs the
+# benches' own tests (benches V1, V2); `cargo bench` skips it.
+[[bench]]
+name = "latency-tests"
+path = "benches/latency/lib.rs"
+harness = true
+test = true
+bench = false
