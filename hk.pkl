@@ -28,6 +28,13 @@ local all = (fast) {
   // dev T2: the release bench must run alone, or its medians measure the
   // other steps; it is a `cargo bench` and a `cargo run` too (dev V10).
   ["bench-gate"] = (generated.push["bench-gate"]) { exclusive = true }
+  // Root T12, as lablith: no dependency with a published advisory. It
+  // fetches the advisory database, so it runs at push and in CI, which
+  // reach the network anyway; the commit-time `deny` step stays offline.
+  ["deny-advisories"] {
+    glob = List("Cargo.toml", "Cargo.lock", "deny.toml")
+    check = "cargo deny check advisories"
+  }
 }
 
 hooks {
