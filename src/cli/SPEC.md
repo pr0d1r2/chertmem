@@ -28,7 +28,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn: `cli::run(args) -> ExitCode`.
+- fn: `cli::run(args, &mut Io) -> u8` (R3); `cli::main()` = system entry.
 
 ## §R RESEARCH
 
