@@ -108,7 +108,8 @@ yaml|yamllint|-|-
 path:.actlith|actlith-gen-check, actlith-check|-|-
 path:.github/workflows/*.yml|yamllint, actionlint, zizmor, actlith-gen-check, actlith-check|-|-
 mjs|-|-|test-only oracle runner for src/grammar, never in the chert binary
-txt|-|-|src/grammar corpus: input texts for the oracle and the grammar tests
+txt|-|-|src/grammar corpus: input texts for the oracle and the grammar tests; tests/hook/corpus: the frozen README and docs the src/hook corpus reads (T14)
+bin|-|-|src/hook T14 (R8): generated o200k subset for the memory tokenizer, read by include_bytes!; the test-bpe drift test checks it
 compressed|-|-|golden output of cavemem compress, compared byte for byte by src/grammar tests
 expanded|-|-|golden output of cavemem expand, compared byte for byte by src/grammar tests
 path:tests/hook/fixtures/**/*.json|-|-|src/hook fixtures read by its tests: Claude Code 2.1.302 hook payloads recorded 2026-10-24 (src/hook R1)

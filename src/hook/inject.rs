@@ -160,9 +160,9 @@ fn cut(lines: &[String], max: u32) -> Option<String> {
 }
 
 /// The tokens `text` counts against `inject.max_tokens`, the 1 place
-/// the count is chosen (src/hook C, R2): the structured estimate (T12,
-/// R7), never under o200k on the corpus, so the hook path loads no
-/// tokenizer.
+/// the count is chosen (src/hook C, R2): the memory tokenizer (T14,
+/// R8), never under o200k's count, from an o200k subset compiled in,
+/// so the hook path loads no tokenizer.
 #[cfg(not(feature = "bpe"))]
 pub(crate) fn tokens_at_most(text: &str) -> usize {
     estimate::tokens(text)

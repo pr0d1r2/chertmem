@@ -90,7 +90,7 @@ V13: ∀ outward act (push, publish, issue in other repo) has owner approval on 
 V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 benchmark on generated fixtures of stated size; `docs/BENCHMARKS.md` explains run, read, targets & why; `docs/PERFORMANCE.md`, generated from `benches/baseline.toml`, lists ∀ measured number w/ date, machine, recount command (D29, owner 2026-10-25, `paradigm/V4`).
 V15: ref resolution = exact match on stored issued ref, ⊥ prefix match ∴ later rows ⊥ make old ref ambiguous. lookup: current project first, then all; ∃ in > 1 project → error naming projects, ⊥ guess (B1).
 V16: dedupe only by event identity dialect supplies (e.g. a tool-use id), verified in recorded fixtures; ⊥ identity → every event kept. ⊥ dedupe by payload content ∵ identical payload = real repeat (same command twice) & mining counts it (D23) (B2).
-V17: injected context ≤ `inject.max_tokens` estimated tokens (structured count ⊥ under o200k, `src/hook` R7; exact o200k with feature `bpe`), refs & gists only (D28).
+V17: injected context ≤ `inject.max_tokens` counted tokens (memory tokenizer ⊥ under o200k, `src/hook` R8; exact o200k with feature `bpe`), refs & gists only (D28).
 
 ## §T TASKS
 

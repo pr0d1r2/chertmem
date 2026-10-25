@@ -1,11 +1,17 @@
-//! The calibration corpus of src/hook T12 (R7): the texts the hook
-//! would inject, built from committed files (the grammar corpus, the
-//! docs, the README, the hook fixtures) at every grammar intensity, plus
-//! the injections of a few seeded stores. Its tests check the default
-//! estimate never undercounts o200k on it.
+//! The calibration corpus of src/hook T12 (R7) and T14 (R8): the texts
+//! the hook would inject, built from committed test inputs at every
+//! grammar intensity (the grammar corpus, the hook fixtures, and
+//! `tests/hook/corpus/`: `README.md` and `docs/*.md` as of 59d8f8f,
+//! 2026-10-25, copied as is and frozen so editing the docs never moves
+//! the hook tests; refresh only on purpose, by copying them again),
+//! plus the injections of a few seeded stores. Its tests check that the
+//! default count never undercounts o200k on it, and its over-ratio on
+//! the texts of every 5th source, held out.
 
 #[cfg(test)]
 mod tests;
+
+mod table;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,15 +33,21 @@ const INTENSITIES: [Intensity; 4] = [
 ];
 
 /// Crockford base32, as ULIDs and so refs are written.
-const ALPHABET: &[u8] = estimate::ALPHABET.as_bytes();
+pub(super) const ALPHABET: &[u8] = b"0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+/// Every how many sources 1 is held out.
+const HOLD_OUT: usize = 5;
+
+/// The frozen copy of the README and the docs (see the module doc).
+const SNAPSHOT: &str = "tests/hook/corpus";
 
 /// The committed files the corpus is built from, sorted.
 fn sources() -> Res<Vec<PathBuf>> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let mut found = vec![root.join("README.md")];
+    let mut found = Vec::new();
     for (dir, ext) in [
         ("tests/grammar/corpus", "txt"),
-        ("docs", "md"),
+        (SNAPSHOT, "txt"),
         ("tests/hook/fixtures/claude-code", "json"),
     ] {
         found.extend(with_ext(&root.join(dir), ext)?);
@@ -95,9 +107,21 @@ fn injected(text: &str, first: u64) -> Vec<String> {
 
 /// Every source at every intensity, as injected texts.
 fn built() -> Res<Vec<String>> {
+    built_from(&sources()?)
+}
+
+/// The texts of every [`HOLD_OUT`]th source: no part of the count is
+/// built from the corpus (R8), and these show it is not fitted to it.
+pub(super) fn held_out() -> Res<Vec<String>> {
+    let sources = sources()?;
+    let held = sources.iter().skip(HOLD_OUT.saturating_sub(1));
+    built_from(&held.step_by(HOLD_OUT).cloned().collect::<Vec<_>>())
+}
+
+fn built_from(sources: &[PathBuf]) -> Res<Vec<String>> {
     let mut out = Vec::new();
-    for path in sources()? {
-        let text = fs::read_to_string(&path)?;
+    for path in sources {
+        let text = fs::read_to_string(path)?;
         for intensity in INTENSITIES {
             let first = u64::try_from(out.len())?.saturating_mul(3);
             out.extend(injected(&compress(&text, intensity), first));
@@ -128,7 +152,8 @@ fn fixtures() -> Res<String> {
     let mut scratch = Scratch::new("corpus-fixtures")?;
     scratch.config.inject.max_tokens = 10_000;
     past(&scratch, "a", NOW, "chert-fixture");
-    let readme = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("README.md");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let readme = root.join(SNAPSHOT).join("README.md.txt");
     let said = fs::read_to_string(readme)?;
     past(&scratch, "b", NOW.saturating_add(10), &said);
     context(at_start(&scratch, "startup"), Kind::SessionStart)
@@ -159,7 +184,7 @@ fn ratios(texts: &[String]) -> Res<Vec<(usize, &String)>> {
     Ok(out)
 }
 /// Prints the totals, the median and worst over-ratio and the worst
-/// text (R7: `--nocapture` to read it); the worst, in thousandths.
+/// text (R7, R8: `--nocapture` to read it); the worst, in thousandths.
 pub(super) fn report(texts: &[String]) -> Res<usize> {
     let ratios = ratios(texts)?;
     let (worst, text) = ratios.last().ok_or("empty")?;
@@ -169,6 +194,21 @@ pub(super) fn report(texts: &[String]) -> Res<usize> {
     println!("{} texts, {total} counted for {exact}", ratios.len());
     println!("over median {median}, worst {worst}:\n{text}");
     Ok(*worst)
+}
+
+/// The nanoseconds the default count takes per KiB of `texts`, the
+/// fastest of `rounds` passes (R8: read it from a release build).
+pub(super) fn nanos_per_kib(texts: &[String], rounds: usize) -> Res<u128> {
+    let bytes: usize = texts.iter().map(String::len).sum();
+    let mut fastest = u128::MAX;
+    for _ in 0..rounds {
+        let start = std::time::Instant::now();
+        let counted: usize = texts.iter().map(|t| estimate::tokens(t)).sum();
+        fastest = fastest.min(start.elapsed().as_nanos());
+        assert!(counted > 0);
+    }
+    let kib = u128::try_from(bytes)?.max(1);
+    Ok(fastest.saturating_mul(1_024).checked_div(kib).unwrap_or(0))
 }
 /// `count` refs of `len` chars, pseudo-random from `seed` (xorshift).
 pub(super) fn random_refs(seed: u64, len: usize, count: usize) -> Vec<String> {
