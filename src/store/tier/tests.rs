@@ -1,6 +1,5 @@
 use std::error::Error as StdError;
 
-use crate::store::generation::clock;
 use crate::store::tests::{Scratch, Test, WEEK, chunk, event, stored};
 use crate::store::{Error, Filter, Lookup, Mode, Ref, State, Stats, Store};
 
@@ -141,15 +140,14 @@ fn seal_and_compact_refuse_a_bucket_still_open() -> Test {
 }
 
 #[test]
-fn seal_and_compact_read_the_clock() -> Test {
-    let s = Scratch::new("tier-clock")?;
+fn seal_and_compact_without_a_clock_take_any_bucket() -> Test {
+    let s = Scratch::new("tier-no-clock")?;
     let mut store = s.open(Mode::Read)?;
-    store.append(&event(clock(), None, "now"))?;
+    store.append(&event(1 << 47, None, "far ahead"))?;
     let all = store.partitions(&Filter::default())?;
     let path = all.first().ok_or("no partition")?.path.clone();
-    for e in [store.seal(&path), store.compact(&path)] {
-        assert!(matches!(e, Err(Error::Open { .. })), "{e:?}");
-    }
+    store.compact(&path)?;
+    assert_eq!(state(&store, &path)?, Some(State::Cold));
     Ok(())
 }
 

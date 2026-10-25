@@ -7,12 +7,12 @@ mod tests;
 use rusqlite::{Connection, Transaction, TransactionBehavior};
 
 use super::catalog::{self, Slot};
-use super::layout::{Key, Plan};
+use super::layout::{Key, Place, Plan};
 use super::partition::{self, Chunks};
 use super::reference;
 use super::session::{self, Begun, Ended};
 use super::summary;
-use super::{Error, Event, Ref, Summary};
+use super::{Error, Event, Ref, State, Summary};
 
 /// An event with the id and project it is stored under.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -96,17 +96,36 @@ pub(super) fn immediate(conn: &Connection) -> Result<Transaction<'_>, Error> {
 }
 
 /// The hot partition `key` lands in: its catalog row, then its file
-/// (src/store V7).
+/// (src/store V7); past a sealed or dropped one, its bucket's next
+/// fresh partition (V13).
 pub(super) fn slot<'c>(
     plan: &Plan,
     chunks: &'c mut Chunks,
     tx: &Connection,
     key: Key<'_>,
 ) -> Result<(Slot, &'c Connection), Error> {
-    let place = plan.place(key)?;
+    let place = writable(tx, &plan.place(key)?)?;
     let (dims, spec) = (plan.dims(), plan.spec());
     let slot = catalog::ensure(tx, &place, &dims, &spec)?;
     Ok((slot, chunks.hot(&place, &dims, &spec)?))
+}
+
+/// The fresh partitions a bucket may hold past its own (src/store V13).
+const FRESH: u32 = 1024;
+
+/// The first of `place` and its fresh partitions that the catalog
+/// calls hot or does not know yet; a warm, cold or dropped one is
+/// passed by, never written (src/store V7, V13, R9).
+fn writable(tx: &Connection, place: &Place) -> Result<Place, Error> {
+    for n in 0..FRESH {
+        let next = place.nth(n);
+        match catalog::find(tx, &next.path)? {
+            None | Some((_, Some(State::Hot))) => return Ok(next),
+            Some(_) => {}
+        }
+    }
+    let path = place.path.clone();
+    Err(Error::ReadOnly { path })
 }
 
 /// Store `row`; its ref, the first one for a known id or identity.

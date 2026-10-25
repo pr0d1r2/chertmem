@@ -136,7 +136,9 @@ impl Store {
     }
 
     /// Replay 1 spool file, then drop it; an unreadable one is set
-    /// aside, and one for a sealed partition held (src/store T10).
+    /// aside, and one for a file sealed past a lost catalog held (src/store
+    /// T10); a sealed partition the catalog knows routes to a fresh one
+    /// (V13).
     fn replay_file(&mut self, path: &Path) -> Result<(), Error> {
         let items = match spool::read(path)? {
             spool::Found::Items(items) => items,
@@ -186,12 +188,14 @@ impl Store {
     }
 
     /// Store `event` in the partition of its own timestamp (src/store
-    /// V1); an identity seen before gives back its first ref (V9). A
-    /// lock outlasting the busy timeout spools it instead and still
-    /// succeeds (V10).
+    /// V1), or that bucket's fresh partition once its own is sealed or
+    /// dropped (V13); an identity seen before gives back its first ref
+    /// (V9). A lock outlasting the busy timeout spools it instead and
+    /// still succeeds (V10).
     ///
     /// # Errors
-    /// A timestamp past 48 bits, a sealed partition, an unusable file.
+    /// A timestamp past 48 bits, a bucket past its last fresh partition
+    /// or a file sealed past a lost catalog (V13), an unusable file.
     pub fn append(&mut self, event: &Event) -> Result<Appended, Error> {
         let row = Row {
             id: new_id(event.ts)?,
@@ -208,7 +212,7 @@ impl Store {
     /// outlasts the busy timeout (V10).
     ///
     /// # Errors
-    /// A timestamp past 48 bits, a sealed partition, an unusable file.
+    /// As [`Store::append`].
     pub fn append_summary(
         &mut self,
         summary: &Summary,

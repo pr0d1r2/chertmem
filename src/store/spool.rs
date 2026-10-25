@@ -97,7 +97,7 @@ pub(super) fn set_aside(root: &Path, path: &Path) -> Result<(), Error> {
     move_to(root, path, "unreadable")
 }
 
-/// Move a file holding an item for a sealed partition to
+/// Move a file holding an item for a file sealed past a lost catalog to
 /// `spool/sealed/`, kept whole and out of every replay (src/store T10).
 pub(super) fn hold(root: &Path, path: &Path) -> Result<(), Error> {
     move_to(root, path, "sealed")

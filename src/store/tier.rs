@@ -28,6 +28,17 @@ impl Work<'_> {
         Ok(catalog::state(&self.tx, path)?.1)
     }
 
+    /// Refuse a partition whose bucket ends after `now`: rows of its
+    /// bucket still arrive (src/store V13).
+    fn ended(&self, path: &str, now: u64) -> Result<(), Error> {
+        let end = catalog::end(&self.tx, path)?;
+        if end > now {
+            let path = path.to_owned();
+            return Err(Error::Open { path, end });
+        }
+        Ok(())
+    }
+
     /// Record `state` in the file, then in the catalog.
     fn mark(&mut self, path: &str, state: State) -> Result<(), Error> {
         if let Some(conn) = self.chunks.existing(path)? {
@@ -68,45 +79,50 @@ impl Store {
         })
     }
 
-    /// Seal the partition at `path`: warm, so every append into it is
-    /// refused with [`Error::ReadOnly`] (src/store V7). A warm or cold
-    /// one stays as it is. The spool is replayed first, so what waits
-    /// there lands before the seal; what a hook spools during it is held
-    /// in `spool/sealed/` (T10).
+    /// Seal the partition at `path`, whatever the time: warm, so no
+    /// append lands in it again; the next one for its bucket opens a
+    /// fresh partition (src/store V7, V13). A warm or cold one stays as
+    /// it is. The spool is replayed first, so what waits there lands
+    /// before the seal. A caller that knows the time, as `chert
+    /// partitions seal` does, calls [`Store::seal_at`] (R9).
     ///
     /// # Errors
     /// [`Error::WriteOnly`] on a write-only store; no such partition.
     pub fn seal(&mut self, path: &str) -> Result<(), Error> {
-        self.seal_at(path, generation::clock())
+        self.seal_at(path, u64::MAX)
     }
 
-    /// [`Store::seal`] at `now` (ms since the epoch).
+    /// [`Store::seal`] at `now` (ms since the epoch): a bucket ending
+    /// after `now` is refused, its rows still arriving (src/store V13).
     ///
     /// # Errors
-    /// As [`Store::seal`].
-    pub fn seal_at(&mut self, path: &str, _now: u64) -> Result<(), Error> {
+    /// As [`Store::seal`]; [`Error::Open`] while the bucket is open.
+    pub fn seal_at(&mut self, path: &str, now: u64) -> Result<(), Error> {
         self.replay()?;
         let mut w = self.work()?;
-        if w.state(path)? == Some(State::Hot) {
+        let state = w.state(path)?;
+        w.ended(path, now)?;
+        if state == Some(State::Hot) {
             w.mark(path, State::Warm)?;
         }
         Ok(w.tx.commit()?)
     }
 
-    /// Compact the partition at `path`, sealing it first: `VACUUM INTO`
-    /// a copy, zstd it to `<path>.zst`, drop the `.db`.
-    /// Its rows, and so its stats, stay as they were.
+    /// Compact the partition at `path`, whatever the time, sealing it
+    /// first: `VACUUM INTO` a copy, zstd it to `<path>.zst`, drop the
+    /// `.db`. Its rows, and so its stats, stay as they were.
     ///
     /// # Errors
-    /// [`Error::WriteOnly`] on a write-only store; no such partition.
+    /// As [`Store::seal`].
     pub fn compact(&mut self, path: &str) -> Result<(), Error> {
-        self.compact_at(path, generation::clock())
+        self.compact_at(path, u64::MAX)
     }
 
-    /// [`Store::compact`] at `now` (ms since the epoch).
+    /// [`Store::compact`] at `now` (ms since the epoch), refused as
+    /// [`Store::seal_at`] is.
     ///
     /// # Errors
-    /// As [`Store::compact`].
+    /// As [`Store::seal_at`].
     pub fn compact_at(&mut self, path: &str, now: u64) -> Result<(), Error> {
         self.seal_at(path, now)?;
         let mut w = self.work()?;
@@ -121,7 +137,8 @@ impl Store {
     /// Drop the partition at `path`: a tombstone lands beside it, its
     /// files go, its catalog row and refs stay marked, so each ref
     /// answers [`super::Lookup::Dropped`], never another row (root V5),
-    /// even after a lost catalog (V12), and no write lands there again.
+    /// even after a lost catalog (V12), and no write lands there again:
+    /// the next one for its bucket opens a fresh partition (V13).
     ///
     /// # Errors
     /// [`Error::WriteOnly`] on a write-only store; no such partition.

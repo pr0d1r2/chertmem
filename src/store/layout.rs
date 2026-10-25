@@ -66,6 +66,20 @@ pub(super) struct Place {
     pub shard: Option<u32>,
 }
 
+impl Place {
+    /// The `n`-th fresh partition of this bucket, `<stem>~<n>.db`, where
+    /// rows land once the ones before are sealed or dropped (src/store
+    /// V13); the 0th is this place itself.
+    pub(super) fn nth(&self, n: u32) -> Self {
+        let mut next = self.clone();
+        if n > 0 {
+            let stem = self.path.strip_suffix(".db").unwrap_or(&self.path);
+            next.path = format!("{stem}~{n}.db");
+        }
+        next
+    }
+}
+
 /// The current `partition.*`; it routes writes only, never reads
 /// (src/store V4).
 #[derive(Debug, Clone)]
