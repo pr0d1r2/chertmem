@@ -51,6 +51,7 @@ V2: merged ranking ≡ ranking over 1 unpartitioned table of same rows (property
 V3: `semantic = false` | provider off → ⊥ network (`.:V6`).
 V4: ties broken by ts desc then id desc ∴ order total & deterministic.
 V5: query text goes through the same grammar as stored bodies before scoring ∴ a word stored compressed (`middleware` → `mw`) is found by its plain form (B1).
+V6: search & the store pool hold a bounded number of open files (≤ 64 partition connections) ∀ partition count ∴ every query works under a 256 fd limit (macOS default) (B2).
 
 ## §T TASKS
 
@@ -65,8 +66,10 @@ T7|x|query both the plain & the compressed form of each term ∴ a word kept lon
 T8|x|`embedding.provider` w/o a v1 client (openai) → keyword ranking w/ 1 log warning, ⊥ every search an error (mcp passes `semantic = true`)|V3
 T9|x|warm recent-window search < 10 ms at 100k rows a bucket & 1M rows (benches `recent_warm`): in-memory postings over cached rows ⊥ scoring every row; 136 → 1.5 ms at 100k-p1, 109 → 1.8 ms at 1M, ~400 B a row (R7)|V1,V2
 T10|.|cold recent-window search < 10 ms at 100k rows in 1 bucket (`recent_cold` 100k-p1, 16.0 ms in the first baseline): profile the FTS5 disk path & fix|V1,V2
+T11|.|bounded open files (B2): pooled stores keep ≤ 64 partition connections in total (LRU close), ⊥ 1 per partition per worker; V6 test under a 256 fd limit at 520 partitions|V6
 
 ## §B BUGS
 
 id|date|cause|fix
 B1|2026-10-24|wave 4 report: query tokenized raw while stored bodies are caveman-compressed ∴ plain-word query misses compressed rows|V5
+B2|2026-10-25|owner push, pre-push gate on macOS (fd limit 256): `merged_ranking_equals_1_unpartitioned_table_of_the_same_rows` fails "unable to open database file"; `merge::Pool` (T6) keeps every partition connection open (up to 3 fds each) per worker ∴ `chert mcp` search fails past ~80 partitions under default limits|V6
