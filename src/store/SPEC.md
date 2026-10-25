@@ -89,6 +89,7 @@ T16|x|`Store::sessions(limit) -> Vec<Session{id, ide, cwd, started_at, ended_at}
 T17|x|FTS5 candidates per partition for `src/search` T6: `matches`, `frequencies` (R8)|V4
 T18|x|V13: refuse to seal or compact an open bucket; route an append past a sealed or dropped bucket (B3)|V13
 T19|x|for `src/hook` T11: `summaries_in(path, scope)` reads 1 partition; time bounds written so SQLite uses `observations_ts` ⊥ `(? IS NULL OR ts >= ?)`; index `summaries (project, scope, ts)`; `seal` & `compact` check the system clock as `seal_at` does (R9 follow-up)|V7,V13
+T20|x|for `src/search` T11 (B2): a store keeps ≤ `Store::KEEP_OPEN` (64) partition connections, least recently used closed first; `Store::keep_open(n)` lowers it (engine store 4, pool workers a share of 60) ∴ cache warm-up, mine, hook inject, doctor rebuild & search all bounded (`src/search` R8); partition connections autocommit ∴ a close ⊥ loses a write; a reopened hot file re-stamps idempotently|`src/search:V6`
 
 ## §B BUGS
 
