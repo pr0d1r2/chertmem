@@ -18,9 +18,9 @@ local fast = (generated.steps) {
   ["rust-mirror"] { exclusive = true }
   ["perf-doc"] { exclusive = true }
   ["package-list"] { exclusive = true }
-  // dev T10: `notices` runs cargo tree and metadata --offline, so it
-  // waits for clippy, whose build fills the cargo registry first (as
-  // rekall orders its own notices step).
+  // dev T11: `notices` runs cargo tree and metadata --offline after its
+  // own `cargo fetch --locked`; it waits for clippy, whose build fills
+  // most of the registry first (as rekall orders its notices step).
   ["notices"] {
     exclusive = true
     depends = List("clippy")

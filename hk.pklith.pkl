@@ -183,8 +183,8 @@ steps: Mapping<String, Config.Step> = new {
   }
   ["notices"] {
     glob = List("Cargo.lock", "Cargo.toml", "THIRD-PARTY-NOTICES.md")
-    check = "command -v cargo >/dev/null 2>&1 || { echo 'notices: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- notices --check || { echo 'notices: THIRD-PARTY-NOTICES.md does not list the crates Cargo.lock ships; run cargo run -q -p chertmem-dev -- notices' >&2; exit 1; }"
-    fix = "cargo run -q -p chertmem-dev -- notices"
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'notices: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo fetch --locked -q && cargo run -q -p chertmem-dev -- notices --check || { echo 'notices: THIRD-PARTY-NOTICES.md does not list the crates Cargo.lock ships; run cargo run -q -p chertmem-dev -- notices' >&2; exit 1; }"
+    fix = "cargo fetch --locked -q && cargo run -q -p chertmem-dev -- notices"
   }
 }
 
