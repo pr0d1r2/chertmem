@@ -53,8 +53,10 @@ is representing this project.
 
 ## Enforcement
 
-TODO(docs T4): the private contact address for conduct reports is not
-decided yet.
+Please report conduct concerns privately, through GitHub's
+[private vulnerability reporting](https://github.com/pr0d1r2/chertmem/security/advisories/new)
+on this repository, the same channel [`SECURITY.md`](SECURITY.md) uses,
+not in a public issue. There is no email address for reports.
 
 Reports are handled privately and the reporter is not named without
 their consent.
