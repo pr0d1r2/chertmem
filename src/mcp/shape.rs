@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use crate::grammar;
 use crate::search::{Entry, Hit};
-use crate::store::Lookup;
+use crate::store::{Lookup, Session};
 
 /// `search`: `[{id, score, snippet, session_id, ts}]`.
 pub(super) fn hits(found: &[Hit]) -> Value {
@@ -49,7 +49,12 @@ fn lookup(found: &Lookup, expand: bool) -> Value {
     }
 }
 
-/// A tool's result: `value` as JSON text in 1 content item.
+/// `list_sessions`: not built yet.
+pub(super) fn sessions(found: &[Session]) -> Value {
+    found.iter().map(|_| Value::Null).collect()
+}
+
+/// A tool's result:`value` as JSON text in 1 content item.
 pub(super) fn content(value: &Value) -> Value {
     json!({"content": [{"type": "text", "text": value.to_string()}]})
 }

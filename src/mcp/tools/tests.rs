@@ -34,6 +34,7 @@ fn tools_list_golden_names_and_params_as_cavemem() {
             json!(["session_id"]),
         ),
         ("get_observations", vec!["expand", "ids"], json!(["ids"])),
+        ("list_sessions", vec!["limit"], json!([])),
     ];
     let want: Vec<(String, Vec<String>, Value)> = want
         .into_iter()
@@ -101,6 +102,16 @@ fn get_observations_expand_defaults_false() -> Test {
     };
     assert_eq!(call("get_observations", &asked), Ok(want));
     Ok(())
+}
+
+#[test]
+fn list_sessions_limit_defaults_20_up_to_200() {
+    let got = call("list_sessions", &json!({}));
+    assert_eq!(got, Ok(Call::Sessions { limit: 20 }));
+    let got = call("list_sessions", &json!({"limit": 200}));
+    assert_eq!(got, Ok(Call::Sessions { limit: 200 }));
+    assert!(call("list_sessions", &json!({"limit": 201})).is_err());
+    assert!(call("list_sessions", &json!({"limit": 0})).is_err());
 }
 
 #[test]

@@ -17,6 +17,8 @@ const SEARCH_MAX: u32 = 50;
 const TIMELINE_MAX: u32 = 200;
 /// The most refs 1 `get_observations` takes, as cavemem.
 const IDS_MAX: usize = 50;
+/// The sessions `list_sessions` gives unless asked, as cavemem.
+const SESSIONS_DEFAULT: u32 = 20;
 
 /// 1 parsed `tools/call`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,6 +35,9 @@ pub(super) enum Call {
     Get {
         ids: Vec<Ref>,
         expand: bool,
+    },
+    Sessions {
+        limit: u32,
     },
 }
 
@@ -99,6 +104,9 @@ pub(super) fn parse(params: &Value) -> Result<Call, String> {
         }),
         "timeline" => around(&a),
         "get_observations" => get(&a),
+        "list_sessions" => Ok(Call::Sessions {
+            limit: SESSIONS_DEFAULT,
+        }),
         other => Err(format!("Tool {other} not found")),
     }
 }
