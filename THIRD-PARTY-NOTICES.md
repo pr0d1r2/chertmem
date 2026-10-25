@@ -153,11 +153,18 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## tiktoken-rs and OpenAI's o200k_base (feature `bpe` only)
+## tiktoken-rs and OpenAI's o200k_base
 
-Both ship only in a `chert` built with `--features bpe`, which counts
-injected tokens exactly (`src/hook/SPEC.md` R2). The default build
-holds neither of them.
+tiktoken-rs and the whole o200k_base table ship only in a `chert`
+built with `--features bpe`, which counts injected tokens exactly
+(`src/hook/SPEC.md` R2). The default build holds no tiktoken-rs code,
+but it embeds data derived from o200k_base: its memory tokenizer
+(`src/hook/SPEC.md` R8) compiles in `src/hook/inject/estimate/vocab.bin`,
+a subset of the o200k_base tokens with their order (every token below
+a rank cutoff set by its byte class) and the o200k counts of frequent
+corpus pieces, generated from the table below by a test of the `bpe`
+build. OpenAI's license below covers that data in the default build
+too.
 
 ### tiktoken-rs 0.12.1
 
