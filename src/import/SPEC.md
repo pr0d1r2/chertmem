@@ -49,7 +49,7 @@ V3: cavemem DB file unchanged after import (checksum before ≡ after).
 id|status|task|cites
 T1|x|JSONL export & import via `Store::restore` (R3)|V1
 T2|x|cavemem 0.2.1 import from fixture DB|V2,V3
-T3|.|`--for rekall` shape, agreed via rekall issue (`.:T14`, R1)|-
+T3|.|`--for rekall` shape, agreed via pr0d1r2/rekall#46 (`.:T14`, R1); waits on its answer|-
 T4|x|import cavemem `summaries` (turn & session scope) w/ their sessions|V1,V2
 T5|x|cavemem rows split by session `cwd`: each session → chert project of its own cwd (same id the hook derives); missing cwd → current project, counted in report (owner 2026-10-24)|V2
 
