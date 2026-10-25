@@ -1,3 +1,6 @@
+#[cfg(feature = "bpe")]
+mod corpus;
+
 use std::collections::BTreeSet;
 use std::fs;
 
@@ -318,16 +321,16 @@ fn cut_keeps_whole_lines_until_one_does_not_fit() {
     assert_eq!(cut(&[], u32::MAX), None);
 }
 
-/// The default count is the itok estimate: bytes / 4, rounded up
-/// (owner 2026-10-24).
+/// The default count is the structured estimate (T12, B1): the header
+/// is its 12 o200k tokens, where bytes / 4 counted 11.
 #[cfg(not(feature = "bpe"))]
 #[test]
-fn the_default_count_is_bytes_over_4_rounded_up() {
-    assert_eq!(tokens_at_most(""), 0);
-    assert_eq!(tokens_at_most("\u{e9}"), 1);
-    assert_eq!(tokens_at_most("chert"), 2);
-    assert_eq!(tokens_at_most("chertmem"), 2);
-    assert_eq!(tokens_at_most("chertmem!"), 3);
+fn the_default_count_is_the_structured_estimate() {
+    for text in ["", "chert", "chertmem!", HEADER, "- chert:01MH94JKC0 a"] {
+        assert_eq!(tokens_at_most(text), super::estimate::tokens(text));
+    }
+    assert_eq!(tokens_at_most(HEADER), 12);
+    assert_eq!(HEADER.len().div_ceil(4), 11);
 }
 
 /// With feature `bpe` the count is exact o200k.
