@@ -24,6 +24,11 @@ sib|dev|root `flake.nix` devShell & `dev` crate (`publish = false`) gate steps
 
 - page: `README.md`, `docs/BENCHMARKS.md`, `docs/INTEGRATION.md`, `docs/CONFIG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `docs/LLM-DISCLAIMER.md`, `THIRD-PARTY-NOTICES.md`.
 
+## §R RESEARCH
+
+id|topic|finding|src
+R1|as built, wave 9|V2 runner = `src/config/tests.rs` `config_page_names_every_key_and_no_other` (key rows ≡ `KEYS`) & `config_page_defaults_are_the_built_ones` (default cell ≡ `chert config show` w/o files, home → `~`); key row = table row, 1st cell backticked `section.key`; page read at run time ∴ missing page fails test ⊥ build. ∀ command & output on pages run 2026-10-25 vs release build in temp HOME & project, ⊥ real home. open TODOs: on_prompt cost (T2), conduct contact|`src/config/tests.rs`
+
 ## §V INVARIANTS
 
 V1: ∀ number in `docs/BENCHMARKS.md` ≡ a row in `benches/baseline.toml` (drift test).
@@ -33,10 +38,10 @@ V3: ⊥ private repo named (`.:V12`).
 ## §T TASKS
 
 id|status|task|cites
-T1|.|`README.md` + routing|-
+T1|x|`README.md` + routing|-
 T2|.|`docs/BENCHMARKS.md` from first baseline (`.:T16`)|V1
-T3|.|`docs/CONFIG.md` w/ parity test|V2
-T4|.|`docs/INTEGRATION.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `docs/LLM-DISCLAIMER.md`, `THIRD-PARTY-NOTICES.md`|V3
+T3|x|`docs/CONFIG.md` w/ parity test|V2
+T4|x|`docs/INTEGRATION.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `docs/LLM-DISCLAIMER.md`, `THIRD-PARTY-NOTICES.md`|V3
 
 ## §B BUGS
 
