@@ -49,7 +49,7 @@ id|status|task|cites
 T1|x|Claude Code settings: hooks & MCP entry|V1,V2
 T2|x|status & doctor|V3
 T3|x|MCP entry goes to `~/.claude.json` `mcpServers.chert` (user scope), ⊥ `settings.json`, under V1 & V2 (B1)|V1,V2,V4
-T4|.|V1 when `settings.json` already holds `"hooks": {}`: uninstall keeps the empty key (B2)|V1
+T4|x|V1 when `settings.json` already holds `"hooks": {}`: uninstall keeps the empty key (B2)|V1
 
 ## §B BUGS
 
