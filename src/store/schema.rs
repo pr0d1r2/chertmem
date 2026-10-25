@@ -16,7 +16,7 @@ use super::Error;
 pub(super) const CATALOG: &[&str] = &[CATALOG_1, SESSIONS];
 
 /// A partition's steps, as [`CATALOG`]'s.
-pub(super) const PARTITION: &[&str] = &[PARTITION_1];
+pub(super) const PARTITION: &[&str] = &[PARTITION_1, SUMMARIES_SCOPE];
 
 /// The catalog: 1 row per partition (src/store C), the `generation`
 /// counter (D15) and every issued ref with its event identity, so a ref
@@ -123,6 +123,13 @@ CREATE TABLE summaries (
   ide TEXT NOT NULL,
   body TEXT NOT NULL);
 CREATE INDEX summaries_session ON summaries (project, session, scope, ts);
+";
+
+/// Partition version 2: every session's summaries of 1 scope by time,
+/// as injection lists them (src/store T19). Laid on open like every
+/// step, so a warm file and a cold file's thawed copy gain it too.
+const SUMMARIES_SCOPE: &str = "
+CREATE INDEX IF NOT EXISTS summaries_scope ON summaries (project, scope, ts);
 ";
 
 /// Open `path` in WAL mode with `busy` as its lock timeout and lay

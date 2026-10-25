@@ -129,11 +129,14 @@ pub(super) fn set_state(conn: &Connection, state: State) -> Result<(), Error> {
     Ok(())
 }
 
+/// Unbounded ends read as 0 and `i64::MAX`, so `SQLite` searches
+/// `observations_ts` by the range; `(? IS NULL OR ts >= ?)` it cannot
+/// (src/store T19).
 const SCAN: &str = "SELECT ref, id, project, ts, session, ide, kind,
   identity, body FROM observations
   WHERE (?1 IS NULL OR project = ?1)
-    AND (?2 IS NULL OR ts >= ?2)
-    AND (?3 IS NULL OR ts < ?3)
+    AND ts >= coalesce(?2, 0)
+    AND ts < coalesce(?3, 9223372036854775807)
   ORDER BY ts, id";
 
 /// The rows of 1 partition `filter` wants, by time then id.

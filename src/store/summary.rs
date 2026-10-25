@@ -49,14 +49,24 @@ pub(super) fn remove(conn: &Connection, id: &str) -> Result<(), Error> {
     Ok(())
 }
 
-const LIST: &str = "SELECT ts, session, scope, ide, body, id FROM summaries
-  WHERE project = ?1 AND (?2 IS NULL OR session = ?2) AND scope = ?3
+/// Every session's summaries of 1 scope, through `summaries_scope`; `?2`
+/// is bound but unused, so both queries take the same 3 values.
+const LIST_ALL: &str = "SELECT ts, session, scope, ide, body, id
+  FROM summaries WHERE project = ?1 AND scope = ?3 ORDER BY ts, id";
+
+/// 1 session's, through `summaries_session`.
+const LIST_ONE: &str = "SELECT ts, session, scope, ide, body, id
+  FROM summaries WHERE project = ?1 AND session = ?2 AND scope = ?3
   ORDER BY ts, id";
 
-/// The query [`list`] runs, of 1 session or of every session.
+/// The query [`list`] runs, of 1 session or of every session: 2, so
+/// each searches an index (src/store T19).
 fn list_sql(session: Option<&str>) -> &'static str {
-    let _ = session;
-    LIST
+    if session.is_some() {
+        LIST_ONE
+    } else {
+        LIST_ALL
+    }
 }
 
 /// The summaries of 1 partition, with their ids for a stable order.
@@ -65,10 +75,15 @@ fn list(
     project: &str,
     session: Option<&str>,
     scope: Scope,
-) -> Result<Vec<(Summary, String)>, Error> {
+) -> Result<Vec<Listed>, Error> {
     let mut stmt = conn.prepare(list_sql(session))?;
     let args = params![project, session, scope.as_str()];
-    let rows = stmt.query_map(args, |r| Ok((summary(r, scope)?, r.get(5)?)))?;
+    let rows = stmt.query_map(args, |r| {
+        Ok(Listed {
+            id: r.get(5)?,
+            summary: summary(r, scope)?,
+        })
+    })?;
     Ok(rows.collect::<Result<_, _>>()?)
 }
 
@@ -95,8 +110,10 @@ impl Store {
         scope: Scope,
     ) -> Result<Vec<Listed>, Error> {
         self.reading()?;
-        let _ = (path, scope);
-        Ok(Vec::new())
+        match self.chunks.existing(path)? {
+            Some(conn) => list(conn, &self.project, None, scope),
+            None => Ok(Vec::new()),
+        }
     }
 
     /// This project's `scope` summaries, of `session` or of every
@@ -119,7 +136,7 @@ impl Store {
                 found.extend(list(conn, &self.project, session, scope)?);
             }
         }
-        found.sort_by(|(a, ia), (b, ib)| (a.ts, ia).cmp(&(b.ts, ib)));
-        Ok(found.into_iter().map(|(s, _)| s).collect())
+        found.sort_by(|a, b| (a.summary.ts, &a.id).cmp(&(b.summary.ts, &b.id)));
+        Ok(found.into_iter().map(|l| l.summary).collect())
     }
 }
