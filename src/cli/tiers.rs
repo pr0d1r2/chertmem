@@ -4,12 +4,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::sync::Arc;
-
 use clap::Subcommand;
 
 use super::{Done, Io, fail, load, open, say};
-use crate::cache::{Cache, Env};
+use crate::cache::Cache;
 use crate::config::Config;
 use crate::store::{Filter, Partition, Store};
 
@@ -54,7 +52,7 @@ pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
         Verb::Partitions { action } => {
             partitions(store, &action.unwrap_or(Partitions::List), io)
         }
-        Verb::Cache { action: _ } => plan(store, &config, io),
+        Verb::Cache { action: _ } => plan(&store, &config, io),
     }
 }
 
@@ -88,15 +86,10 @@ fn row(p: &Partition) -> String {
     )
 }
 
-/// The plan as the catalog stands; the cache started only to plan, its
-/// log silent: the plan is the report.
-fn plan(store: Store, config: &Config, io: &mut Io<'_>) -> Done {
-    let env = Env {
-        now: io.now,
-        memory: || None,
-        log: Arc::new(|_: &str| {}),
-    };
-    let plan = Cache::start_with(store, config, env).plan();
+/// The plan as the catalog stands, no cache started (src/cache T5):
+/// the plan is the report.
+fn plan(store: &Store, config: &Config, io: &mut Io<'_>) -> Done {
+    let plan = Cache::plan_at(store, config, (io.now)());
     let plan = plan.map_err(fail)?;
     say(io, &plan.to_string())?;
     Ok(u8::from(plan.estimate > plan.limit))

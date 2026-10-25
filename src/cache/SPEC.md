@@ -30,8 +30,8 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- fn: `Cache::start(store, cfg) -> Handle`; `Handle::query(q) -> Rows`; `Handle::plan() -> Plan{estimate, limit, days_kept}`.
-- cmd: `chert cache plan` prints `Plan`.
+- fn: `Cache::start(store, cfg) -> Handle`; `Handle::query(q) -> Rows`; `Handle::plan() -> Plan{estimate, limit, days_kept}`; `Cache::plan(&store, cfg) -> Plan` (system clock), `Cache::plan_at(&store, cfg, now) -> Plan`: same estimate as `Handle::plan` (1 `fit_at`), ⊥ thread, ⊥ row load, ⊥ log.
+- cmd: `chert cache plan` prints `Cache::plan_at`'s `Plan`; exit 1 when estimate > limit.
 
 ## §R RESEARCH
 
@@ -56,7 +56,7 @@ T1|x|load window from partitions, background warm|V1
 T2|x|data_version + seq tail|V2
 T3|x|generation reload|V3
 T4|x|estimate, overflow policies, memory check, `cache plan`|V4
-T5|.|`Cache::plan(store, cfg) -> Plan` ⊥ warm-up thread; `chert cache plan` uses it (src/cli R4)|V4
+T5|x|`Cache::plan(store, cfg) -> Plan` ⊥ warm-up thread; `chert cache plan` uses it (src/cli R4)|V4
 
 ## §B BUGS
 
