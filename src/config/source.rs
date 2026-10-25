@@ -34,6 +34,11 @@ pub(super) const KEYS: &[&str] = &[
     "mining.min_occurrences",
     "inject.max_tokens",
     "inject.on_prompt",
+    "statusline.ms_green",
+    "statusline.ms_amber",
+    "statusline.size_green",
+    "statusline.size_amber",
+    "statusline.fit_amber",
 ];
 
 /// Keys whose value is a table of keys of their own, each merged and

@@ -1,10 +1,13 @@
 //! `statusline.*`: the thresholds `chert statusline` colors its badge
-//! by (src/config T7, src/cli T3). RED stub: the defaults only.
+//! by (src/config T7, src/cli T3), as itok's `[rate]` colors its own.
 
 #[cfg(test)]
 mod tests;
 
+use toml::Value;
+
 use super::Error;
+use super::parse::{POSITIVE, SIZE_FORMS, positive, size};
 use super::source::Source;
 
 /// `statusline.*`: below green is green, below amber amber, else red.
@@ -23,15 +26,24 @@ pub struct Statusline {
     pub fit_amber: u32,
 }
 
+/// An integer percent, 1 to 100.
+const PERCENT: &str = "an integer from 1 to 100";
+
 impl Statusline {
-    #[allow(clippy::unnecessary_wraps, reason = "RED stub")]
-    pub(super) fn build(_src: &Source) -> Result<Self, Error> {
+    pub(super) fn build(src: &Source) -> Result<Self, Error> {
+        let ms = |key| src.get(key, POSITIVE, positive);
+        let bytes = |key| src.get(key, SIZE_FORMS, size);
+        let fit = src.get("statusline.fit_amber", PERCENT, percent)?;
         Ok(Self {
-            ms_green: 10,
-            ms_amber: 50,
-            size_green: 1 << 30,
-            size_amber: 5 << 30,
-            fit_amber: 80,
+            ms_green: ms("statusline.ms_green")?.unwrap_or(10),
+            ms_amber: ms("statusline.ms_amber")?.unwrap_or(50),
+            size_green: bytes("statusline.size_green")?.unwrap_or(1 << 30),
+            size_amber: bytes("statusline.size_amber")?.unwrap_or(5 << 30),
+            fit_amber: fit.unwrap_or(80),
         })
     }
+}
+
+fn percent(value: &Value) -> Option<u32> {
+    positive(value).filter(|p| *p <= 100)
 }

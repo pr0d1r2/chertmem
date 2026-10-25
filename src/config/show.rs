@@ -51,6 +51,11 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("mining.min_occurrences", "3"),
     ("inject.max_tokens", "300"),
     ("inject.on_prompt", "false"),
+    ("statusline.ms_green", "10"),
+    ("statusline.ms_amber", "50"),
+    ("statusline.size_green", "\"1GiB\""),
+    ("statusline.size_amber", "\"5GiB\""),
+    ("statusline.fit_amber", "80"),
 ];
 
 /// Every leaf key, in src/config I order, with its effective value;
