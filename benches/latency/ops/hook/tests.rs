@@ -81,3 +81,12 @@ fn an_injecting_hook_outlasts_one_ms_worth_of_ids() -> crate::fixture::Res<()> {
     }
     Ok(())
 }
+
+#[test]
+fn the_clock_moves_back_1_ms_a_run_inside_the_newest_week() {
+    use crate::fixture::{END, WEEK};
+    let mut clock = super::Clock::default();
+    let ticks: Vec<u64> = (0..3).map(|_| clock.tick()).collect();
+    assert_eq!(ticks, [END - 1, END - 2, END - 3]);
+    assert_eq!((END - 1) / WEEK, (END - 1_000_000) / WEEK);
+}

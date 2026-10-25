@@ -34,7 +34,7 @@ pub(crate) fn env() -> Env {
 
 /// A cache of `fx` started now.
 pub(crate) fn start(fx: &Fixture, cfg: &Config) -> Res<Handle> {
-    let store = Store::open(cfg, &fx.root(), Mode::Read)?;
+    let store = Store::open(cfg, fx.root(), Mode::Read)?;
     Ok(Cache::start_with(store, cfg, env()))
 }
 

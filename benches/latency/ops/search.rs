@@ -42,7 +42,7 @@ fn searching(
     q: Q,
     cache: Option<Handle>,
 ) -> Res<Op> {
-    let mut engine = Engine::open(cfg, &fx.root())?;
+    let mut engine = Engine::open(cfg, fx.root())?;
     let q = query(&engine, q.recent, q.semantic);
     if engine.run(&q, cache.as_ref())?.is_empty() {
         return Err(format!("{:?} found nothing", q.text).into());
