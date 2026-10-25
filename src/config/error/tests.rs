@@ -11,15 +11,17 @@ fn invalid_window() -> ConfigError {
     }
 }
 
-fn every_error() -> [ConfigError; 4] {
+fn every_error() -> [ConfigError; 5] {
     let p = || PathBuf::from("/p/chert.toml");
     let (file, reason, key) = (p(), "denied".to_owned(), "a.b".to_owned());
     let read = ConfigError::Read { file, reason };
+    let (file, reason) = (p(), "read-only".to_owned());
+    let write = ConfigError::Write { file, reason };
     let (file, reason) = (p(), "line 1".to_owned());
     let parse = ConfigError::Parse { file, reason };
     let file = p();
     let unknown = ConfigError::UnknownKey { file, key };
-    [read, parse, unknown, invalid_window()]
+    [read, write, parse, unknown, invalid_window()]
 }
 
 #[test]

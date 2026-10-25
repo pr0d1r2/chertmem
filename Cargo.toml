@@ -37,6 +37,10 @@ tinyjson = "2.5.1"
 # or MIT OR Apache-2.0, and serde_core brings no proc macro, so the
 # MIT-only deny.toml holds.
 toml = "1.1.8"
+# `chert config set` (src/config T6): rewrites 1 key, keeping every
+# other byte of the file. MIT OR Apache-2.0; it shares toml's parser,
+# writer and datetime crates, adding only itself to the tree.
+toml_edit = "0.25.17"
 # Observation ids (src/store C): MIT; its rand tree is MIT OR Apache-2.0.
 ulid = "3.0.0"
 # Cold partitions (src/store T6): zstd MIT, zstd-safe and zstd-sys

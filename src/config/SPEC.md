@@ -37,6 +37,7 @@ sib|src/mine|behaviour findings & awareness report
 
 id|topic|finding|src
 R1|zstd levels|`compression.zstd.level` accepts 1..=22: zstd's positive levels, 20..=22 = `--ultra`; 0 (alias of default 3) & negative fast levels rejected, each 1 more spelling ⊥ asked by root §C|zstd manual: `ZSTD_minCLevel()` < 0, `ZSTD_maxCLevel()` = 22
+R2|byte-kept set|`toml_edit` 0.25 (toml's parser & writer) keeps decor & order of untouched items; new section → `[section]`, in an inline table stays inline|toml_edit `DocumentMut`
 
 ## §V INVARIANTS
 
@@ -54,7 +55,7 @@ T2|x|window/bucket multiple warning|V2
 T3|x|`inject.*` keys & on_prompt disclaimer|V4
 T4|x|defaults for `compression.*`, `search.*`, `mining.*` per `.:§C`; `compression.zstd` = table `{ level, dictionary }`, ⊥ bool|V1,V5
 T5|x|split `config.rs` (5158 tok) & its tests (4214) under the 4000-tok file budget of `sherd check`: 1 submodule per section|-
-T6|.|API for `chert config` show, get, set, path: effective config w/ the file each value came from, get 1 key, set 1 key in the project or user file keeping other bytes, file paths (src/cli report)|V1,V3
+T6|x|API for `chert config` show, get, set, path: effective config w/ the file each value came from, get 1 key, set 1 key in the project or user file keeping other bytes, file paths (src/cli report)|V1,V3
 
 ## §B BUGS
 

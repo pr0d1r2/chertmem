@@ -6,12 +6,14 @@ mod tests;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-/// Why `chert.toml` could not be loaded; each names the file (src/config
-/// V3, root C `chert: <what> (<fix>)`).
+/// Why `chert.toml` could not be loaded or set; each names the file
+/// (src/config V3, root C `chert: <what> (<fix>)`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     /// The file exists but could not be read.
     Read { file: PathBuf, reason: String },
+    /// The file could not be written (`chert config set`, T6).
+    Write { file: PathBuf, reason: String },
     /// The file is not valid TOML.
     Parse { file: PathBuf, reason: String },
     /// A key outside src/config I.
@@ -37,6 +39,7 @@ impl Error {
     pub fn file(&self) -> &Path {
         match self {
             Self::Read { file, .. }
+            | Self::Write { file, .. }
             | Self::Parse { file, .. }
             | Self::UnknownKey { file, .. }
             | Self::Invalid { file, .. } => file,
@@ -46,8 +49,8 @@ impl Error {
     fn what(&self) -> String {
         let file = self.file().display();
         match self {
-            Self::Read { reason, .. } => {
-                format!("cannot read {file}: {reason}")
+            Self::Read { reason, .. } | Self::Write { reason, .. } => {
+                self.io(reason)
             }
             Self::Parse { reason, .. } => {
                 format!("{file} is not valid TOML: {reason}")
@@ -61,9 +64,18 @@ impl Error {
         }
     }
 
+    fn io(&self, reason: &str) -> String {
+        let verb = match self {
+            Self::Read { .. } => "read",
+            _ => "write",
+        };
+        format!("cannot {verb} {}: {reason}", self.file().display())
+    }
+
     fn fix(&self) -> String {
         match self {
             Self::Read { .. } => "check the file".to_owned(),
+            Self::Write { .. } => "check the file and its directory".to_owned(),
             Self::Parse { .. } => "fix its syntax".to_owned(),
             Self::UnknownKey { .. } => "remove or respell it".to_owned(),
             Self::Invalid { accepted, .. } => format!("accepted: {accepted}"),
