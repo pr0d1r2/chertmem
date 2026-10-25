@@ -1,7 +1,9 @@
-//! Behaviour findings with evidence refs (src/mine G): repeated command
-//! sequences, hot files and token sinks, mined from the `post-tool-use` observations
-//! `src/hook` stores. Mining only reads the store; it changes nothing
-//! by itself (root C) and never writes under `.rekall/` (V3).
+//! Behaviour findings with evidence refs (src/mine G): repeated failing
+//! commands and errors, command sequences, hot files and token sinks,
+//! mined from the `post-tool-use` and `post-tool-use-failure`
+//! observations `src/hook` stores. Mining only reads the store; it
+//! changes nothing by itself (root C) and never writes under `.rekall/`
+//! (V3).
 
 #[cfg(test)]
 mod tests;
@@ -31,6 +33,9 @@ pub fn findings(rows: &[Observation], min: u32) -> Vec<Finding> {
 /// What a finding is a repeat of (src/mine G).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Kind {
+    /// 1 tool call pattern failing with 1 error, from the
+    /// `post-tool-use-failure` observations (src/mine T1).
+    Failure,
     /// 1 Bash command right after another in 1 session.
     Sequence,
     /// 1 path a tool read or wrote.
@@ -40,7 +45,8 @@ pub enum Kind {
     TokenSink,
 }
 
-const KINDS: [(Kind, &str); 3] = [
+const KINDS: [(Kind, &str); 4] = [
+    (Kind::Failure, "failure"),
     (Kind::Sequence, "sequence"),
     (Kind::HotFile, "hot_file"),
     (Kind::TokenSink, "token_sink"),
@@ -56,7 +62,7 @@ impl Kind {
             .map_or("sequence", |&(_, name)| name)
     }
 
-    /// `sequence`, `hot_file` or `token_sink`.
+    /// `failure`, `sequence`, `hot_file` or `token_sink`.
     #[must_use]
     pub fn parse(text: &str) -> Option<Self> {
         KINDS.iter().find(|(_, n)| *n == text).map(|&(k, _)| k)

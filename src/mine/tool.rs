@@ -3,7 +3,8 @@
 //! compact JSON, then compresses the whole at `compression.grammar`.
 //! Compression keeps paths and the JSON shape, but may drop words inside
 //! a command string; the same command compresses to the same bytes, so
-//! repeats still match.
+//! repeats still match. A `post-tool-use-failure` body has the error
+//! text in place of the response (src/hook R5).
 
 #[cfg(test)]
 mod tests;
@@ -44,6 +45,18 @@ pub(super) fn parse(body: &str) -> Option<Tool> {
         command: command.map(str::to_owned),
         paths: paths(input),
     })
+}
+
+/// The error of a stored `post-tool-use-failure` body (src/hook R5), as
+/// a failure is counted under (src/mine T1): the first non-blank line of
+/// the error text, trimmed; empty when it has none. Later lines carry
+/// output that changes run to run, the first the stable cause (Claude
+/// Code's `Exit code N` for Bash). Numbers stay: exit codes tell
+/// failures apart, and a number in a path names another path.
+pub(super) fn error(body: &str) -> String {
+    let text = body.splitn(3, '\n').nth(2).unwrap_or_default();
+    let mut lines = text.lines().map(str::trim);
+    lines.find(|l| !l.is_empty()).unwrap_or_default().to_owned()
 }
 
 /// Every path `input` names, sorted, each once.

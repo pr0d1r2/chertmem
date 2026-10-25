@@ -87,6 +87,21 @@ fn the_same_findings_give_the_same_bytes() -> Test {
 }
 
 #[test]
+fn a_failure_is_spelled_failure_in_every_format() -> Test {
+    let fail = "failing `Bash` `false`: `Exit code 1`";
+    let one = [finding("00000000000000dd", Kind::Failure, fail)?];
+    let text = report(&one, Format::Text);
+    let head = format!("2x failure 00000000000000dd {fail}\n");
+    assert!(text.starts_with(&head), "{text}");
+    let got: Value = serde_json::from_str(&report(&one, Format::Json))?;
+    let kind = got.get(0).and_then(|f| f.get("kind"));
+    assert_eq!(kind, Some(&json!("failure")));
+    let md = report(&one, Format::Md);
+    assert!(md.contains(&format!("| failure | 2 | {fail} |")), "{md}");
+    Ok(())
+}
+
+#[test]
 fn a_token_sink_is_spelled_token_sink_in_every_format() -> Test {
     let sink = "token sink `Read` `x.rs`: >= 1/10 of tool call tokens";
     let one = [finding("00000000000000cc", Kind::TokenSink, sink)?];

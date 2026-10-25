@@ -147,11 +147,24 @@ fn a_row_of_an_unknown_kind_is_an_error() -> Test {
     Ok(())
 }
 
-/// Token sinks (src/mine T3) changed the signals, so findings kept by
-/// the miner before them are mined again.
+/// Failures (src/mine T1) changed the signals, so findings kept by the
+/// miner before them are mined again.
 #[test]
-fn the_version_names_the_signals_with_token_sinks() {
-    assert!(VERSION.ends_with("/signals-2"), "{VERSION}");
+fn the_version_names_the_signals_with_failures() {
+    assert!(VERSION.ends_with("/signals-3"), "{VERSION}");
+}
+
+#[test]
+fn a_failure_is_put_and_got_back() -> Test {
+    let dir = Dir::new("failure")?;
+    let mut ledger = Ledger::open(&dir.0)?;
+    let mut kept = found()?;
+    for f in &mut kept {
+        f.kind = Kind::Failure;
+    }
+    ledger.put(&key("c1"), &kept)?;
+    assert_eq!(ledger.get(&key("c1"))?, Some(kept));
+    Ok(())
 }
 
 #[test]

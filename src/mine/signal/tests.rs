@@ -1,6 +1,6 @@
 use super::{findings, id};
 use crate::hook::inject::tokens_at_most;
-use crate::mine::tests::{Res, Test, bash, reference, row};
+use crate::mine::tests::{Res, Test, bash, failed, reference, row};
 use crate::mine::{Finding, Kind};
 use crate::store::{Observation, Ref};
 
@@ -223,6 +223,88 @@ fn a_tool_naming_no_command_or_path_is_1_pattern() -> Test {
         .collect();
     let want = "token sink `WebSearch`: >= 1/10 of tool call tokens";
     assert_eq!(sinks, [(refs(&[1, 2, 3])?, want.to_owned())]);
+    Ok(())
+}
+
+/// A failed Bash call of `command` as row `n` in session `s`.
+fn bash_failed(n: u64, command: &str, error: &str) -> Res<Observation> {
+    let input = serde_json::json!({ "command": command }).to_string();
+    failed(n, "s", ("Bash", &input), error)
+}
+
+/// The only failure of `found`.
+fn only_failure(found: &[Finding]) -> Res<&Finding> {
+    match of(found, Kind::Failure).as_slice() {
+        [only] => Ok(only),
+        _ => Err(format!("not 1 failure: {found:?}").into()),
+    }
+}
+
+#[test]
+fn a_command_failing_alike_enough_times_is_a_failure() -> Test {
+    let (test, code) = ("cargo test", "Exit code 101");
+    let rows = [
+        bash_failed(5, test, &format!("{code}\nerror: 1 test failed"))?,
+        bash_failed(1, test, &format!("{code}\nerror: 2 tests failed"))?,
+        bash_failed(2, test, "Exit code 1")?,
+        bash_failed(3, test, code)?,
+        bash(4, "s", test)?,
+    ];
+    let found = findings(&rows, 3);
+    let only = only_failure(&found)?;
+    assert_eq!((only.count, only.refs.clone()), (3, refs(&[1, 3, 5])?));
+    let want = "failing `Bash` `cargo test`: `Exit code 101`";
+    assert_eq!(only.summary, want);
+    Ok(())
+}
+
+#[test]
+fn a_failing_tool_is_named_by_its_paths() -> Test {
+    let read = |n| {
+        let input = r#"{"file_path":"src/gone.rs"}"#;
+        failed(n, "s", ("Read", input), "File does not exist.")
+    };
+    let found = findings(&[read(1)?, read(2)?], 2);
+    let only = &only_failure(&found)?.summary;
+    let head = "failing `Read` `src/gone.rs`: `";
+    assert!(only.starts_with(head), "{only}");
+    assert!(of(&found, Kind::HotFile).is_empty(), "{found:?}");
+    assert!(of(&found, Kind::TokenSink).is_empty(), "{found:?}");
+    Ok(())
+}
+
+#[test]
+fn failures_are_no_sequences_and_successes_no_failures() -> Test {
+    let rows = [
+        bash_failed(1, "make", "Exit code 2")?,
+        bash_failed(2, "make check", "Exit code 2")?,
+        bash(3, "s", "make")?,
+        bash(4, "s", "make check")?,
+    ];
+    let found = findings(&rows, 1);
+    let seqs = of(&found, Kind::Sequence);
+    let refs_of: Vec<_> = seqs.iter().map(|f| f.refs.clone()).collect();
+    assert_eq!(refs_of, [refs(&[3])?]);
+    let fails = of(&found, Kind::Failure);
+    let refs_of: Vec<_> = fails.iter().map(|f| f.refs.clone()).collect();
+    assert_eq!(refs_of, [refs(&[1])?, refs(&[2])?]);
+    Ok(())
+}
+
+#[test]
+fn failures_in_any_order_give_the_same_findings() -> Test {
+    let rows = [
+        bash_failed(1, "ls x", "Exit code 2")?,
+        bash_failed(2, "ls y", "Exit code 2")?,
+        bash_failed(3, "ls x", "Exit code 2")?,
+    ];
+    let mut shuffled = rows.clone();
+    shuffled.reverse();
+    let found = findings(&rows, 1);
+    assert_eq!(found, findings(&shuffled, 1));
+    let fails = of(&found, Kind::Failure);
+    let counts: Vec<_> = fails.iter().map(|f| f.count).collect();
+    assert_eq!(counts, [2, 1]);
     Ok(())
 }
 
