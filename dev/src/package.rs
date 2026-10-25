@@ -48,7 +48,9 @@ fn links(md: &str) -> Vec<&str> {
     let inline = md.split("](").skip(1).filter_map(|s| s.split(')').next());
     let refs = md.lines().filter_map(|l| {
         let rest = l.trim_start().strip_prefix('[')?;
-        rest.split_once("]: ").map(|(_, t)| t.trim())
+        let (_, target) = rest.split_once("]: ")?;
+        let target = target.trim();
+        (!target.contains(' ')).then_some(target)
     });
     let mut out: Vec<&str> = inline
         .chain(refs)
