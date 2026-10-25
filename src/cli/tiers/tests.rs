@@ -41,6 +41,7 @@ fn exec(
         home: Some(&home),
         now: later,
         chert: CHERT,
+        tty: super::super::Tty::default(),
     };
     run(std::iter::once("chert").chain(args.to_vec()), &mut io)
 }

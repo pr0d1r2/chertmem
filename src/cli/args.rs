@@ -16,7 +16,7 @@ use clap::{
     ValueEnum,
 };
 
-use super::{insight, meta, port, query, serve, setup, text, tiers};
+use super::{badge, insight, meta, port, query, serve, setup, text, tiers};
 use crate::config::{Span, Unit};
 use crate::hook::Ide;
 
@@ -69,6 +69,7 @@ fn verbs() -> impl Iterator<Item = clap::Command> {
         setup::commands(),
         tiers::commands(),
         insight::commands(),
+        badge::commands(),
         text::commands(),
         port::commands(),
         meta::commands(),
@@ -84,6 +85,7 @@ pub(super) enum Command {
     Setup(setup::Verb),
     Tiers(tiers::Verb),
     Insight(insight::Verb),
+    Badge(badge::Verb),
     Text(text::Verb),
     Port(port::Verb),
     Meta(meta::Verb),
@@ -92,12 +94,13 @@ pub(super) enum Command {
 impl Command {
     /// The verb `name` with its matches, from the group that owns it.
     fn parse(name: &str, m: &ArgMatches) -> Option<Self> {
-        let groups: [Group; 8] = [
+        let groups: [Group; 9] = [
             |n, m| serve::parse(n, m).map(Self::Serve),
             |n, m| query::parse(n, m).map(Self::Query),
             |n, m| setup::parse(n, m).map(Self::Setup),
             |n, m| tiers::parse(n, m).map(Self::Tiers),
             |n, m| insight::parse(n, m).map(Self::Insight),
+            |n, m| badge::parse(n, m).map(Self::Badge),
             |n, m| text::parse(n, m).map(Self::Text),
             |n, m| port::parse(n, m).map(Self::Port),
             |n, m| meta::parse(n, m).map(Self::Meta),

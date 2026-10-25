@@ -12,7 +12,7 @@ use crate::config::{Span, Unit};
 use crate::hook::Ide;
 
 /// Every verb of root I, as `chert <verb>`.
-const VERBS: [&str; 20] = [
+const VERBS: [&str; 21] = [
     "hook",
     "mcp",
     "search",
@@ -27,6 +27,7 @@ const VERBS: [&str; 20] = [
     "cache",
     "mine",
     "report",
+    "statusline",
     "compress",
     "expand",
     "export",
