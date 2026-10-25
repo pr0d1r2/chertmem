@@ -5,6 +5,7 @@
 mod tests;
 
 mod bench;
+mod package;
 mod release;
 
 use crate::{
@@ -16,7 +17,8 @@ const USAGE: &str = "usage: chertmem-dev name-guard [files...] | \
                      no-core-worktree | lock-graph | rust-mirror | \
                      tdd-order [RANGE] | commit-msg <file> | \
                      bench-record | bench-gate [fixture...] | \
-                     perf-doc [--check] | notices [--check]";
+                     perf-doc [--check] | notices [--check] | \
+                     package-list";
 
 /// Run one guard from `args` against the repository at `root`.
 #[must_use]
@@ -32,10 +34,16 @@ pub fn run(args: &[String], root: &Path) -> u8 {
         ("tdd-order", []) => order(root, None),
         ("tdd-order", [range]) => order(root, Some(range)),
         ("commit-msg", [file]) => commit_msg(root, file),
-        (verb, rest) => bench::run(verb, rest, root)
-            .or_else(|| release::run(verb, rest, root))
-            .unwrap_or_else(usage),
+        (verb, rest) => other(verb, rest, root),
     }
+}
+
+/// The verbs of the `bench`, `release` and `package` submodules.
+fn other(verb: &str, rest: &[String], root: &Path) -> u8 {
+    bench::run(verb, rest, root)
+        .or_else(|| release::run(verb, rest, root))
+        .or_else(|| package::run(verb, rest, root))
+        .unwrap_or_else(usage)
 }
 
 /// `commit-msg <file>`: the message git hands the hook (dev V11).

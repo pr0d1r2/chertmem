@@ -12,6 +12,7 @@ pub mod message;
 pub mod mirror;
 pub mod name_guard;
 pub mod notices;
+pub mod package;
 pub mod perf_doc;
 pub mod public_repos;
 pub mod record;
