@@ -10,6 +10,9 @@
 #[cfg(test)]
 mod tests;
 
+#[cfg(any(test, not(feature = "bpe")))]
+mod estimate;
+
 use std::cmp::Reverse;
 use std::collections::BTreeSet;
 
@@ -157,11 +160,12 @@ fn cut(lines: &[String], max: u32) -> Option<String> {
 }
 
 /// The tokens `text` counts against `inject.max_tokens`, the 1 place
-/// the count is chosen (src/hook C, R2): the itok estimate, bytes / 4
-/// rounded up, so the hook path loads no tokenizer.
+/// the count is chosen (src/hook C, R2): the structured estimate (T12,
+/// R7), never under o200k on the corpus, so the hook path loads no
+/// tokenizer.
 #[cfg(not(feature = "bpe"))]
 pub(crate) fn tokens_at_most(text: &str) -> usize {
-    text.len().div_ceil(4)
+    estimate::tokens(text)
 }
 
 /// The exact o200k tokens of `text` (feature `bpe`); its bytes, an upper
