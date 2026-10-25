@@ -57,6 +57,7 @@ T2|x|data_version + seq tail|V2
 T3|x|generation reload|V3
 T4|x|estimate, overflow policies, memory check, `cache plan`|V4
 T5|x|`Cache::plan(store, cfg) -> Plan` ⊥ warm-up thread; `chert cache plan` uses it (src/cli R4)|V4
+T6|.|`cache::Index` trait (reset, insert, bytes) called from window begin & sync; `Handle::with_index(q, f)` reads rows & index under 1 lock ⊥ cloning the window; `fit` & `cache plan` count `Index::bytes` toward `max_bytes`; for `src/search` T9 (lead picks the observer over a borrowed view + change feed)|V1,V4
 
 ## §B BUGS
 

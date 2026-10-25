@@ -61,7 +61,7 @@ T5|x|compress query terms w/ `compression.grammar` before tokenizing; test plain
 T6|x|candidate rows via store FTS5 MATCH per partition, ⊥ full scan per query ∴ `.:§C` search < 10 ms holds at 10^5 rows; benchmark it: median ~3 ms (R6)|V1,V2
 T7|x|query both the plain & the compressed form of each term ∴ a word kept long inside an identifier, inline code, path or compound (`src/middleware.rs`) is found again (R3); semantic re-rank embeds the same text it scores|V5
 T8|x|`embedding.provider` w/o a v1 client (openai) → keyword ranking w/ 1 log warning, ⊥ every search an error (mcp passes `semantic = true`)|V3
-T9|.|warm recent-window search < 10 ms at 100k rows a bucket & 1M rows (benches `recent_warm`): in-memory postings over cached rows ⊥ scoring every row; today 140 ms at 100k-p1, 115 ms at 1M; V1 holds|V1,V2
+T9|.|warm recent-window search < 10 ms at 100k rows a bucket & 1M rows (benches `recent_warm`): in-memory postings over cached rows ⊥ scoring every row; today 140 ms at 100k-p1, 115 ms at 1M; V1 holds after `src/cache:T6`|V1,V2
 
 ## §B BUGS
 
