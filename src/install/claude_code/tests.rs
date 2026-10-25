@@ -64,8 +64,26 @@ fn wire_then_unwire_is_the_value_before() -> Test {
     let mut value = before.clone();
     wire(&mut value, CHERT)?;
     assert_ne!(value, before);
-    unwire(&mut value)?;
+    unwire(&mut value, &before)?;
     assert_eq!(value, before);
+    Ok(())
+}
+
+#[test]
+fn unwire_keeps_the_empty_containers_the_value_before_held() -> Test {
+    let before = json!({"hooks": {"Stop": []}, "mcpServers": {}});
+    let mut value = before.clone();
+    wire(&mut value, CHERT)?;
+    unwire(&mut value, &before)?;
+    assert_eq!(value, before);
+    let mut value = json!({"mcpServers": {}});
+    serve(&mut value, CHERT)?;
+    unserve(&mut value, &json!({"mcpServers": {}}))?;
+    assert_eq!(value, json!({"mcpServers": {}}));
+    let mut value = json!({"hooks": {}});
+    wire(&mut value, CHERT)?;
+    unwire(&mut value, &json!({}))?;
+    assert_eq!(value, json!({}));
     Ok(())
 }
 
@@ -85,11 +103,11 @@ fn serve_then_unserve_is_the_value_before() -> Test {
     serve(&mut value, CHERT)?;
     let got = value.pointer("/mcpServers/chert").cloned();
     assert_eq!(got, Some(server(CHERT)));
-    unserve(&mut value)?;
+    unserve(&mut value, &before)?;
     assert_eq!(value, before);
     let mut value = json!({});
     serve(&mut value, CHERT)?;
-    unserve(&mut value)?;
+    unserve(&mut value, &json!({}))?;
     assert_eq!(value, json!({}));
     Ok(())
 }
@@ -98,9 +116,9 @@ fn serve_then_unserve_is_the_value_before() -> Test {
 fn unwire_keeps_containers_it_did_not_empty() -> Test {
     let before = json!({"hooks": {}, "mcpServers": {}});
     let mut value = before.clone();
-    unwire(&mut value)?;
+    unwire(&mut value, &json!({}))?;
     assert_eq!(value, before);
-    unserve(&mut value)?;
+    unserve(&mut value, &json!({}))?;
     assert_eq!(value, before);
     Ok(())
 }
@@ -110,7 +128,7 @@ fn unwire_keeps_a_user_hook_sharing_chert_s_group() -> Test {
     let mine = json!({"type": "command", "command": "lint.sh"});
     let chert = json!({"type": "command", "command": command(CHERT, "stop")});
     let mut value = json!({"hooks": {"Stop": [{"hooks": [mine, chert]}]}});
-    unwire(&mut value)?;
+    unwire(&mut value, &json!({}))?;
     assert_eq!(value, json!({"hooks": {"Stop": [{"hooks": [mine]}]}}));
     Ok(())
 }
@@ -119,7 +137,7 @@ fn unwire_keeps_a_user_hook_sharing_chert_s_group() -> Test {
 fn a_group_without_a_hook_list_is_kept() -> Test {
     let before = json!({"hooks": {"Stop": [{"matcher": "x"}]}});
     let mut value = before.clone();
-    unwire(&mut value)?;
+    unwire(&mut value, &json!({}))?;
     assert_eq!(value, before);
     Ok(())
 }

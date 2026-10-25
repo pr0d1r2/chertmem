@@ -429,3 +429,44 @@ fn a_private_file_and_its_backup_stay_private() -> Test {
     }
     Ok(())
 }
+
+/// Settings files holding empty containers chert fills (B2).
+const EMPTY_SETTINGS: [&str; 4] = [
+    "{\n  \"hooks\": {}\n}\n",
+    r#"{"hooks": {"PostToolUse": []}}"#,
+    r#"{"hooks": {"Stop": [], "SessionEnd": []}, "mcpServers": {}}"#,
+    r#"{"hooks": {"PostToolUse": [{"hooks": []}]}}"#,
+];
+
+/// `~/.claude.json` files holding an empty `mcpServers` (B2).
+const EMPTY_CLAUDE_JSON: [&str; 2] = [
+    r#"{"mcpServers": {}}"#,
+    r#"{"mcpServers":{},"numStartups":1}"#,
+];
+
+#[test]
+fn install_then_uninstall_keeps_the_empty_hooks_key() -> Test {
+    let s = Scratch::new("b2-hooks")?;
+    let text = "{\n  \"hooks\": {}\n}\n";
+    let path = s.with(text)?;
+    install(&s.target(), Ide::ClaudeCode)?;
+    let back = uninstall(&s.target(), Ide::ClaudeCode)?;
+    assert_eq!(back.settings, Change::Restored);
+    restored(&path, text)
+}
+
+#[test]
+fn install_then_uninstall_keeps_every_empty_container() -> Test {
+    let mcps = EMPTY_CLAUDE_JSON.iter().cycle();
+    for (i, (text, mcp)) in EMPTY_SETTINGS.iter().zip(mcps).enumerate() {
+        let s = Scratch::new(&format!("v1-empty-{i}"))?;
+        let path = s.with(text)?;
+        let mcp_path = s.with_mcp(mcp)?;
+        install(&s.target(), Ide::ClaudeCode)?;
+        let back = uninstall(&s.target(), Ide::ClaudeCode)?;
+        assert_eq!(back, both(Change::Restored), "{text}");
+        restored(&path, text)?;
+        restored(&mcp_path, mcp)?;
+    }
+    Ok(())
+}
