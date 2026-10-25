@@ -58,7 +58,7 @@ fn newline(c: char) -> bool {
 }
 
 /// Neither space, letter nor digit.
-pub(super) fn mark(c: char) -> bool {
+fn mark(c: char) -> bool {
     !c.is_whitespace() && !letter(c) && !number_char(c)
 }
 
@@ -78,16 +78,14 @@ fn word(rest: &[char]) -> Option<usize> {
 
 /// `'s`, `'t`, `'re`, `'ve`, `'m`, `'ll` or `'d` in any case: its length.
 fn contraction(rest: &[char]) -> usize {
-    let lower: String =
-        rest.iter().take(3).flat_map(|c| c.to_lowercase()).collect();
-    let two = ["'s", "'t", "'m", "'d"]
-        .iter()
-        .any(|s| lower.starts_with(s));
-    let three = ["'re", "'ve", "'ll"].iter().any(|s| lower.starts_with(s));
-    if three {
-        3
-    } else {
-        usize::from(two).saturating_mul(2)
+    let lower = |at: usize| rest.get(at).map(char::to_ascii_lowercase);
+    if rest.first() != Some(&'\'') {
+        return 0;
+    }
+    match (lower(1), lower(2)) {
+        (Some('r' | 'v'), Some('e')) | (Some('l'), Some('l')) => 3,
+        (Some('s' | 't' | 'm' | 'd'), _) => 2,
+        _ => 0,
     }
 }
 

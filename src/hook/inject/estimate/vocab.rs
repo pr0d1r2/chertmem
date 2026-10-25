@@ -61,11 +61,50 @@ pub(in crate::hook::inject) fn class(token: &[u8]) -> Class {
 }
 
 /// The o200k tokens of `piece`, 1 o200k pre-split piece: never fewer
-/// than o200k's. RED: lookups only, a piece not found counts bytes.
+/// than o200k's, as many when its merges stay below its cutoff.
 pub(super) fn count(piece: &[u8]) -> usize {
     let cut = blob::cutoff(piece);
     if piece.len() < 2 || blob::rank(piece, cut).is_some() {
         return piece.len().min(1);
     }
-    blob::known(piece).unwrap_or(piece.len())
+    blob::known(piece).unwrap_or_else(|| merged(piece, cut))
+}
+
+/// A part's start, and the rank of the token it makes with the next
+/// part, if any.
+type Part = (usize, Option<u32>);
+
+/// The parts left once no adjacent pair makes a kept token.
+fn merged(piece: &[u8], cut: u32) -> usize {
+    let mut parts: Vec<Part> = (0..=piece.len()).map(|at| (at, None)).collect();
+    for at in 0..parts.len() {
+        relink(&mut parts, at, piece, cut);
+    }
+    while let Some(at) = lowest(&parts) {
+        parts.remove(at.saturating_add(1));
+        relink(&mut parts, at, piece, cut);
+        if let Some(before) = at.checked_sub(1) {
+            relink(&mut parts, before, piece, cut);
+        }
+    }
+    parts.len().saturating_sub(1)
+}
+
+/// Sets the rank part `at` makes with the next part.
+fn relink(parts: &mut [Part], at: usize, piece: &[u8], cut: u32) {
+    let end = parts.get(at.saturating_add(2)).map(|&(end, _)| end);
+    let span = parts.get(at).map(|&(start, _)| start).zip(end);
+    let token = span.and_then(|(start, end)| piece.get(start..end));
+    let ranked = token.and_then(|token| blob::rank(token, cut));
+    if let Some(part) = parts.get_mut(at) {
+        part.1 = ranked;
+    }
+}
+
+/// The part making the lowest-ranked token with the next, the first of
+/// equals.
+fn lowest(parts: &[Part]) -> Option<usize> {
+    let ranked = parts.iter().enumerate();
+    let ranked = ranked.filter_map(|(at, &(_, rank))| Some((rank?, at)));
+    ranked.min().map(|(_, at)| at)
 }
