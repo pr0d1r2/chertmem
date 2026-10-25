@@ -208,3 +208,55 @@ fn defaults_load_without_warnings() -> Test {
     assert!(loaded.warnings.is_empty(), "{:?}", loaded.warnings);
     Ok(())
 }
+
+/// `docs/CONFIG.md`, read at run time: a missing page fails the parity
+/// tests, not the build (docs V2).
+fn config_page() -> Result<String, Box<dyn Error>> {
+    let page = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/CONFIG.md");
+    Ok(fs::read_to_string(page)?)
+}
+
+/// Every key row of the page as (key, default), backticks off: a table
+/// row whose first cell is a backticked `section.key`.
+fn documented(page: &str) -> Vec<(String, String)> {
+    page.lines().filter_map(key_row).collect()
+}
+
+fn key_row(line: &str) -> Option<(String, String)> {
+    let mut cells = line.strip_prefix('|')?.split('|').map(str::trim);
+    let key = unquote(cells.next()?)?;
+    let default = cells.nth(1)?;
+    let default = unquote(default).unwrap_or(default);
+    key.contains('.')
+        .then(|| (key.to_owned(), default.to_owned()))
+}
+
+fn unquote(cell: &str) -> Option<&str> {
+    cell.strip_prefix('`')?.strip_suffix('`')
+}
+
+#[test]
+fn config_page_names_every_key_and_no_other() -> Test {
+    let page = config_page()?;
+    let rows = documented(&page);
+    let mut named: Vec<&str> = rows.iter().map(|(k, _)| k.as_str()).collect();
+    let mut keys = super::source::KEYS.to_vec();
+    named.sort_unstable();
+    keys.sort_unstable();
+    assert_eq!(named, keys, "docs/CONFIG.md key rows vs src/config KEYS");
+    Ok(())
+}
+
+#[test]
+fn config_page_defaults_are_the_built_ones() -> Test {
+    let s = Scratch::new("docsdefaults")?;
+    let (page, home) = (config_page()?, s.home().display().to_string());
+    let rows = documented(&page);
+    for entry in super::show(Some(&s.home()), &s.project())? {
+        let built = entry.value.map(|v| v.replace(&home, "~"));
+        let found = rows.iter().find(|(k, _)| k == entry.key);
+        let doc = found.map(|(_, d)| d.clone());
+        assert_eq!(doc, built, "docs/CONFIG.md default of {}", entry.key);
+    }
+    Ok(())
+}
