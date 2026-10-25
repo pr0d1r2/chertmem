@@ -4,7 +4,7 @@ const LIST: &str = "Cargo.lock\nCargo.toml\nLICENSE\nREADME.md\n\
                     THIRD-PARTY-NOTICES.md\nsrc/lib.rs\nsrc/main.rs\n";
 
 const README: &str = "# x\n\n[MIT](LICENSE), [notices](THIRD-PARTY-NOTICES.md#rust-crates),\n\
-                      [spec](https://github.com/o/r/blob/main/SPEC.md), [top](#x).\n\n\
+                      [spec](https://x.test/blob/main/SPEC.md), [top](#x).\n\n\
                       [ref]: src/lib.rs\n";
 
 #[test]
