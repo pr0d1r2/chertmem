@@ -3,4 +3,7 @@
 //! bench` builds `main.rs` with `--cfg test` but no harness, so a test
 //! module there holds only `#[test]` fns, which it strips.
 
+mod fixture;
 mod harness;
+mod rng;
+mod words;
