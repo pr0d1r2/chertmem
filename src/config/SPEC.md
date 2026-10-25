@@ -56,6 +56,7 @@ T3|x|`inject.*` keys & on_prompt disclaimer|V4
 T4|x|defaults for `compression.*`, `search.*`, `mining.*` per `.:§C`; `compression.zstd` = table `{ level, dictionary }`, ⊥ bool|V1,V5
 T5|x|split `config.rs` (5158 tok) & its tests (4214) under the 4000-tok file budget of `sherd check`: 1 submodule per section|-
 T6|x|API for `chert config` show, get, set, path: effective config w/ the file each value came from, get 1 key, set 1 key in the project or user file keeping other bytes, file paths (src/cli report)|V1,V3
+T7|x|`statusline.{ms_green,ms_amber}` ≥ 1 (10, 50), `{size_green,size_amber}` sizes (`1GiB`, `5GiB`), `fit_amber` 1..=100 % (80) for `chert statusline` (src/cli T3); `docs/CONFIG.md` rows|V1,V3
 
 ## §B BUGS
 
