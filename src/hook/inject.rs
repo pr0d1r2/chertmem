@@ -10,11 +10,12 @@
 #[cfg(test)]
 mod tests;
 
+use std::cmp::Reverse;
 use std::collections::BTreeSet;
 
 use super::{Kind, Payload};
 use crate::config::Config;
-use crate::store::{Error, Filter, Ref, Scope, Store, Summary};
+use crate::store::{Error, Filter, Listed, Ref, Scope, Store, Summary};
 
 /// The first line of every injected context.
 pub(super) const HEADER: &str = "chert: recent sessions (chert get <ref>):";
@@ -62,12 +63,52 @@ fn stdout(kind: Kind, text: &str) -> String {
 
 /// 1 line per last [`SESSIONS`] other sessions, newest first.
 fn sessions(store: &mut Store, session: &str) -> Result<Vec<String>, Error> {
-    let all = store.summaries(None, Scope::Session)?;
+    let picked = recent(store, session)?;
+    picked.iter().map(|s| line(store, s)).collect()
+}
+
+/// The newest session summary of each of the last [`SESSIONS`] sessions
+/// other than `session`, newest first by time then id. Partitions are
+/// read newest end first, each opened only once reached, until no
+/// unread one can change the pick (src/hook T11).
+pub(super) fn recent(
+    store: &mut Store,
+    session: &str,
+) -> Result<Vec<Summary>, Error> {
+    let mine = Filter {
+        project: Some(store.project().to_owned()),
+        ..Filter::default()
+    };
+    let mut parts = store.partitions(&mine)?;
+    parts.sort_by_key(|p| Reverse(p.t1));
+    let mut read = Vec::new();
+    for p in parts {
+        if settled(&read, session, p.t1) {
+            break;
+        }
+        read.extend(store.summaries_in(&p.path, Scope::Session)?);
+    }
+    Ok(pick(&read, session).into_iter().cloned().collect())
+}
+
+/// The pick from `read`: newest first by `(ts, id)`, as
+/// [`Store::summaries`] orders them, the newest of each other session.
+fn pick<'a>(read: &'a [Listed], session: &str) -> Vec<&'a Summary> {
+    let mut newest: Vec<&Listed> = read.iter().collect();
+    newest.sort_by(|a, b| (b.summary.ts, &b.id).cmp(&(a.summary.ts, &a.id)));
     let mut seen = BTreeSet::new();
-    let recent = all.iter().rev().filter(|s| s.session != session);
-    let fresh = recent.filter(|s| seen.insert(s.session.as_str()));
-    let picked: Vec<&Summary> = fresh.take(SESSIONS).collect();
-    picked.into_iter().map(|s| line(store, s)).collect()
+    let others = newest.into_iter().map(|l| &l.summary);
+    let others = others.filter(|s| s.session != session);
+    let fresh = others.filter(|s| seen.insert(s.session.as_str()));
+    fresh.take(SESSIONS).collect()
+}
+
+/// Whether no partition ending by `t1` can change the pick from
+/// `read`: it is full and its oldest is at or past `t1`, so every
+/// unread summary, earlier than its own partition's end, is older.
+fn settled(read: &[Listed], session: &str, t1: u64) -> bool {
+    let picked = pick(read, session);
+    picked.len() == SESSIONS && picked.last().is_some_and(|s| s.ts >= t1)
 }
 
 fn line(store: &mut Store, summary: &Summary) -> Result<String, Error> {
