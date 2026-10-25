@@ -86,9 +86,9 @@ path:Cargo.lock|deny|-|-
 exempt|tdd-order|-|-
 coverage|coverage|-|-
 path:LICENSE|-|-|MIT license text, kept verbatim; the `*` checks still apply
-path:.markdownlint.yaml|-|-|markdownlint configuration; yamllint arrives with the workflows (root T12)
+yaml|yamllint|-|-
 path:.actlith|actlith-gen-check, actlith-check|-|-
-path:.github/workflows/*.yml|actlith-gen-check, actlith-check|-|-
+path:.github/workflows/*.yml|yamllint, actlith-gen-check, actlith-check|-|-
 mjs|-|-|test-only oracle runner for src/grammar, never in the chert binary
 txt|-|-|src/grammar corpus: input texts for the oracle and the grammar tests
 compressed|-|-|golden output of cavemem compress, compared byte for byte by src/grammar tests

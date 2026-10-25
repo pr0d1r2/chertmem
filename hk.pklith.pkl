@@ -86,6 +86,10 @@ steps: Mapping<String, Config.Step> = new {
     check = "command -v markdownlint >/dev/null 2>&1 || { echo 'markdownlint: markdownlint is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; markdownlint {{files}} || { echo 'markdownlint: markdown style finding; markdownlint names the rule' >&2; exit 1; }"
     fix = "markdownlint --fix {{files}}"
   }
+  ["yamllint"] {
+    glob = List("**/*.yml", "**/*.yaml")
+    check = "command -v yamllint >/dev/null 2>&1 || { echo 'yamllint: yamllint is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; yamllint {{files}} || { echo 'yamllint: YAML error; yamllint names the rule' >&2; exit 1; }"
+  }
   ["editorconfig-checker"] {
     glob = List("**/*")
     check = "command -v editorconfig-checker >/dev/null 2>&1 || { echo 'editorconfig-checker: editorconfig-checker is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; editorconfig-checker {{files}} || { echo 'editorconfig-checker: file breaks its .editorconfig (indent, line ends, final newline)' >&2; exit 1; }"

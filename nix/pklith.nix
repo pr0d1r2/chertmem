@@ -19,4 +19,5 @@ catalog: [
   catalog.statix
   catalog.taplo
   catalog.typos
+  catalog.yamllint
 ]
