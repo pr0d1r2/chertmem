@@ -4,8 +4,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use super::{Chunks, SCAN, insert, scan};
+use crate::store::tests::{Scratch, WEEK, event};
 use crate::store::write::Row;
-use crate::store::{Event, Filter};
+use crate::store::{Event, Filter, Mode, Store};
 
 type Test = Result<(), Box<dyn StdError>>;
 
@@ -118,5 +119,37 @@ fn get_fails_where_no_dir_can_be_made() -> Test {
     fs::write(dir.join("chunks"), "a file")?;
     let mut chunks = Chunks::new(dir, Duration::from_millis(50));
     assert!(chunks.get("chunks/p/a.db").is_err());
+    Ok(())
+}
+
+#[test]
+fn chunks_keep_at_most_their_bound_closing_the_least_recent() -> Test {
+    let mut chunks = Chunks::new(root("lru")?, Duration::from_millis(50));
+    chunks.keep(2);
+    for path in ["a.db", "b.db", "a.db", "c.db"] {
+        chunks.get(path)?;
+    }
+    let kept: Vec<&str> = chunks.open.keys().map(String::as_str).collect();
+    assert_eq!(kept, ["a.db", "c.db"]);
+    chunks.keep(0);
+    assert!(chunks.open.is_empty());
+    chunks.get("b.db")?;
+    assert_eq!(chunks.open.len(), 1);
+    Ok(())
+}
+
+#[test]
+fn a_store_keeps_64_partitions_open_by_default() -> Test {
+    let s = Scratch::new("part-keep")?;
+    let mut store = s.open(Mode::Read)?;
+    for i in 0..70_u64 {
+        store.append(&event(i.saturating_mul(WEEK), None, "row"))?;
+    }
+    assert_eq!(store.chunks.open.len(), Store::KEEP_OPEN);
+    assert_eq!(Store::KEEP_OPEN, 64);
+    store.keep_open(3);
+    assert_eq!(store.chunks.open.len(), 3);
+    assert_eq!(store.observations(&Filter::default())?.len(), 70);
+    assert_eq!(store.chunks.open.len(), 3);
     Ok(())
 }

@@ -128,7 +128,8 @@ impl Engine {
         project_root: &Path,
         host: String,
     ) -> Result<Self, Error> {
-        let store = Store::open(cfg, project_root, Mode::Read)?;
+        let mut store = Store::open(cfg, project_root, Mode::Read)?;
+        store.keep_open(merge::OWN);
         let data = cfg.storage.data_dir.as_deref();
         let terms = Terms::open(data.ok_or(store::Error::NoDataDir)?)?;
         Ok(Self {

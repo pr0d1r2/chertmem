@@ -3,7 +3,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::{Job, Pool, candidates, parallel, split, workers};
+use super::{
+    BUDGET, Job, MAX_WORKERS, OWN, Pool, candidates, parallel, split, workers,
+};
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::search::rank::{Rater, top};
 use crate::search::terms::{Stats, Terms};
@@ -51,7 +53,13 @@ fn split_deals_every_path_once_and_no_group_empty() {
 fn workers_are_at_least_1_and_at_most_1_per_partition() {
     assert_eq!(workers(0), 1);
     assert_eq!(workers(1), 1);
-    assert!(workers(64) >= 1 && workers(64) <= 64);
+    assert!(workers(64) >= 1 && workers(64) <= MAX_WORKERS);
+}
+
+#[test]
+fn the_engine_and_its_pool_keep_at_most_64_partitions_open() {
+    assert_eq!(OWN.checked_add(BUDGET), Some(Store::KEEP_OPEN));
+    assert!(BUDGET / MAX_WORKERS >= 52_usize.div_ceil(MAX_WORKERS));
 }
 
 /// 12 rows, 1 per weekly partition, every 3rd scoring higher.
@@ -386,8 +394,9 @@ fn open_fds() -> Result<usize, Box<dyn StdError>> {
 }
 
 /// 3 descriptors a partition connection (file, `-wal`, `-shm`) for at
-/// most 64 connections, and slack for the catalog and terms files.
-const FD_BOUND: usize = 3 * 64 + 32;
+/// most 64 connections, and slack for the workers' catalogs and the
+/// terms file: under 256 with what the process held before.
+const FD_BOUND: usize = 3 * 64 + 48;
 
 #[test]
 fn a_search_over_520_partitions_holds_a_bounded_number_of_files() -> Test {
