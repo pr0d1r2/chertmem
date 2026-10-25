@@ -153,6 +153,91 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
+## tiktoken-rs and OpenAI's o200k_base (feature `bpe` only)
+
+Both ship only in a `chert` built with `--features bpe`, which counts
+injected tokens exactly (`src/hook/SPEC.md` R2). The default build
+holds neither of them.
+
+### tiktoken-rs 0.12.1
+
+The `tiktoken-rs` crate, <https://github.com/zurawiki/tiktoken-rs>,
+declares `license = "MIT"` in its manifest, but its crates.io tarball
+holds no license file. The license below is the `LICENSE` file of its
+repository at tag `v0.12.1`, unchanged.
+
+```text
+MIT License
+
+Copyright (c) 2023 Roger Zurawicki
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### OpenAI tiktoken and the o200k_base table
+
+The crate carries two pieces of OpenAI's work:
+
+- **Code.** `src/vendor_tiktoken.rs` is OpenAI's tiktoken Rust core
+  (`src/lib.rs` of <https://github.com/openai/tiktoken>, vendored as a
+  git submodule at ref `0.13.0`), its Python bindings commented out.
+- **Data.** `assets/o200k_base.tiktoken`, the o200k_base BPE ranks,
+  is compiled into the binary with `include_str!`. Its download script
+  fetches it from OpenAI's
+  <https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken>
+  and checks SHA-256
+  `446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d`:
+  the URL and hash OpenAI's own `tiktoken_ext/openai_public.py` loads,
+  and the hash of the file in the 0.12.1 tarball. The crate also holds
+  the older r50k, p50k and cl100k tables from the same source; chert
+  calls only o200k_base.
+
+The table file carries no license of its own, and OpenAI publishes
+none for it apart from tiktoken's. The license below is the `LICENSE`
+file of openai/tiktoken at tag `0.13.0`, unchanged; it covers the
+vendored code, and is the license OpenAI distributes the loader of the
+table under.
+
+```text
+MIT License
+
+Copyright (c) 2022 OpenAI, Shantanu Jain
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 <!-- BEGIN crates -->
 
 ## Rust crates
