@@ -6,6 +6,7 @@
 mod tests;
 
 use std::path::Path;
+use std::process::{Command, Output};
 
 /// `program args` run in `dir`: its stdout when it exits 0.
 ///
@@ -17,6 +18,28 @@ pub fn stdout(
     program: &str,
     args: &[&str],
 ) -> Result<String, String> {
-    let _ = (dir, program, args);
-    Ok(String::new())
+    let line = std::iter::once(program)
+        .chain(args.iter().copied())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let out = Command::new(program)
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .map_err(|e| format!("`{line}` did not start: {e}"))?;
+    if !out.status.success() {
+        return Err(failed(&line, &out));
+    }
+    String::from_utf8(out.stdout)
+        .map_err(|_| format!("`{line}` printed non-UTF-8"))
+}
+
+/// Why `line` failed: its exit code, or the signal, and its stderr.
+fn failed(line: &str, out: &Output) -> String {
+    let code = out
+        .status
+        .code()
+        .map_or("a signal".to_owned(), |c| format!("exit {c}"));
+    let err = String::from_utf8_lossy(&out.stderr);
+    format!("`{line}` failed ({code}): {}", err.trim())
 }
