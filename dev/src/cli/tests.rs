@@ -27,9 +27,37 @@ fn unknown_verb_is_usage() -> Res {
     Ok(())
 }
 
+/// A scratch repository with a public list naming 1 repository.
+fn listed(name: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let root = scratch(name)?;
+    fs::create_dir_all(root.join("dev"))?;
+    let list = "[[repo]]\nname = \"pr0d1r2/rekall\"\npublic = \"2026-10-25\"\n";
+    fs::write(root.join("dev/public-repos.toml"), list)?;
+    Ok(root)
+}
+
+#[test]
+fn name_guard_planted_unlisted_repo_is_a_finding_without_denylist() -> Res {
+    let root = listed("unlisted")?;
+    fs::remove_dir_all(root.join(".private"))?;
+    fs::write(root.join("a.md"), "see pr0d1r2/secret\n")?;
+    assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 1);
+    fs::write(root.join("a.md"), "see pr0d1r2/rekall\n")?;
+    assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 0);
+    Ok(())
+}
+
+#[test]
+fn name_guard_without_public_list_is_unreadable_input() -> Res {
+    let root = scratch("nolist")?;
+    fs::write(root.join("a.md"), "text\n")?;
+    assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 2);
+    Ok(())
+}
+
 #[test]
 fn name_guard_without_denylist_holds() -> Res {
-    let root = scratch("nodeny")?;
+    let root = listed("nodeny")?;
     fs::remove_dir_all(root.join(".private"))?;
     fs::write(root.join("a.md"), "secretproj\n")?;
     assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 0);
@@ -38,7 +66,7 @@ fn name_guard_without_denylist_holds() -> Res {
 
 #[test]
 fn name_guard_planted_name_is_a_finding() -> Res {
-    let root = scratch("planted")?;
+    let root = listed("planted")?;
     fs::write(root.join(".private/denylist"), "secretproj\n")?;
     fs::write(root.join("a.md"), "see SecretProj\n")?;
     assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 1);
@@ -47,7 +75,7 @@ fn name_guard_planted_name_is_a_finding() -> Res {
 
 #[test]
 fn name_guard_clean_twin_holds() -> Res {
-    let root = scratch("clean")?;
+    let root = listed("clean")?;
     fs::write(root.join(".private/denylist"), "secretproj\n")?;
     fs::write(root.join("a.md"), "see public docs\n")?;
     assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 0);
