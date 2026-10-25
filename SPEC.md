@@ -69,6 +69,7 @@ R2|Rust agent-memory 2026-10-24|leteo 4★ · engram-mcp 18★ · opencode-memor
 R3|rekall 3235597|candidate = `{id, src, text, at}` in `.rekall/ledger.toml`; only rekall's classifier mints (rekall `src/catch` rule 44); ⊥ 2nd candidate store (rekall `src/catch` rule 45); `catch` reads transcript roots, dialect per agent (rekall `src/catch` rule 47)|`github.com/pr0d1r2/rekall` `src/ledger/mod.rs`, `src/catch/SPEC.md`
 R4|names 2026-10-24|`chertmem` free on crates.io & npm, 0 GitHub repos; `chert` crate = `jesopo/chert` 0.2.1 (2024-02-06); ⊥ Homebrew formula `chert`|`curl https://crates.io/api/v1/crates/<name>`; `gh search repos chertmem`; `brew info --formula chert`
 R5|SQLite limits|`ATTACH` default max 10 dbs (`SQLITE_MAX_ATTACHED`) ∴ 1 connection per partition, ⊥ attach-all. WAL: readers ⊥ block writer, 1 writer at a time, multi-process|`https://sqlite.org/limits.html`; `https://sqlite.org/wal.html`
+R6|CI, actlith 0.1.0, 2026-10-25|gate kind = 1 job, matrix ubuntu-latest · ubuntu-24.04-arm · macos-latest; refuses x86_64-darwin (⊥ hosted runner) & flake ⊥ x86_64-darwin build of 6 fleet tools ∴ that system = pre-push on owner's Intel Mac (`paradigm/V28`). cache = cachix (nix store) only, ⊥ cargo cache. CI ⊥ upstream ∴ `tdd-order` range = `HEAD`, all history holds. `bench-gate`: runner CPU ⊥ baseline row → `no baseline row for <cpu>, <os>; held`, exit 0. cold run (empty `CARGO_HOME`, ⊥ `target/`) of CI command: ∀ 45 steps pass, 243 s, M1 Pro|`actlith gen`, `actlith report`, `actionlint`, `zizmor --offline`; `dev/src/cli/bench.rs`
 
 ## §V INVARIANTS
 
@@ -104,7 +105,7 @@ T8|.|waves via `sherd wave`, order: `src/config` → `src/store` → `src/gramma
 T9|x|grammar oracle: corpus + cavemem 0.2.1 JavaScript pinned by hash, test-only (`src/grammar:T1`, `tests/grammar/ORACLE.md`)|V9
 T10|.|benchmark step on push w/ baseline file; regression fails|V10,V14
 T11|.|defaults (D19) checked against 1 real month of history; record in §R|V11
-T12|.|CI via actlith: gate on `paradigm/V28` systems|V10
+T12|x|CI via actlith: gate on `paradigm/V28` systems. `.actlith` row `ci` (gate) → `.github/workflows/ci.yml`: `nix develop --command hk check --all --check` on x86_64-linux, aarch64-linux, aarch64-darwin, cachix `pr0d1r2`, 60 min; x86_64-darwin by pre-push (R6). steps `actlith-gen-check` `actlith-check` `yamllint` `actionlint` `zizmor`; push & CI `deny-advisories`; `name-guard` allowlist `dev/public-repos.toml` (`dev:V14`). ⊥ `nix build` job until `packages.default` (T18). first real run after first push (T13)|V10,V12
 T13|.|GitHub repo `pr0d1r2/chertmem` PUBLIC, first push, w/ approval; `gh repo view` ∀ named repo first|V12,V13
 T14|x|issue in rekall proposing `chert` dialect for `catch`, w/ approval (D27): pr0d1r2/rekall#46, filed by owner 2026-10-25|V7,V13
 T15|.|owner review of agent-answered round 2 (D11–D26)|-
