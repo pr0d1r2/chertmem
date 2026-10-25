@@ -59,6 +59,34 @@ fn hook_events_give_a_sequence_whose_refs_resolve() -> Test {
     Ok(())
 }
 
+/// The recorded failure (src/hook R5) of `false`, stored by `src/hook`
+/// at each `(at, exit code)`.
+fn fail_false(scratch: &Scratch, codes: &[(u64, u8)]) -> Test {
+    let input = json!({"command": "false", "description": "Run false"});
+    for (at, code) in codes {
+        let error = format!("Exit code {code}");
+        scratch.failure(*at, "s", ("Bash", &input, &error))?;
+    }
+    Ok(())
+}
+
+/// `false` failing with exit code 1 3 times and with 2 once.
+#[test]
+fn hook_failures_give_a_failure_whose_refs_resolve() -> Test {
+    let scratch = Scratch::new("failure")?;
+    fail_false(&scratch, &[(0, 1), (1, 1), (2, 2), (3, 1)])?;
+    let mut store = scratch.store()?;
+    let found = mine(&mut store, &scratch.config, None)?;
+    let mut fails = found.iter().filter(|f| f.kind == Kind::Failure);
+    let only = fails.next().ok_or("no failure")?;
+    assert_eq!(only.summary, "failing `Bash` `false`: `Exit code 1`");
+    let got = store.get(&only.refs)?;
+    let found_all = got.iter().all(|l| matches!(l, Lookup::Found(_)));
+    let more = fails.count();
+    assert!(got.len() == 3 && found_all && more == 0, "{found:?}");
+    Ok(())
+}
+
 #[test]
 fn the_same_store_gives_the_same_findings_sealed_or_not() -> Test {
     let scratch = Scratch::new("same")?;

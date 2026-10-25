@@ -1,4 +1,4 @@
-use super::{Tool, parse};
+use super::{Tool, error, parse};
 use crate::grammar::{Intensity, compress};
 
 /// A body as `src/hook` builds it, compressed at the default grammar.
@@ -62,4 +62,41 @@ fn a_body_without_a_json_input_is_no_tool() {
     assert_eq!(parse("Bash"), None);
     assert_eq!(parse("Bash\nnot json\n{}"), None);
     assert_eq!(parse("Bash\n[1]\n{}"), None);
+}
+
+/// A failure body as `src/hook` builds it (src/hook R5), compressed.
+fn failed(error: &str) -> String {
+    let raw = format!("Bash\n{{\"command\":\"false\"}}\n{error}");
+    compress(&raw, Intensity::Full)
+}
+
+#[test]
+fn a_failure_is_counted_under_its_errors_first_line() {
+    let got = error(&failed("Exit code 101\nerror: test failed, at 12:03"));
+    assert_eq!(got, error(&failed("Exit code 101")));
+    assert!(got.contains("101"), "{got}");
+    assert!(!got.contains('\n'), "{got}");
+}
+
+#[test]
+fn blank_lines_and_edge_blanks_are_skipped() {
+    let got = error(&failed("\n  \n  Exit code 2  \nmore"));
+    assert_eq!(got, error(&failed("Exit code 2")));
+    assert!(!got.starts_with(' ') && !got.ends_with(' '), "{got:?}");
+}
+
+#[test]
+fn exit_codes_and_numbers_in_paths_are_kept() {
+    let one = error(&failed("Exit code 1"));
+    assert_ne!(one, error(&failed("Exit code 2")));
+    assert_ne!(one, String::new());
+    let (a, b) = ("cannot open tmp/run-1", "cannot open tmp/run-2");
+    assert_ne!(error(&failed(a)), error(&failed(b)));
+}
+
+#[test]
+fn a_body_without_an_error_line_has_an_empty_error() {
+    assert_eq!(error("Bash\n{}"), "");
+    assert_eq!(error("Bash\n{}\n\n  "), "");
+    assert_eq!(error("Bash"), "");
 }

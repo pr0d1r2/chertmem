@@ -5,7 +5,7 @@ use std::error::Error as StdError;
 use std::fs;
 use std::path::PathBuf;
 
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use super::Kind;
 use crate::config::{Config, load_from};
@@ -15,6 +15,12 @@ use crate::store::{Mode, Observation, Ref, Store};
 
 pub(super) type Test = Result<(), Box<dyn StdError>>;
 pub(super) type Res<T> = Result<T, Box<dyn StdError>>;
+
+/// The recorded Claude Code `PostToolUseFailure` payload (src/hook R5).
+const FAILURE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/hook/fixtures/claude-code/post-tool-use-failure.json"
+);
 
 /// Milliseconds of 2026-10-24, the time test events happen around.
 pub(super) const NOW: u64 = 1_792_800_000_000;
@@ -62,11 +68,33 @@ impl Scratch {
             "tool_response": {"stdout": ""}, "tool_use_id": format!("toolu_{at}"),
         });
         let now = NOW.checked_add(at).ok_or("time out of range")?;
-        self.hook(now, payload.to_string().as_bytes())
+        let stdin = payload.to_string();
+        self.hook(hook::Kind::PostToolUse, now, stdin.as_bytes())
     }
 
-    /// Run the `post-tool-use` hook on `stdin` at `now`.
-    fn hook(&self, now: u64, stdin: &[u8]) -> Test {
+    /// The recorded `post-tool-use-failure` (src/hook R5) as a call of
+    /// `call.0` with input `call.1` failing with error `call.2`, `at` ms
+    /// after [`NOW`] in `session`, stored by `src/hook`.
+    pub(super) fn failure(
+        &self,
+        at: u64,
+        session: &str,
+        call: (&str, &Value, &str),
+    ) -> Test {
+        let mut payload: Value = serde_json::from_slice(&fs::read(FAILURE)?)?;
+        let fields: Map<String, Value> = serde_json::from_value(json!({
+            "session_id": session, "tool_name": call.0, "tool_input": call.1,
+            "error": call.2, "tool_use_id": format!("toolu_{at}"),
+        }))?;
+        let obj = payload.as_object_mut().ok_or("fixture not an object")?;
+        obj.extend(fields);
+        let now = NOW.checked_add(at).ok_or("time out of range")?;
+        let stdin = payload.to_string();
+        self.hook(hook::Kind::PostToolUseFailure, now, stdin.as_bytes())
+    }
+
+    /// Run the `kind` hook on `stdin` at `now`.
+    fn hook(&self, kind: hook::Kind, now: u64, stdin: &[u8]) -> Test {
         let root = self.root();
         let ide = Ide::ClaudeCode;
         let config = &self.config;
@@ -76,7 +104,7 @@ impl Scratch {
             now,
             ide,
         };
-        let done = hook::run(hook::Kind::PostToolUse, stdin, &ctx);
+        let done = hook::run(kind, stdin, &ctx);
         done.note.map_or(Ok(()), |n| Err(n.into()))
     }
 
@@ -102,6 +130,25 @@ pub(super) fn row(
     input: &str,
 ) -> Res<Observation> {
     let raw = format!("{name}\n{input}\n{{\"stdout\":\"\"}}");
+    observation(n, session, &raw)
+}
+
+/// A `post-tool-use-failure` row as [`row`], with the body `src/hook`
+/// stores for tool `call.0` with input `call.1` failing with `error`.
+pub(super) fn failed(
+    n: u64,
+    session: &str,
+    call: (&str, &str),
+    error: &str,
+) -> Res<Observation> {
+    let raw = format!("{}\n{}\n{error}", call.0, call.1);
+    let mut failed = observation(n, session, &raw)?;
+    failed.kind = "post-tool-use-failure".to_owned();
+    Ok(failed)
+}
+
+/// A `post-tool-use` row as [`row`], its body `raw` compressed.
+fn observation(n: u64, session: &str, raw: &str) -> Res<Observation> {
     Ok(Observation {
         reference: reference(n)?,
         id: format!("{n:026}"),
@@ -111,7 +158,7 @@ pub(super) fn row(
         ide: "claude-code".to_owned(),
         kind: "post-tool-use".to_owned(),
         identity: None,
-        body: compress(&raw, Intensity::Full),
+        body: compress(raw, Intensity::Full),
     })
 }
 
@@ -128,7 +175,13 @@ pub(super) fn bash(n: u64, session: &str, command: &str) -> Res<Observation> {
 
 #[test]
 fn every_kind_round_trips_its_spelling() {
-    for kind in [Kind::Sequence, Kind::HotFile, Kind::TokenSink] {
+    let all = [
+        Kind::Failure,
+        Kind::Sequence,
+        Kind::HotFile,
+        Kind::TokenSink,
+    ];
+    for kind in all {
         assert_eq!(Kind::parse(kind.as_str()), Some(kind));
     }
     assert_eq!(Kind::parse("error"), None);

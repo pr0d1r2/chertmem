@@ -31,6 +31,9 @@ pub fn findings(rows: &[Observation], min: u32) -> Vec<Finding> {
 /// What a finding is a repeat of (src/mine G).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Kind {
+    /// 1 tool call pattern failing with 1 error, from the
+    /// `post-tool-use-failure` observations (src/mine T1).
+    Failure,
     /// 1 Bash command right after another in 1 session.
     Sequence,
     /// 1 path a tool read or wrote.

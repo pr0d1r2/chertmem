@@ -46,6 +46,13 @@ pub(super) fn parse(body: &str) -> Option<Tool> {
     })
 }
 
+/// The error of a stored `post-tool-use-failure` body, as a failure is
+/// counted under (src/mine T1).
+#[cfg_attr(not(test), expect(dead_code, reason = "RED: no signal yet"))]
+pub(super) fn error(_body: &str) -> String {
+    String::new()
+}
+
 /// Every path `input` names, sorted, each once.
 fn paths(input: &Map<String, Value>) -> Vec<String> {
     let found = PATH_KEYS.iter().filter_map(|k| input.get(*k));

@@ -179,6 +179,7 @@ fn summary(kind: Kind, pattern: &str) -> String {
         .map(|p| format!("`{}`", shown(p)))
         .collect();
     match kind {
+        Kind::Failure => String::new(),
         Kind::Sequence => parts.join(" then "),
         Kind::HotFile => format!("hot file {}", parts.join(" ")),
         Kind::TokenSink => format!(
