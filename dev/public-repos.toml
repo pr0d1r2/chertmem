@@ -1,0 +1,78 @@
+# Public repositories committed text may name or link (dev V14,
+# paradigm/V37): `name-guard` refuses any other, denylist or not, so CI,
+# which has no denylist, still keeps private names out. Each row is dated
+# by the `gh repo view <name> --json visibility` that showed it PUBLIC;
+# adding a row is its own reviewed commit.
+
+# This repository: named everywhere, and exempt. It does not exist on
+# GitHub yet; `gh repo view` on 2026-10-25 found no such repository. It is
+# PUBLIC from its first push (root T13).
+self = "pr0d1r2/chertmem"
+
+[[repo]]
+name = "jdx/expr-rs"
+public = "2026-10-25"
+
+[[repo]]
+name = "jdx/hk"
+public = "2026-10-25"
+
+[[repo]]
+name = "JuliusBrussee/cavemem"
+public = "2026-10-25"
+
+[[repo]]
+name = "panva/jose"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/actlith"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/characterminator"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/itok"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/lablith"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/microlith"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/nix-hk"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/nixpkgs-lock"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/paradigm"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/pklith"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/rekall"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/sherd"
+public = "2026-10-25"
+
+[[repo]]
+name = "pr0d1r2/xenolith"
+public = "2026-10-25"
+
+[[repo]]
+name = "rust-lang/crates.io-index"
+public = "2026-10-25"

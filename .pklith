@@ -14,9 +14,11 @@ id|category|nix|glob|check|fix|env|msg
 # steps match .pklith, and every tracked file type has a row.
 gen-check|gate|-|.pklith, hk.pklith.pkl, nix/pklith.nix|pklith gen --check|pklith gen|-|hk.pklith.pkl or nix/pklith.nix no longer matches .pklith; run pklith gen
 pklith-check|gate|-|-|pklith check|-|-|a tracked file type has no row in .pklith, a row matches nothing, or a claimed check never reaches its files
-# paradigm/V37, dev V3: no committed file holds a name from the local,
-# untracked .private/denylist; without one (CI) it holds.
-name-guard|gate|-|**/*|cargo run -q -p chertmem-dev -- name-guard {{files}}|-|-|a committed file holds a name from .private/denylist
+# paradigm/V37, dev V3, V14: no committed file holds a name from the local,
+# untracked .private/denylist, and none names a repository that
+# dev/public-repos.toml does not list as PUBLIC: with or without a
+# denylist, so CI, which has none, still keeps private names out.
+name-guard|gate|-|**/*|cargo run -q -p chertmem-dev -- name-guard {{files}}|-|-|a committed file holds a name from .private/denylist, or names a repository dev/public-repos.toml does not list
 # paradigm/V15, dev V4: core.worktree in the shared .git/config redirects
 # every worktree; the step refuses it.
 no-core-worktree|gate|-|**/*|cargo run -q -p chertmem-dev -- no-core-worktree|-|-|core.worktree is set in the shared .git/config; unset it

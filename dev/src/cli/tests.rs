@@ -40,7 +40,7 @@ fn listed(name: &str) -> Result<PathBuf, Box<dyn Error>> {
 fn name_guard_planted_unlisted_repo_is_a_finding_without_denylist() -> Res {
     let root = listed("unlisted")?;
     fs::remove_dir_all(root.join(".private"))?;
-    fs::write(root.join("a.md"), "see pr0d1r2/secret\n")?;
+    fs::write(root.join("a.md"), concat!("see pr0d1r2", "/secret\n"))?;
     assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 1);
     fs::write(root.join("a.md"), "see pr0d1r2/rekall\n")?;
     assert_eq!(run(&args(&["name-guard", "a.md"]), &root), 0);

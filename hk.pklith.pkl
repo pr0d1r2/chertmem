@@ -141,7 +141,7 @@ steps: Mapping<String, Config.Step> = new {
   }
   ["name-guard"] {
     glob = List("**/*")
-    check = "command -v cargo >/dev/null 2>&1 || { echo 'name-guard: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- name-guard {{files}} || { echo 'name-guard: a committed file holds a name from .private/denylist' >&2; exit 1; }"
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'name-guard: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- name-guard {{files}} || { echo 'name-guard: a committed file holds a name from .private/denylist, or names a repository dev/public-repos.toml does not list' >&2; exit 1; }"
   }
   ["no-core-worktree"] {
     glob = List("**/*")

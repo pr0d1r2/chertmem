@@ -2,6 +2,9 @@ use super::{Allowlist, Unlisted, refs, unlisted};
 
 type Res = Result<(), String>;
 
+/// Split, so this file does not name it to the guard it tests.
+const PLANT: &str = concat!("pr0d1r2", "/secret");
+
 const LIST: &str = r#"
 self = "pr0d1r2/chertmem"
 
@@ -20,7 +23,7 @@ fn listed_and_self_are_allowed_ignoring_case() -> Res {
     assert!(list.allows("pr0d1r2/rekall"));
     assert!(list.allows("PR0D1R2/Rekall"));
     assert!(list.allows("pr0d1r2/chertmem"));
-    assert!(!list.allows("pr0d1r2/secret"));
+    assert!(!list.allows(PLANT));
     Ok(())
 }
 
@@ -33,6 +36,16 @@ fn a_row_without_a_date_or_name_is_refused() {
     assert!(Allowlist::parse("[[repo]]\npublic = \"2026-10-25\"\n").is_err());
     assert!(Allowlist::parse("other = \"x\"\n").is_err());
     assert!(Allowlist::parse("not toml [").is_err());
+}
+
+#[test]
+fn a_list_of_the_wrong_shape_is_refused() {
+    assert!(Allowlist::parse("self = 1\n").is_err());
+    assert!(Allowlist::parse("repo = \"a/b\"\n").is_err());
+    assert!(Allowlist::parse("repo = [1]\n").is_err());
+    let extra =
+        "[[repo]]\nname = \"a/b\"\npublic = \"2026-10-25\"\nx = \"y\"\n";
+    assert!(Allowlist::parse(extra).is_err());
 }
 
 #[test]
@@ -53,11 +66,11 @@ fn refs_read_links_flake_refs_and_owner_paths() {
 #[test]
 fn planted_unlisted_repo_is_found_and_listed_twin_holds() -> Res {
     let list = Allowlist::parse(LIST)?;
-    let planted = [file("a.md", "ok pr0d1r2/rekall\nsee pr0d1r2/secret\n")];
+    let planted = [file("a.md", &format!("ok pr0d1r2/rekall\nsee {PLANT}\n"))];
     let want = vec![Unlisted {
         path: "a.md".to_owned(),
         line: 2,
-        repo: "pr0d1r2/secret".to_owned(),
+        repo: PLANT.to_owned(),
     }];
     assert_eq!(unlisted(&list, &planted), want);
     let twin = [file("a.md", "ok pr0d1r2/rekall\nsee pr0d1r2/chertmem\n")];

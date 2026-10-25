@@ -56,7 +56,7 @@ T6|x|`rust-mirror`, RED → GREEN → gate row|V7,V6
 T7|x|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
 T8|x|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
 T9|x|`perf-doc [--check]`: `docs/PERFORMANCE.md` from `benches/baseline.toml` & root §C targets, RED → GREEN → gate row at commit|V6
-T10|.|`name-guard` allowlist half + `dev/public-repos.toml` seeded from ∀ repo committed text names, `gh repo view` 2026-10-25, RED → GREEN|V14,V6
+T10|x|`name-guard` allowlist half + `dev/public-repos.toml` seeded from ∀ repo committed text names, `gh repo view` 2026-10-25, RED → GREEN|V14,V6
 
 ## §B BUGS
 

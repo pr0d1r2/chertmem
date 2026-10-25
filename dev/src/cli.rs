@@ -6,7 +6,9 @@ mod tests;
 
 mod bench;
 
-use crate::{lock_graph, message, mirror, name_guard, tdd_order, worktree};
+use crate::{
+    lock_graph, message, mirror, name_guard, public_repos, tdd_order, worktree,
+};
 use std::path::Path;
 
 const USAGE: &str = "usage: chertmem-dev name-guard [files...] | \
@@ -48,8 +50,10 @@ fn usage() -> u8 {
     2
 }
 
+/// `name-guard [files...]`: the denylist when present, and always the
+/// public list (dev V3, V14).
 fn name(root: &Path, files: &[String]) -> u8 {
-    let Some(names) = denylist(root) else {
+    let (Some(names), Some(allow)) = (denylist(root), allowlist(root)) else {
         return 2;
     };
     let mut texts = Vec::new();
@@ -60,7 +64,35 @@ fn name(root: &Path, files: &[String]) -> u8 {
         };
         texts.push((f.clone(), String::from_utf8_lossy(&bytes).into_owned()));
     }
-    report(&name_guard::scan(&names, &texts))
+    let denied = report(&name_guard::scan(&names, &texts));
+    denied.max(unlisted(&public_repos::unlisted(&allow, &texts)))
+}
+
+/// `dev/public-repos.toml`, `None` when it is missing or malformed.
+fn allowlist(root: &Path) -> Option<public_repos::Allowlist> {
+    let path = public_repos::PATH;
+    let parsed = std::fs::read_to_string(root.join(path))
+        .map_err(|e| e.to_string())
+        .and_then(|text| public_repos::Allowlist::parse(&text));
+    parsed
+        .map_err(|why| eprintln!("name-guard: {path}: {why}"))
+        .ok()
+}
+
+fn unlisted(found: &[public_repos::Unlisted]) -> u8 {
+    for u in found {
+        eprintln!(
+            "{}:{}: names {}, which {} does not list; if `gh repo view {} \
+             --json visibility` says PUBLIC, add a dated row in its own \
+             commit, else reword",
+            u.path,
+            u.line,
+            u.repo,
+            public_repos::PATH,
+            u.repo
+        );
+    }
+    u8::from(!found.is_empty())
 }
 
 /// The denylist's names; none when the file is absent (the CI half has
