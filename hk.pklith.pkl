@@ -204,6 +204,9 @@ push: Mapping<String, Config.Step> = new {
   ["coverage"] {
     glob = List("**/*.rs", "Cargo.toml", ".coverage")
     check = "command -v sherd >/dev/null 2>&1 || { echo 'coverage: sherd is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; sherd coverage --check || { echo 'coverage: line coverage fell below .coverage' >&2; exit 1; }"
+    env {
+      ["RUST_TEST_THREADS"] = "1"
+    }
   }
   ["bench-gate"] {
     glob = List("**/*.rs", "Cargo.toml", "Cargo.lock", "benches/baseline.toml")

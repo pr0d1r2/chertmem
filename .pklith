@@ -68,7 +68,10 @@ rust-mirror|lint|-|**/*.rs|cargo run -q -p chertmem-dev -- rust-mirror|-|-|a Rus
 tdd-order|coverage|-|**/*.rs, dev/tdd-order.exempt|cargo run -q -p chertmem-dev -- tdd-order|-|-|a commit adds Rust code with no test: commit before it in the push range
 # paradigm/V25: line coverage floor, a ratchet; push only, alone (dev V10):
 # cargo-llvm-cov builds the binaries too.
-coverage|coverage|sherd|**/*.rs, Cargo.toml, .coverage|sherd coverage --check|-|-|line coverage fell below .coverage
+# Serial: cargo-llvm-cov runs plain cargo test, every test in 1 process,
+# so ~10 parallel tests share one open-file limit (256 on macOS) and
+# fail "unable to open database file"; nextest steps run 1 per process.
+coverage|coverage|sherd|**/*.rs, Cargo.toml, .coverage|sherd coverage --check|-|RUST_TEST_THREADS=1|line coverage fell below .coverage
 # root V10, dev T2: the latency gate. Push only (category coverage), alone
 # (dev V10): it builds and runs the release bench. Locally, not only in
 # CI: the baseline's rows are this machine class's, and CI has none, so
