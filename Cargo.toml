@@ -18,6 +18,8 @@ categories = ["development-tools", "command-line-utilities"]
 # gates this list.
 include = [
   "src/**/*.rs",
+  # The o200k subset table src/hook T14 reads with include_bytes!.
+  "src/**/*.bin",
   "Cargo.toml",
   "Cargo.lock",
   "LICENSE",
