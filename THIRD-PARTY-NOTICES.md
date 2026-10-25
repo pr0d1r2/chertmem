@@ -169,7 +169,7 @@ build scripts and proc macros included, on the release systems:
 - `x86_64-apple-darwin`
 - `x86_64-unknown-linux-gnu`
 
-That is 53 crates in the default build, and 12 more with
+That is 47 crates in the default build, and 12 more with
 feature `bpe` (marked `bpe`).
 
 Where a crate offers a choice of licenses, chert takes MIT whenever it
@@ -193,7 +193,6 @@ for that choice follow the table, each distinct text once.
 | clap | 4.6.7 | MIT | default | <https://github.com/clap-rs/clap> | [3](#text-3) |
 | clap_builder | 4.6.7 | MIT | default | <https://github.com/clap-rs/clap> | [3](#text-3) |
 | clap_complete | 4.6.11 | MIT | default | <https://github.com/clap-rs/clap> | [3](#text-3) |
-| clap_derive | 4.6.7 | MIT | default | <https://github.com/clap-rs/clap> | [3](#text-3) |
 | clap_lex | 1.1.1 | MIT | default | <https://github.com/clap-rs/clap> | [3](#text-3) |
 | clap_mangen | 0.3.3 | MIT | default | <https://github.com/clap-rs/clap> | [3](#text-3) |
 | cpufeatures | 0.3.1 | MIT | default | <https://github.com/RustCrypto/utils> | [12](#text-12) |
@@ -204,46 +203,41 @@ for that choice follow the table, each distinct text once.
 | find-msvc-tools | 0.1.15 | MIT | default | <https://github.com/rust-lang/cc-rs> | [10](#text-10) |
 | getrandom | 0.4.3 | MIT | default | <https://github.com/rust-random/getrandom> | [17](#text-17) |
 | hashbrown | 0.17.1 | MIT | default | <https://github.com/rust-lang/hashbrown> | [18](#text-18) |
-| heck | 0.5.0 | MIT | default | <https://github.com/withoutboats/heck> | [19](#text-19) |
-| indexmap | 2.14.2 | MIT | default | <https://github.com/indexmap-rs/indexmap> | [20](#text-20) |
+| indexmap | 2.14.2 | MIT | default | <https://github.com/indexmap-rs/indexmap> | [19](#text-19) |
 | itoa | 1.0.18 | MIT | default | <https://github.com/dtolnay/itoa> | [4](#text-4) |
 | jobserver | 0.1.35 | MIT | default | <https://github.com/rust-lang/jobserver-rs> | [10](#text-10) |
-| libc | 0.2.191 | MIT | default | <https://github.com/rust-lang/libc> | [21](#text-21) |
-| libsqlite3-sys | 0.39.0 | MIT | default | <https://github.com/rusqlite/rusqlite> | [22](#text-22) |
+| libc | 0.2.191 | MIT | default | <https://github.com/rust-lang/libc> | [20](#text-20) |
+| libsqlite3-sys | 0.39.0 | MIT | default | <https://github.com/rusqlite/rusqlite> | [21](#text-21) |
 | memchr | 2.8.3 | MIT | default | <https://github.com/BurntSushi/memchr> | [1](#text-1), [2](#text-2) |
 | pkg-config | 0.3.34 | MIT | default | <https://github.com/rust-lang/pkg-config-rs> | [10](#text-10) |
-| proc-macro2 | 1.0.107 | MIT | default | <https://github.com/dtolnay/proc-macro2> | [4](#text-4) |
-| quote | 1.0.47 | MIT | default | <https://github.com/dtolnay/quote> | [4](#text-4) |
-| rand | 0.10.3 | MIT | default | <https://github.com/rust-random/rand> | [23](#text-23) |
-| rand_core | 0.10.1 | MIT | default | <https://github.com/rust-random/rand_core> | [24](#text-24) |
+| rand | 0.10.3 | MIT | default | <https://github.com/rust-random/rand> | [22](#text-22) |
+| rand_core | 0.10.1 | MIT | default | <https://github.com/rust-random/rand_core> | [23](#text-23) |
 | regex | 1.13.1 | MIT | `bpe` | <https://github.com/rust-lang/regex> | [7](#text-7) |
 | regex-automata | 0.4.18 | MIT | `bpe` | <https://github.com/rust-lang/regex> | [7](#text-7) |
 | regex-syntax | 0.8.11 | MIT | `bpe` | <https://github.com/rust-lang/regex> | [7](#text-7) |
 | roff | 1.1.1 | MIT | default | <https://github.com/rust-cli/roff-rs> | [3](#text-3) |
-| rusqlite | 0.41.0 | MIT | default | <https://github.com/rusqlite/rusqlite> | [22](#text-22) |
+| rusqlite | 0.41.0 | MIT | default | <https://github.com/rusqlite/rusqlite> | [21](#text-21) |
 | rustc-hash | 2.1.3 | MIT | `bpe` | <https://github.com/rust-lang/rustc-hash> | [4](#text-4) |
 | serde_core | 1.0.229 | MIT | default | <https://github.com/serde-rs/serde> | [4](#text-4) |
 | serde_json | 1.0.154 | MIT | default | <https://github.com/serde-rs/json> | [4](#text-4) |
 | serde_spanned | 1.1.2 | MIT | default | <https://github.com/toml-rs/toml> | [3](#text-3) |
-| shlex | 2.0.1 | MIT | default | <https://github.com/comex/rust-shlex> | [25](#text-25) |
-| smallvec | 1.16.4 | MIT | default | <https://github.com/servo/rust-smallvec> | [26](#text-26) |
-| strsim | 0.11.1 | MIT | default | <https://github.com/rapidfuzz/strsim-rs> | [27](#text-27) |
-| syn | 3.0.9 | MIT | default | <https://github.com/dtolnay/syn> | [4](#text-4) |
+| shlex | 2.0.1 | MIT | default | <https://github.com/comex/rust-shlex> | [24](#text-24) |
+| smallvec | 1.16.4 | MIT | default | <https://github.com/servo/rust-smallvec> | [25](#text-25) |
+| strsim | 0.11.1 | MIT | default | <https://github.com/rapidfuzz/strsim-rs> | [26](#text-26) |
 | tiktoken-rs | 0.12.1 | MIT | `bpe` | <https://github.com/zurawiki/tiktoken-rs> | none shipped |
-| tinyjson | 2.5.1 | MIT | default | <https://github.com/rhysd/tinyjson> | [28](#text-28) |
+| tinyjson | 2.5.1 | MIT | default | <https://github.com/rhysd/tinyjson> | [27](#text-27) |
 | toml | 1.1.8+spec-1.1.0 | MIT | default | <https://github.com/toml-rs/toml> | [3](#text-3) |
 | toml_datetime | 1.1.2+spec-1.1.0 | MIT | default | <https://github.com/toml-rs/toml> | [3](#text-3) |
 | toml_edit | 0.25.17+spec-1.1.0 | MIT | default | <https://github.com/toml-rs/toml> | [3](#text-3) |
 | toml_parser | 1.1.5+spec-1.1.0 | MIT | default | <https://github.com/toml-rs/toml> | [3](#text-3) |
 | toml_writer | 1.1.3+spec-1.1.0 | MIT | default | <https://github.com/toml-rs/toml> | [3](#text-3) |
-| ulid | 3.0.0 | MIT | default | <https://github.com/dylanhart/ulid-rs> | [29](#text-29) |
-| unicode-ident | 1.0.27 | MIT AND Unicode-3.0 | default | <https://github.com/dtolnay/unicode-ident> | [4](#text-4), [30](#text-30) |
-| vcpkg | 0.2.15 | MIT | default | <https://github.com/mcgoo/vcpkg-rs> | [31](#text-31) |
-| winnow | 1.0.4 | MIT | default | <https://github.com/winnow-rs/winnow> | [32](#text-32) |
+| ulid | 3.0.0 | MIT | default | <https://github.com/dylanhart/ulid-rs> | [28](#text-28) |
+| vcpkg | 0.2.15 | MIT | default | <https://github.com/mcgoo/vcpkg-rs> | [29](#text-29) |
+| winnow | 1.0.4 | MIT | default | <https://github.com/winnow-rs/winnow> | [30](#text-30) |
 | zmij | 1.0.23 | MIT | default | <https://github.com/dtolnay/zmij> | [4](#text-4) |
-| zstd | 0.13.3 | MIT | default | <https://github.com/gyscos/zstd-rs> | [33](#text-33) |
-| zstd-safe | 7.3.0 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [34](#text-34) |
-| zstd-sys | 2.1.2+zstd.1.5.7 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [34](#text-34), [35](#text-35) |
+| zstd | 0.13.3 | MIT | default | <https://github.com/gyscos/zstd-rs> | [31](#text-31) |
+| zstd-safe | 7.3.0 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [32](#text-32) |
+| zstd-sys | 2.1.2+zstd.1.5.7 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [32](#text-32), [33](#text-33) |
 
 ### Text 1
 
@@ -285,7 +279,7 @@ THE SOFTWARE.
 
 ### Text 3
 
-Shipped by `anstyle 1.0.14`, `clap 4.6.7`, `clap_builder 4.6.7`, `clap_complete 4.6.11`, `clap_derive 4.6.7`, `clap_lex 1.1.1`, `clap_mangen 0.3.3`, `roff 1.1.1`, `serde_spanned 1.1.2`, `toml 1.1.8+spec-1.1.0`, `toml_datetime 1.1.2+spec-1.1.0`, `toml_edit 0.25.17+spec-1.1.0`, `toml_parser 1.1.5+spec-1.1.0`, `toml_writer 1.1.3+spec-1.1.0`.
+Shipped by `anstyle 1.0.14`, `clap 4.6.7`, `clap_builder 4.6.7`, `clap_complete 4.6.11`, `clap_lex 1.1.1`, `clap_mangen 0.3.3`, `roff 1.1.1`, `serde_spanned 1.1.2`, `toml 1.1.8+spec-1.1.0`, `toml_datetime 1.1.2+spec-1.1.0`, `toml_edit 0.25.17+spec-1.1.0`, `toml_parser 1.1.5+spec-1.1.0`, `toml_writer 1.1.3+spec-1.1.0`.
 
 ```text
 Copyright (c) Individual contributors
@@ -311,7 +305,7 @@ SOFTWARE.
 
 ### Text 4
 
-Shipped by `anyhow 1.0.104`, `itoa 1.0.18`, `proc-macro2 1.0.107`, `quote 1.0.47`, `rustc-hash 2.1.3`, `serde_core 1.0.229`, `serde_json 1.0.154`, `syn 3.0.9`, `unicode-ident 1.0.27`, `zmij 1.0.23`.
+Shipped by `anyhow 1.0.104`, `itoa 1.0.18`, `rustc-hash 2.1.3`, `serde_core 1.0.229`, `serde_json 1.0.154`, `zmij 1.0.23`.
 
 ```text
 Permission is hereby granted, free of charge, to any
@@ -749,38 +743,6 @@ DEALINGS IN THE SOFTWARE.
 
 ### Text 19
 
-Shipped by `heck 0.5.0`.
-
-```text
-Copyright (c) 2015 The Rust Project Developers
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-```
-
-### Text 20
-
 Shipped by `indexmap 2.14.2`.
 
 ```text
@@ -811,7 +773,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 21
+### Text 20
 
 Shipped by `libc 0.2.191`.
 
@@ -843,7 +805,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 22
+### Text 21
 
 Shipped by `libsqlite3-sys 0.39.0`, `rusqlite 0.41.0`.
 
@@ -869,7 +831,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### Text 23
+### Text 22
 
 Shipped by `rand 0.10.3`.
 
@@ -902,7 +864,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 24
+### Text 23
 
 Shipped by `rand_core 0.10.1`.
 
@@ -934,7 +896,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 25
+### Text 24
 
 Shipped by `shlex 2.0.1`.
 
@@ -962,7 +924,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### Text 26
+### Text 25
 
 Shipped by `smallvec 1.16.4`.
 
@@ -994,7 +956,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 27
+### Text 26
 
 Shipped by `strsim 0.11.1`.
 
@@ -1024,7 +986,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 28
+### Text 27
 
 Shipped by `tinyjson 2.5.1`.
 
@@ -1051,7 +1013,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 29
+### Text 28
 
 Shipped by `ulid 3.0.0`.
 
@@ -1079,53 +1041,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Text 30
-
-Shipped by `unicode-ident 1.0.27`.
-
-```text
-UNICODE LICENSE V3
-
-COPYRIGHT AND PERMISSION NOTICE
-
-Copyright © 1991-2023 Unicode, Inc.
-
-NOTICE TO USER: Carefully read the following legal agreement. BY
-DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
-SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
-TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
-DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of data files and any associated documentation (the "Data Files") or
-software and any associated documentation (the "Software") to deal in the
-Data Files or Software without restriction, including without limitation
-the rights to use, copy, modify, merge, publish, distribute, and/or sell
-copies of the Data Files or Software, and to permit persons to whom the
-Data Files or Software are furnished to do so, provided that either (a)
-this copyright and permission notice appear with all copies of the Data
-Files or Software, or (b) this copyright and permission notice appear in
-associated Documentation.
-
-THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
-KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
-THIRD PARTY RIGHTS.
-
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
-BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
-OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
-WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
-ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
-FILES OR SOFTWARE.
-
-Except as contained in this notice, the name of a copyright holder shall
-not be used in advertising or otherwise to promote the sale, use or other
-dealings in these Data Files or Software without prior written
-authorization of the copyright holder.
-```
-
-### Text 31
+### Text 29
 
 Shipped by `vcpkg 0.2.15`.
 
@@ -1157,7 +1073,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 32
+### Text 30
 
 Shipped by `winnow 1.0.4`.
 
@@ -1182,7 +1098,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 33
+### Text 31
 
 Shipped by `zstd 0.13.3`.
 
@@ -1197,7 +1113,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### Text 34
+### Text 32
 
 Shipped by `zstd-safe 7.3.0`, `zstd-sys 2.1.2+zstd.1.5.7`.
 
@@ -1232,7 +1148,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### Text 35
+### Text 33
 
 Shipped by `zstd-sys 2.1.2+zstd.1.5.7`.
 
