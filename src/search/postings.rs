@@ -131,9 +131,7 @@ impl Index for Postings {
             self.forget(key, old);
         }
         match self.claim(key) {
-            Some(slot) => {
-                self.learn(slot, row.body.get(..0).unwrap_or_default());
-            }
+            Some(slot) => self.learn(slot, &row.body),
             None => self.full = true,
         }
     }
