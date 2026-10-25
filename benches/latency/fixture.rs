@@ -25,6 +25,7 @@ pub(crate) type Res<T> = Result<T, Box<dyn StdError>>;
 /// The generator's version: a change to the rows changes it, so a
 /// cached fixture of an older generator is built again.
 pub(crate) const GENERATOR: &str = "fixture-1";
+pub(crate) const DAY: u64 = 86_400_000;
 /// 1 `time_bucket` of the default `7d`, which partitions are cut by.
 pub(crate) const WEEK: u64 = 604_800_000;
 /// The fixture's newest instant, on a bucket edge: week 2930 since the
@@ -143,6 +144,11 @@ pub(crate) fn base() -> PathBuf {
         PathBuf::from,
     );
     target.join("bench-fixtures")
+}
+
+/// The fixture of `spec` under [`base`], built unless cached.
+pub(crate) fn cached(spec: Spec) -> Res<Fixture> {
+    cached_in(&base(), spec)
 }
 
 /// The fixture of `spec` under `base`: built when its stamp is missing

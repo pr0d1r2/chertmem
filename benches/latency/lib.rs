@@ -5,5 +5,8 @@
 
 mod fixture;
 mod harness;
+mod ollama;
+mod ops;
 mod rng;
+mod suites;
 mod words;
