@@ -181,3 +181,40 @@ impl State {
         STATES.iter().find(|(n, _)| *n == text).map(|&(_, s)| s)
     }
 }
+
+/// A session's start as the hook sees it on `session-start` (src/store
+/// T16).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionStart {
+    /// The IDE's session id.
+    pub id: String,
+    pub ide: String,
+    /// The working dir the IDE reports.
+    pub cwd: String,
+    /// Milliseconds since the Unix epoch.
+    pub ts: u64,
+}
+
+/// 1 session of a project (src/store T16); its rows may span buckets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Session {
+    pub id: String,
+    /// Empty when only its end was recorded.
+    pub ide: String,
+    /// Empty when only its end was recorded.
+    pub cwd: String,
+    /// The earliest start seen; its end when no start was recorded.
+    pub started_at: u64,
+    /// The latest end seen; `None` while it runs.
+    pub ended_at: Option<u64>,
+}
+
+/// What `src/search` needs for IDF from 1 partition's FTS5 index
+/// (src/store T17).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Frequencies {
+    /// Every indexed row of the partition, of any project.
+    pub rows: u64,
+    /// Per term, in order: the rows holding it as 1 index token.
+    pub docs: Vec<u64>,
+}
