@@ -62,12 +62,21 @@ fn stdout(kind: Kind, text: &str) -> String {
 
 /// 1 line per last [`SESSIONS`] other sessions, newest first.
 fn sessions(store: &mut Store, session: &str) -> Result<Vec<String>, Error> {
+    let picked = recent(store, session)?;
+    picked.iter().map(|s| line(store, s)).collect()
+}
+
+/// The newest session summary of each of the last [`SESSIONS`] sessions
+/// other than `session`, newest first by time then id.
+pub(super) fn recent(
+    store: &mut Store,
+    session: &str,
+) -> Result<Vec<Summary>, Error> {
     let all = store.summaries(None, Scope::Session)?;
     let mut seen = BTreeSet::new();
-    let recent = all.iter().rev().filter(|s| s.session != session);
-    let fresh = recent.filter(|s| seen.insert(s.session.as_str()));
-    let picked: Vec<&Summary> = fresh.take(SESSIONS).collect();
-    picked.into_iter().map(|s| line(store, s)).collect()
+    let recent = all.into_iter().rev().filter(|s| s.session != session);
+    let fresh = recent.filter(|s| seen.insert(s.session.clone()));
+    Ok(fresh.take(SESSIONS).collect())
 }
 
 fn line(store: &mut Store, summary: &Summary) -> Result<String, Error> {

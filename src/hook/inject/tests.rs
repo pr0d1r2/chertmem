@@ -1,9 +1,12 @@
+use std::collections::BTreeSet;
+use std::fs;
+
 use serde_json::Value;
 
-use super::{HEADER, budget, cut, tokens_at_most};
+use super::{HEADER, budget, cut, recent, tokens_at_most};
 use crate::hook::tests::{NOW, Res, Scratch, Test, fixture};
 use crate::hook::{Kind, Payload};
-use crate::store::{Scope, Summary};
+use crate::store::{Filter, Scope, Store, Summary};
 
 fn json(text: &serde_json::Value) -> Vec<u8> {
     text.to_string().into_bytes()
@@ -67,6 +70,100 @@ fn startup_injects_the_last_3_other_sessions_newest_first() -> Test {
         assert!(line.ends_with(&format!("parser {n}")), "{line}");
     }
     assert!(!text.contains("this session"));
+    Ok(())
+}
+
+/// 30 days in ms: past the default 7d bucket.
+const MONTH: u64 = 30 * 86_400_000;
+
+/// Overwrite the partition holding `ts` with bytes `SQLite` refuses, so
+/// any read of it fails.
+fn break_partition_at(scratch: &Scratch, ts: u64) -> Test {
+    let filter = Filter {
+        project: None,
+        since: Some(ts),
+        until: ts.checked_add(1),
+    };
+    let found = scratch.store()?.partitions(&filter)?;
+    let part = found.first().ok_or("no partition")?;
+    let file = scratch.data().join(&part.path);
+    for end in ["-wal", "-shm"] {
+        let _ = fs::remove_file(format!("{}{end}", file.display()));
+    }
+    Ok(fs::write(file, "not a database, never opened")?)
+}
+
+#[test]
+fn injection_reads_only_the_newest_partitions_it_needs() -> Test {
+    let mut scratch = Scratch::new("injectnewest")?;
+    scratch.config.inject.max_tokens = 10_000;
+    let old = NOW.saturating_sub(MONTH);
+    past(&scratch, "old", old, "Long ago");
+    history(&scratch, 3, "Fixed the parser");
+    break_partition_at(&scratch, old)?;
+    let out = at_start(&scratch, "startup");
+    let text = context(out, Kind::SessionStart)?;
+    assert_eq!(text.lines().count(), 4, "{text}");
+    assert!(!text.contains("Long ago"), "{text}");
+    Ok(())
+}
+
+/// The pick as made before src/hook T11: every partition read, then
+/// newest first by time then id, 1 per other session.
+fn every(store: &mut Store, session: &str) -> Res<Vec<Summary>> {
+    let all = store.summaries(None, Scope::Session)?;
+    let mut seen = BTreeSet::new();
+    let newest = all.into_iter().rev().filter(|s| s.session != session);
+    let fresh = newest.filter(|s| seen.insert(s.session.clone()));
+    Ok(fresh.take(3).collect())
+}
+
+/// 3 weeks of session summaries, 4 sharing each time, of `sessions`
+/// sessions that recur across weeks: ties within and across shard
+/// files.
+fn tied_history(store: &mut Store, sessions: u64) -> Test {
+    for n in 0..24_u64 {
+        let (week, k) = (n / 8, n % 8);
+        let back = week.saturating_mul(MONTH / 4).saturating_add(k / 4);
+        let summary = Summary {
+            ts: NOW.saturating_sub(back),
+            session: format!("s{}", n.checked_rem(sessions).unwrap_or(0)),
+            scope: Scope::Session,
+            ide: "claude-code".to_owned(),
+            body: format!("summary {n}"),
+        };
+        store.append_summary(&summary)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn reading_newest_partitions_first_picks_as_reading_every_one_did() -> Test {
+    let mut scratch = Scratch::new("injectties")?;
+    scratch.config.partition.shards = 4;
+    let mut store = scratch.store()?;
+    tied_history(&mut store, 6)?;
+    let parts = store.partitions(&Filter::default())?;
+    assert!(parts.len() > 3, "{parts:?}");
+    for own in ["", "s0", "s1", "s2", "s3", "s4", "s5", "other"] {
+        let picked = recent(&mut store, own)?;
+        assert_eq!(picked, every(&mut store, own)?, "{own}");
+        assert_eq!(picked.len(), 3, "{own}");
+    }
+    Ok(())
+}
+
+#[test]
+fn fewer_than_3_other_sessions_are_picked_from_every_partition() -> Test {
+    let mut scratch = Scratch::new("injectfew")?;
+    scratch.config.partition.shards = 2;
+    let mut store = scratch.store()?;
+    tied_history(&mut store, 3)?;
+    for (own, count) in [("s0", 2), ("s2", 2), ("other", 3)] {
+        let picked = recent(&mut store, own)?;
+        assert_eq!(picked, every(&mut store, own)?, "{own}");
+        assert_eq!(picked.len(), count, "{own}");
+    }
     Ok(())
 }
 
