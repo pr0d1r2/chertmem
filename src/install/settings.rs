@@ -5,7 +5,8 @@
 mod tests;
 
 use std::ffi::OsString;
-use std::io::ErrorKind;
+use std::fs::File;
+use std::io::{ErrorKind, Write as _};
 use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
@@ -72,23 +73,38 @@ pub(super) fn backup(path: &Path) -> PathBuf {
 }
 
 /// `bytes` at `path` whole: written to `<path>.chert.tmp`, then renamed
-/// into place, so the IDE never reads half a file.
+/// into place, so the IDE never reads half a file. The file keeps its
+/// permissions (`~/.claude.json` is private).
 pub(super) fn write(path: &Path, bytes: &[u8]) -> Result<(), Error> {
+    write_like(path, bytes, path)
+}
+
+/// [`write()`], with the permissions of the file at `like` when there is
+/// one, set before any byte is written.
+fn write_like(path: &Path, bytes: &[u8], like: &Path) -> Result<(), Error> {
     let dir = path.parent().unwrap_or(path);
     std::fs::create_dir_all(dir).map_err(|e| Error::io(dir, &e))?;
     let tmp = beside(path, ".chert.tmp");
-    std::fs::write(&tmp, bytes).map_err(|e| Error::io(&tmp, &e))?;
+    let mut file = File::create(&tmp).map_err(|e| Error::io(&tmp, &e))?;
+    if let Ok(meta) = std::fs::metadata(like) {
+        let perm = meta.permissions();
+        file.set_permissions(perm)
+            .map_err(|e| Error::io(&tmp, &e))?;
+    }
+    file.write_all(bytes).map_err(|e| Error::io(&tmp, &e))?;
+    drop(file);
     std::fs::rename(&tmp, path).map_err(|e| Error::io(path, &e))
 }
 
 /// Keep `original` as the backup unless one is there: the backup holds
-/// the bytes before chert's first write, never a later state.
+/// the bytes before chert's first write, never a later state, with the
+/// file's permissions.
 pub(super) fn back_up(path: &Path, original: &[u8]) -> Result<(), Error> {
     let bak = backup(path);
     if bytes(&bak)?.is_some() {
         return Ok(());
     }
-    write(&bak, original)
+    write_like(&bak, original, path)
 }
 
 /// Remove the file at `path`; one already gone is fine.

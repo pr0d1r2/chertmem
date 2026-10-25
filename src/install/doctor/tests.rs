@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use super::{Drift, Finding, Report, Wire, WireState, doctor, status};
 use crate::config::{Config, load_from};
 use crate::hook::Ide;
-use crate::install::tests::{Res, Scratch, Test, target};
+use crate::install::tests::{Res, Scratch, Test};
 use crate::install::{Error, install};
 use crate::store::{self, Event, Filter, Mode, Store};
 
@@ -37,11 +37,10 @@ impl Home {
         self.scratch.dir.join("data")
     }
 
-    /// The settings file, wired.
-    fn wired(&self) -> Res<PathBuf> {
-        let path = self.scratch.settings();
-        install(&target(&path), Ide::ClaudeCode)?;
-        Ok(path)
+    /// Both config files, wired.
+    fn wired(&self) -> Res<()> {
+        install(&self.scratch.target(), Ide::ClaudeCode)?;
+        Ok(())
     }
 
     /// 1 stored event; the catalog path of its partition.
@@ -61,9 +60,8 @@ impl Home {
     }
 
     fn doctor(&self) -> Res<Report> {
-        let path = self.scratch.settings();
         Ok(doctor(
-            &target(&path),
+            &self.scratch.target(),
             Ide::ClaudeCode,
             &self.config,
             &self.root(),
@@ -74,13 +72,27 @@ impl Home {
 #[test]
 fn status_reads_each_entry_before_and_after_install() -> Test {
     let home = Home::new("status")?;
-    let path = home.scratch.settings();
-    let before = status(&target(&path), Ide::ClaudeCode)?;
-    assert_eq!(before.settings, path);
-    assert_eq!(before.wires.len(), 6);
+    let target = home.scratch.target();
+    let before = status(&target, Ide::ClaudeCode)?;
+    assert_eq!(before.settings, home.scratch.settings);
+    assert_eq!(before.mcp, home.scratch.mcp);
+    assert_eq!(before.wires.len(), 7);
     assert!(!before.wired());
     home.wired()?;
-    assert!(status(&target(&path), Ide::ClaudeCode)?.wired());
+    assert!(status(&target, Ide::ClaudeCode)?.wired());
+    Ok(())
+}
+
+#[test]
+fn status_reads_the_server_from_claude_json_not_settings() -> Test {
+    let home = Home::new("status-mcp")?;
+    home.wired()?;
+    let server = std::fs::read(&home.scratch.mcp)?;
+    std::fs::remove_file(&home.scratch.mcp)?;
+    home.scratch.with(&String::from_utf8(server)?)?;
+    let got = status(&home.scratch.target(), Ide::ClaudeCode)?;
+    let last = got.wires.last().map(|w| w.state.clone());
+    assert_eq!(last, Some(WireState::Missing));
     Ok(())
 }
 
@@ -101,7 +113,7 @@ fn doctor_exits_1_naming_each_broken_wiring() -> Test {
     assert_eq!(report.exit(), 1);
     let lines: Vec<String> =
         report.findings.iter().map(ToString::to_string).collect();
-    assert_eq!(lines.len(), 6);
+    assert_eq!(lines.len(), 7);
     let stop = "wiring hook Stop: missing (run chert install)";
     assert!(lines.iter().any(|l| l == stop), "{lines:?}");
     let server = "wiring mcp server chert: missing (run chert install)";
@@ -206,9 +218,8 @@ fn a_stale_spool_reads_as_its_count_and_dir() -> Test {
 fn no_data_dir_setting_is_a_store_error() -> Test {
     let mut home = Home::new("no-data-dir")?;
     home.config.storage.data_dir = None;
-    let path = home.scratch.settings();
-    let got =
-        doctor(&target(&path), Ide::ClaudeCode, &home.config, &home.root());
+    let target = home.scratch.target();
+    let got = doctor(&target, Ide::ClaudeCode, &home.config, &home.root());
     assert_eq!(got, Err(Error::Store(store::Error::NoDataDir)));
     Ok(())
 }
