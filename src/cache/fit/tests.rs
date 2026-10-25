@@ -5,11 +5,12 @@ use std::error::Error as StdError;
 use std::mem::size_of;
 
 use super::{
-    DAY, Fit, Plan, ROW_OVERHEAD, days, estimate, fit, memory, overflow,
-    window_ms,
+    DAY, Fit, INDEX_ROW, Plan, ROW_OVERHEAD, days, estimate, fit, memory,
+    overflow, window_ms,
 };
 use crate::cache::tests::{
-    HOUR, NOW, START, Scratch, Test, env, event, from, logged, same, wait_warm,
+    HOUR, NOW, START, Scratch, Test, env, event, from, logged, recorded, same,
+    seed, wait_warm,
 };
 use crate::cache::{Cache, Env, Source};
 use crate::config::{self, Config, Overflow, Span};
@@ -43,12 +44,15 @@ fn part(t0: u64, t1: u64, rows: u64, bytes: u64) -> Partition {
 }
 
 /// 28 rows of 1000 bytes spread over the 28 days before [`NOW`]: 1
-/// day costs `1000 + ROW_OVERHEAD`.
+/// day costs `1000 + ROW`.
 fn month() -> Vec<Partition> {
     vec![part(START, NOW, 28, 28_000)]
 }
 
-const PER_DAY: u64 = 1000 + ROW_OVERHEAD;
+/// What a row costs beyond its body, its index share included.
+const ROW: u64 = ROW_OVERHEAD + INDEX_ROW;
+
+const PER_DAY: u64 = 1000 + ROW;
 
 fn cache(max_bytes: u64, on_overflow: Overflow) -> config::Cache {
     config::Cache {
@@ -76,13 +80,13 @@ fn a_row_costs_its_body_and_the_overhead() {
     // Plus 2 ULIDs on the heap, the least a row holds there.
     assert!(ROW_OVERHEAD >= u64::try_from(inline + 2 * 26).unwrap_or(0));
     let one = [part(0, DAY, 2, 100)];
-    assert_eq!(estimate(&one, 0, DAY), 100 + 2 * ROW_OVERHEAD);
+    assert_eq!(estimate(&one, 0, DAY), 100 + 2 * ROW);
 }
 
 #[test]
 fn a_partition_counts_its_share_from_since() {
     let ten = [part(0, 10 * DAY, 10, 0)];
-    let whole = 10 * ROW_OVERHEAD;
+    let whole = 10 * ROW;
     let at = |since| estimate(&ten, since, 10 * DAY);
     assert_eq!([at(0), at(5 * DAY), at(10 * DAY)], [whole, whole / 2, 0]);
     // The current bucket: its rows spread over the 4 days past.
@@ -96,6 +100,7 @@ fn a_window_that_fits_is_kept_whole() {
     let got = fit(&month(), &cache(256 << 20, Overflow::Warn), NOW);
     let plan = Plan {
         estimate: 28 * PER_DAY,
+        index: 28 * INDEX_ROW,
         limit: 256 << 20,
         days_kept: 28,
     };
@@ -150,14 +155,44 @@ fn memory_warns_over_a_quarter_of_what_is_available() {
 }
 
 #[test]
-fn a_plan_prints_its_3_numbers() {
+fn a_plan_prints_its_numbers_and_an_index_line() {
     let plan = Plan {
         estimate: 3,
+        index: 1,
         limit: 2,
         days_kept: 1,
     };
-    let text = "estimate 3 bytes, limit 2 bytes, 1 days kept";
+    let text = "estimate 3 bytes, limit 2 bytes, 1 days kept\n\
+                index 1 bytes of the estimate";
     assert_eq!(plan.to_string(), text);
+}
+
+#[test]
+fn the_index_counts_toward_the_estimate_before_a_load() {
+    // The high end of what search T9 measured with `Vec` slack (R6).
+    const { assert!(INDEX_ROW >= 450) };
+    let got = fit(&month(), &cache(256 << 20, Overflow::Warn), NOW);
+    assert_eq!(got.plan.index, 28 * INDEX_ROW);
+    let rows = estimate(&month(), START, NOW) - got.plan.index;
+    assert_eq!(rows, 28 * (1000 + ROW_OVERHEAD));
+}
+
+#[test]
+fn a_live_plan_swaps_in_the_index_bytes_when_over_only() {
+    let cfg = cache(28 * PER_DAY, Overflow::Warn);
+    let got = fit(&month(), &cfg, NOW);
+    let rows = 28 * (1000 + ROW_OVERHEAD);
+    assert_eq!(got.live(28 * INDEX_ROW, &cfg), None);
+    let live = got.live(28 * INDEX_ROW + 1, &cfg).ok_or("fits");
+    let want = (rows + 28 * INDEX_ROW + 1, 28 * INDEX_ROW + 1, 28);
+    let live = live.map(|p| (p.estimate, p.index, p.days_kept));
+    assert_eq!(live, Ok(want));
+    let fail = cache(28 * PER_DAY, Overflow::Fail);
+    let off = got.live(u64::MAX, &fail).map(|p| p.days_kept);
+    assert_eq!(off, Some(0));
+    // Over before the load: reported then, not again.
+    let over = fit(&month(), &cache(1, Overflow::Warn), NOW);
+    assert_eq!(over.live(u64::MAX, &cfg), None);
 }
 
 /// A scratch store with 20 days of 2000-byte rows, and a config whose
@@ -262,5 +297,42 @@ fn plan_alone_runs_on_the_system_clock() -> Test {
     let plan = Cache::plan(&s.open(Mode::Read)?, &cfg)?;
     let got = (plan.estimate, plan.limit, plan.days_kept);
     assert_eq!(got, (0, 20_000, 28), "the rows are long past: {plan}");
+    Ok(())
+}
+
+/// A live index of 1 MB a row: the 3 seeded rows of the window fit
+/// `max_bytes` before the load, not once they are indexed.
+const HEAVY: u64 = 1_000_000;
+
+/// 2 loads of the seeded `s` under `policy` with a [`HEAVY`] index:
+/// how many warnings, and whether the cache stays warm.
+fn heavy(
+    s: &Scratch,
+    policy: Overflow,
+) -> Result<(usize, bool), Box<dyn StdError>> {
+    let mut cfg = s.config()?;
+    (cfg.cache.max_bytes, cfg.cache.on_overflow) = (1_000_000, policy);
+    let cold = recorded(s, &cfg, HEAVY)?;
+    cold.handle.warm()?;
+    cold.handle.warm()?;
+    let (logs, warm) = (logged(&cold.logs)?, cold.handle.is_warm()?);
+    let index = format!("(index {} bytes)", 3 * HEAVY);
+    assert!(logs.iter().all(|l| l.contains(&index)), "{logs:?}");
+    let off = logs.iter().all(|l| l.contains("the cache is off"));
+    assert_eq!(off, !warm, "{logs:?}");
+    // The plan before a load, as `cache plan` prints it: all days.
+    assert_eq!(cold.handle.plan()?.days_kept, 28, "{policy:?}");
+    let q = from(&s.open(Mode::Read)?, START);
+    assert_eq!(cold.handle.with_index(&q, |_, _| ())?.is_some(), warm);
+    Ok((logs.len(), warm))
+}
+
+#[test]
+fn a_live_index_over_the_limit_warns_and_fail_turns_the_cache_off() -> Test {
+    let s = Scratch::new("live")?;
+    seed(&s)?;
+    assert_eq!(heavy(&s, Overflow::Warn)?, (2, true));
+    assert_eq!(heavy(&s, Overflow::Shrink)?, (1, true));
+    assert_eq!(heavy(&s, Overflow::Fail)?, (2, false));
     Ok(())
 }
