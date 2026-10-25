@@ -23,6 +23,10 @@ no-core-worktree|gate|-|**/*|cargo run -q -p chertmem-dev -- no-core-worktree|-|
 # dev V5: flake.lock holds one nixpkgs and one nixpkgs-lock node, so every
 # input follows the fleet pin (paradigm/V20).
 lock-graph|gate|-|flake.lock, flake.nix|cargo run -q -p chertmem-dev -- lock-graph|-|-|flake.lock holds more than one nixpkgs or nixpkgs-lock node
+# docs V1, dev T9: docs/PERFORMANCE.md is perf-doc's output for the
+# baseline and the root C targets, never a hand edit. At commit: it
+# reads 2 files and builds no bench, so a stale page never lands.
+perf-doc|gate|-|benches/baseline.toml, docs/PERFORMANCE.md, SPEC.md|cargo run -q -p chertmem-dev -- perf-doc --check|cargo run -q -p chertmem-dev -- perf-doc|-|docs/PERFORMANCE.md is not perf-doc's output for benches/baseline.toml and SPEC.md; run cargo run -q -p chertmem-dev -- perf-doc
 
 # Offline, as in lablith: advisories need a fetched database, so they wait
 # for the push and CI steps (root T12).
@@ -69,7 +73,8 @@ path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
 rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test, coverage, bench-gate|-|-
 toml|taplo|-|-
-path:benches/baseline.toml|taplo, bench-gate|-|-
+path:benches/baseline.toml|taplo, bench-gate, perf-doc|-|-
+path:docs/PERFORMANCE.md|markdownlint, perf-doc|-|-
 path:Cargo.lock|deny|-|-
 exempt|tdd-order|-|-
 coverage|coverage|-|-

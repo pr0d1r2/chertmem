@@ -151,6 +151,11 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("flake.lock", "flake.nix")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'lock-graph: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- lock-graph || { echo 'lock-graph: flake.lock holds more than one nixpkgs or nixpkgs-lock node' >&2; exit 1; }"
   }
+  ["perf-doc"] {
+    glob = List("benches/baseline.toml", "docs/PERFORMANCE.md", "SPEC.md")
+    check = #"command -v cargo >/dev/null 2>&1 || { echo 'perf-doc: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- perf-doc --check || { echo 'perf-doc: docs/PERFORMANCE.md is not perf-doc'\''s output for benches/baseline.toml and SPEC.md; run cargo run -q -p chertmem-dev -- perf-doc' >&2; exit 1; }"#
+    fix = "cargo run -q -p chertmem-dev -- perf-doc"
+  }
 }
 
 push: Mapping<String, Config.Step> = new {

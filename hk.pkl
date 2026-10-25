@@ -16,6 +16,7 @@ local fast = (generated.steps) {
   ["no-core-worktree"] { exclusive = true }
   ["lock-graph"] { exclusive = true }
   ["rust-mirror"] { exclusive = true }
+  ["perf-doc"] { exclusive = true }
 }
 
 local all = (fast) {
