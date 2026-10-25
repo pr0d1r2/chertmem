@@ -195,8 +195,9 @@ skill written from chert's memory can point back at the exact event.
   MCP tools, importing from cavemem, and exporting.
 - [Configuration](docs/CONFIG.md): every `chert.toml` key, its default
   and its meaning.
-- [Benchmarks](docs/BENCHMARKS.md): how chert's speed is measured, and
-  the numbers (written with the first benchmark baseline).
+- [Benchmarks](docs/BENCHMARKS.md): how chert's speed is measured, the
+  targets and why; [Performance](docs/PERFORMANCE.md): the latest
+  measured numbers, generated from the baseline.
 - `chert --help` and `chert man`: every command and flag;
   `chert completions <shell>` prints shell completions.
 - [Contributing](CONTRIBUTING.md), [security](SECURITY.md), the

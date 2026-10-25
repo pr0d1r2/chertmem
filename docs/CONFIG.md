@@ -80,9 +80,11 @@ prompt. With it off, the prompt hook only writes, which is chert's
 fastest path. `chert config set inject.on_prompt true` prints this
 warning once when it turns the key on; set it back to `false` to undo.
 
-The measured cost will be in [Benchmarks](BENCHMARKS.md).
-TODO(docs T2): state the measured per-prompt cost here once the first
-benchmark baseline exists.
+The measured cost of one such prompt, per store size, is the
+[`prompt_inject` suite on Performance](PERFORMANCE.md#prompt_inject),
+next to `session_start`, which every session pays already. It is
+measured in process, so a real hook adds its own process start on top.
+[Benchmarks](BENCHMARKS.md) says how it is measured.
 
 ## An example
 
