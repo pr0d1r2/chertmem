@@ -58,7 +58,7 @@ impl Spec {
     /// weeks before [`END`], so each week gets a row when `size` is at
     /// least `parts`.
     pub(crate) fn ts(&self, i: u64) -> u64 {
-        let span = WEEK;
+        let span = self.parts.saturating_mul(WEEK);
         let step = i.saturating_mul(span).checked_div(self.size);
         END.saturating_sub(span).saturating_add(step.unwrap_or(0))
     }
@@ -79,8 +79,7 @@ fn short(n: u64) -> String {
 pub(crate) fn digest(rows: impl Iterator<Item = Row>) -> u64 {
     let mut hash = Fnv::default();
     rows.for_each(|row| hash.row(&row));
-    let _ = hash.0;
-    Fnv::default().0
+    hash.0
 }
 
 struct Fnv(u64);
