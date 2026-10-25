@@ -55,8 +55,27 @@ fn every_ready_suite_runs_under_criterion() -> crate::fixture::Res<()> {
     let mut picked = ALL.to_vec();
     picked.retain(|s| s.id != "semantic_rerank");
     let tiny = |_: &Suite| vec![crate::fixture::Spec::new(9001, 120, 2)];
-    assert_eq!(super::run(c.output_directory(out.path()), &picked, tiny), 0);
-    let groups = std::fs::read_dir(out.path())?.count();
+    assert_eq!(super::bench(c, out.path(), &picked, tiny), 0);
+    let entries = std::fs::read_dir(out.path())?;
+    let groups =
+        entries.filter(|e| e.as_ref().is_ok_and(|e| e.path().is_dir()));
+    let groups = groups.count();
     assert_eq!(groups, picked.len().saturating_sub(1), "1 is pending");
+    Ok(())
+}
+
+#[test]
+fn the_index_names_each_ready_suites_target() -> crate::fixture::Res<()> {
+    // benches T4: the recorder learns each suite's root C target here.
+    use crate::suites::ALL;
+    let dir = crate::fixture::Scratch::new("harness-index")?;
+    super::write_index(dir.path(), &ALL)?;
+    let text = std::fs::read_to_string(dir.path().join(super::INDEX))?;
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.len(), 11, "every ready suite, not the pending one");
+    assert!(lines.contains(&"session_start\thook write"));
+    assert!(lines.contains(&"get_observations\tget_observations"));
+    assert!(lines.contains(&"cross_partition\t-"));
+    assert!(super::criterion_dir().ends_with("target/criterion"));
     Ok(())
 }

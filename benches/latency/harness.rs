@@ -5,6 +5,7 @@
 mod tests;
 
 use std::fmt::Display;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use criterion::measurement::WallTime;
@@ -116,4 +117,40 @@ fn setup(make: Make, spec: Spec) -> Op {
 fn fail(e: &dyn Display) -> ! {
     eprintln!("chert bench: {e}");
     std::process::exit(1)
+}
+
+/// [`run`] with its output in `out`, the suite index written there
+/// first; 2 when it cannot be.
+pub(crate) fn bench(
+    c: Criterion,
+    out: &Path,
+    suites: &[Suite],
+    grid: fn(&Suite) -> Vec<Spec>,
+) -> i32 {
+    if let Err(e) = write_index(out, suites) {
+        eprintln!("chert bench: cannot write the suite index: {e}");
+        return 2;
+    }
+    run(c.output_directory(out), suites, grid)
+}
+
+/// The suite index's file name, beside criterion's group dirs.
+pub(crate) const INDEX: &str = "chert-suites.tsv";
+
+/// Where criterion writes: beside the fixtures, `target/criterion`.
+pub(crate) fn criterion_dir() -> PathBuf {
+    fixture::base().with_file_name("criterion")
+}
+
+/// The suite index `chertmem-dev bench-record` reads (benches T4): 1
+/// line per ready suite, `<id>\t<root C target>`, `-` for none.
+pub(crate) fn index(suites: &[Suite]) -> String {
+    let _ = suites;
+    String::new()
+}
+
+/// [`index`] written to `dir`/[`INDEX`].
+pub(crate) fn write_index(dir: &Path, suites: &[Suite]) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(dir.join(INDEX), index(suites))
 }
