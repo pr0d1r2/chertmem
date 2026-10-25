@@ -77,6 +77,14 @@ impl Store {
     /// # Errors
     /// [`Error::WriteOnly`] on a write-only store; no such partition.
     pub fn seal(&mut self, path: &str) -> Result<(), Error> {
+        self.seal_at(path, generation::clock())
+    }
+
+    /// [`Store::seal`] at `now` (ms since the epoch).
+    ///
+    /// # Errors
+    /// As [`Store::seal`].
+    pub fn seal_at(&mut self, path: &str, _now: u64) -> Result<(), Error> {
         self.replay()?;
         let mut w = self.work()?;
         if w.state(path)? == Some(State::Hot) {
@@ -92,7 +100,15 @@ impl Store {
     /// # Errors
     /// [`Error::WriteOnly`] on a write-only store; no such partition.
     pub fn compact(&mut self, path: &str) -> Result<(), Error> {
-        self.seal(path)?;
+        self.compact_at(path, generation::clock())
+    }
+
+    /// [`Store::compact`] at `now` (ms since the epoch).
+    ///
+    /// # Errors
+    /// As [`Store::compact`].
+    pub fn compact_at(&mut self, path: &str, now: u64) -> Result<(), Error> {
+        self.seal_at(path, now)?;
         let mut w = self.work()?;
         if w.state(path)? == Some(State::Warm) {
             w.freeze(path)?;

@@ -73,14 +73,39 @@ fn the_catalog_counts_rows_and_bytes_under_the_spec() -> Test {
 }
 
 #[test]
-fn a_sealed_partition_takes_no_write() -> Test {
+fn a_sealed_partition_takes_no_write_its_fresh_one_does() -> Test {
     let s = Scratch::new("sealed")?;
     let mut store = s.open(Mode::Write)?;
-    store.append(&event(5, None, "a"))?;
+    let a = stored(store.append(&event(5, None, "a"))?)?;
     let sql = "UPDATE partitions SET state = 'cold'";
     s.sql("catalog.db")?.execute(sql, [])?;
-    let e = store.append(&event(6, None, "b")).err();
-    assert!(matches!(e, Some(Error::ReadOnly { .. })), "{e:?}");
+    let b = stored(store.append(&event(6, None, "b"))?)?;
+    let path = chunk(&store, "19700101-7d");
+    assert_eq!(rows(&s, &path)?, [(5, a.as_str().to_owned())]);
+    let next = chunk(&store, "19700101-7d~1");
+    assert_eq!(rows(&s, &next)?, [(6, b.as_str().to_owned())]);
+    Ok(())
+}
+
+const SEALED: &str = "INSERT INTO partitions (path, dims, project, ide,
+  t0, t1, checksum, spec, state) SELECT ?1, dims, project, ide, t0, t1,
+  checksum, spec, 'warm' FROM partitions LIMIT 1";
+
+#[test]
+fn a_bucket_past_every_fresh_partition_is_refused() -> Test {
+    let s = Scratch::new("sealed-all")?;
+    let mut store = s.open(Mode::Write)?;
+    store.append(&event(5, None, "a"))?;
+    let path = chunk(&store, "19700101-7d");
+    let mut conn = s.sql("catalog.db")?;
+    let tx = conn.transaction()?;
+    for n in 1..1024 {
+        tx.execute(SEALED, [chunk(&store, &format!("19700101-7d~{n}"))])?;
+    }
+    tx.execute("UPDATE partitions SET dropped = 1 WHERE id = 1", [])?;
+    tx.commit()?;
+    let e = store.append(&event(6, None, "b"));
+    assert_eq!(e, Err(Error::ReadOnly { path }));
     Ok(())
 }
 

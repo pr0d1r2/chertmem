@@ -25,10 +25,16 @@ fn mark(root: &Path) -> PathBuf {
     root.join("generation")
 }
 
-/// Milliseconds since the epoch.
-fn now() -> i64 {
+/// Milliseconds since the epoch: the store's clock, which a seal and a
+/// compaction read too (src/store V13).
+pub(super) fn clock() -> u64 {
     let since = SystemTime::now().duration_since(UNIX_EPOCH);
-    i64::try_from(since.unwrap_or_default().as_millis()).unwrap_or(i64::MAX)
+    u64::try_from(since.unwrap_or_default().as_millis()).unwrap_or(u64::MAX)
+}
+
+/// [`clock`] as the catalog stores it.
+fn now() -> i64 {
+    i64::try_from(clock()).unwrap_or(i64::MAX)
 }
 
 /// The mark's value; 0 when there is none yet, or it does not parse.

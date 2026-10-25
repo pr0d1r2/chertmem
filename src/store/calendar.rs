@@ -58,6 +58,15 @@ pub(super) fn bucket_name(span: Span, t0: u64) -> String {
     format!("{start}-{span}")
 }
 
+/// `ms` since the epoch as `YYYY-MM-DDTHH:MM:SSZ`, for a message.
+pub(super) fn utc(ms: u64) -> String {
+    let (year, month, day) = civil(ms / DAY_MS);
+    let secs = ms % DAY_MS / 1000;
+    let (hour, min, sec) = (secs / 3600, secs % 3600 / 60, secs % 60);
+    let date = format!("{year:04}-{month:02}-{day:02}");
+    format!("{date}T{hour:02}:{min:02}:{sec:02}Z")
+}
+
 // The calendar math is Howard Hinnant's `civil_from_days` and
 // `days_from_civil`, unsigned: no bucket starts before 1970 and a ULID
 // timestamp (48 bits) is under 3.3e6 days, so no step can wrap.

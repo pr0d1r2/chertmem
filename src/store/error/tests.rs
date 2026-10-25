@@ -25,9 +25,13 @@ fn all() -> [Error; 9] {
     ]
 }
 
-/// The variants added in waves 4 and 5.
-fn later() -> [Error; 2] {
+/// The variants added in waves 4, 5 and 9.
+fn later() -> [Error; 3] {
     [
+        Error::Open {
+            path: "p".into(),
+            end: 0,
+        },
         Error::RefTaken {
             reference: "R".into(),
             id: "I".into(),
@@ -46,6 +50,20 @@ fn every_message_reads_what_then_fix() {
         assert!(text.starts_with("chert: "), "{text}");
         assert!(text.ends_with(')') && text.contains(" ("), "{text}");
     }
+}
+
+#[test]
+fn an_open_bucket_names_its_end() {
+    let e = Error::Open {
+        path: "chunks/p/19700101-7d.db".into(),
+        end: 604_800_000,
+    };
+    let text = e.to_string();
+    assert!(text.contains("19700101-7d.db is open until"), "{text}");
+    assert!(
+        text.contains("1970-01-08T00:00:00Z (604800000 ms)"),
+        "{text}"
+    );
 }
 
 #[test]

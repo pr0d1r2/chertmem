@@ -71,7 +71,7 @@ fn a_ref_held_by_another_id_is_refused() -> Test {
 }
 
 #[test]
-fn a_sealed_target_refuses_a_restore() -> Test {
+fn a_sealed_target_routes_a_restore_to_its_fresh_partition() -> Test {
     let rows = export("restore-sealed-src")?;
     let s = Scratch::new("restore-sealed")?;
     let mut store = s.open(Mode::Read)?;
@@ -80,6 +80,10 @@ fn a_sealed_target_refuses_a_restore() -> Test {
     let path = format!("chunks/{}/19700101-7d.db", first.project);
     store.seal(&path)?;
     let late = rows.get(1).ok_or("no row")?;
-    assert_eq!(store.restore(late), Err(Error::ReadOnly { path }));
+    let reference = late.reference.clone();
+    assert_eq!(store.restore(late)?, Appended::Stored(reference));
+    let fresh = format!("chunks/{}/19700101-7d~1.db", first.project);
+    let held = store.partitions(&Filter::default())?;
+    assert!(held.iter().any(|p| p.path == fresh), "{held:?}");
     Ok(())
 }
