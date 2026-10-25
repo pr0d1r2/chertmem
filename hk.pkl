@@ -31,6 +31,9 @@ local all = (fast) {
   // `cargo nextest run --workspace` relinks the binaries too, so `test`
   // runs alone as well (lablith and actlith B10).
   ["test"] = (generated.push["test"]) { exclusive = true }
+  // src/hook T12: the bpe tests build the root package with feature
+  // bpe, relinking it as `test` does, so it runs alone too.
+  ["test-bpe"] = (generated.push["test-bpe"]) { exclusive = true }
   ["tdd-order"] = (generated.push["tdd-order"]) { exclusive = true }
   ["coverage"] = (generated.push["coverage"]) { exclusive = true }
   // dev T2: the release bench must run alone, or its medians measure the

@@ -193,6 +193,10 @@ push: Mapping<String, Config.Step> = new {
     glob = List("**/*.rs", "Cargo.toml", "Cargo.lock")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'test: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v cargo-nextest >/dev/null 2>&1 || { echo 'test: cargo-nextest is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo nextest run --workspace --no-fail-fast --status-level fail --final-status-level fail || { echo 'test: a test failed, or the suite is empty' >&2; exit 1; }"
   }
+  ["test-bpe"] {
+    glob = List("**/*.rs", "Cargo.toml", "Cargo.lock")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'test-bpe: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v cargo-nextest >/dev/null 2>&1 || { echo 'test-bpe: cargo-nextest is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo nextest run -p chertmem --features bpe --no-fail-fast --status-level fail --final-status-level fail || { echo 'test-bpe: a test of feature bpe failed: the exact count, or the default estimate undercounting it on the src/hook corpus' >&2; exit 1; }"
+  }
   ["tdd-order"] {
     glob = List("**/*.rs", "dev/tdd-order.exempt")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'tdd-order: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo run -q -p chertmem-dev -- tdd-order || { echo 'tdd-order: a commit adds Rust code with no test: commit before it in the push range' >&2; exit 1; }"

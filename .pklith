@@ -55,6 +55,10 @@ deny|supply|cargo-deny|Cargo.toml, Cargo.lock, deny.toml|cargo deny check --disa
 doctest|test|cargo|**/*.rs, Cargo.toml|cargo test --workspace --doc -q|-|-|a doc example failed
 rustdoc|lint|cargo|**/*.rs, Cargo.toml|cargo doc --workspace --no-deps --document-private-items -q|-|RUSTDOCFLAGS=-D warnings|docs do not build cleanly
 test|coverage|cargo-nextest|**/*.rs, Cargo.toml, Cargo.lock|cargo nextest run --workspace --no-fail-fast --status-level fail --final-status-level fail|-|-|a test failed, or the suite is empty
+# src/hook T12: the bpe build's own tests, the exact o200k count and the
+# corpus check that the default estimate never undercounts it. Push
+# only, alone (dev V10): it builds the root package with feature bpe.
+test-bpe|coverage|cargo-nextest|**/*.rs, Cargo.toml, Cargo.lock|cargo nextest run -p chertmem --features bpe --no-fail-fast --status-level fail --final-status-level fail|-|-|a test of feature bpe failed: the exact count, or the default estimate undercounting it on the src/hook corpus
 # dev V7: every Rust module with logic has a wired tests.rs mirror, ported
 # from xenolith v0.1.0 to the dev crate.
 rust-mirror|lint|-|**/*.rs|cargo run -q -p chertmem-dev -- rust-mirror|-|-|a Rust file with logic has no sibling tests.rs wired by #[cfg(test)] mod tests;
@@ -90,7 +94,7 @@ envrc|shellcheck|-|-
 gitignore|-|-|git configuration; no linter reads ignore patterns
 path:flake.lock|lock-graph|-|-
 markdownlintignore|-|-|ignore patterns, no linter reads them
-rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test, coverage, bench-gate|-|-
+rs|rustfmt, clippy, rust-mirror, tdd-order, doctest, rustdoc, test, test-bpe, coverage, bench-gate|-|-
 toml|taplo|-|-
 path:benches/baseline.toml|taplo, bench-gate, perf-doc|-|-
 path:docs/PERFORMANCE.md|markdownlint, perf-doc|-|-
