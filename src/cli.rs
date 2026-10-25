@@ -11,6 +11,7 @@
 mod tests;
 
 mod args;
+mod badge;
 mod insight;
 mod meta;
 mod port;
@@ -23,7 +24,7 @@ mod tiers;
 
 use std::ffi::OsString;
 use std::fmt::Display;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -46,8 +47,18 @@ pub struct Io<'a> {
     pub home: Option<&'a Path>,
     /// Milliseconds since the Unix epoch.
     pub now: fn() -> u64,
+    /// Which of stdin and stdout are terminals.
+    pub tty: Tty,
     /// The `chert` program `install` wires: a path or a name on `PATH`.
     pub chert: &'a str,
+}
+
+/// Which standard streams are terminals: `chert statusline` reads no
+/// terminal stdin and colors a terminal stdout (T3).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Tty {
+    pub stdin: bool,
+    pub stdout: bool,
 }
 
 /// A verb's exit code, or the message of an exit 2 (V2).
@@ -73,7 +84,6 @@ pub fn main() -> ExitCode {
     let cwd = std::env::current_dir().unwrap_or_default();
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let exe = std::env::current_exe().ok();
-    let chert = exe.as_deref().and_then(Path::to_str).unwrap_or("chert");
     let (mut stdin, mut stdout) = (std::io::stdin().lock(), std::io::stdout());
     let mut io = Io {
         stdin: &mut stdin,
@@ -82,9 +92,20 @@ pub fn main() -> ExitCode {
         cwd: &cwd,
         home: home.as_deref(),
         now: clock,
-        chert,
+        chert: exe.as_deref().and_then(Path::to_str).unwrap_or("chert"),
+        tty: Tty::system(),
     };
     ExitCode::from(run(std::env::args_os(), &mut io))
+}
+
+impl Tty {
+    /// The process's own stdin and stdout.
+    fn system() -> Self {
+        Self {
+            stdin: std::io::stdin().is_terminal(),
+            stdout: std::io::stdout().is_terminal(),
+        }
+    }
 }
 
 fn clock() -> u64 {
@@ -99,6 +120,7 @@ fn verb(command: Command, io: &mut Io<'_>) -> Done {
         Command::Setup(v) => setup::run(v, io),
         Command::Tiers(v) => tiers::run(v, io),
         Command::Insight(v) => insight::run(v, io),
+        Command::Badge(v) => badge::run(v, io),
         Command::Text(v) => text::run(v, io),
         Command::Port(v) => port::run(v, io),
         Command::Meta(v) => meta::run(v, io),

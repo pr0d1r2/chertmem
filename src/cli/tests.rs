@@ -6,7 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use super::{Io, run};
+use super::{Io, Tty, run};
 
 pub(super) type Test = Result<(), Box<dyn StdError>>;
 pub(super) type Res<T> = Result<T, Box<dyn StdError>>;
@@ -77,21 +77,13 @@ impl Sandbox {
     }
 
     fn run_in(&self, args: &[&str], stdin: &[u8], home: Option<&Path>) -> Ran {
-        let (mut input, project) = (stdin, self.project());
-        let (mut out, mut err) = (Vec::new(), Vec::new());
-        let mut io = Io {
-            stdin: &mut input,
-            stdout: &mut out,
-            stderr: &mut err,
-            cwd: &project,
-            home,
-            now,
-            chert: CHERT,
+        let feed = Feed {
+            stdin: stdin.to_vec(),
+            cwd: self.project(),
+            home: home.map(Path::to_path_buf),
+            tty: Tty::default(),
         };
-        let code = run(argv(args), &mut io);
-        let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
-        let (out, err) = (text(&out), text(&err));
-        Ran { code, out, err }
+        exec(args, &feed)
     }
 
     /// Store the recorded `<event>` hook payload: exit 0 asserted.
@@ -111,6 +103,38 @@ impl Drop for Sandbox {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.dir);
     }
+}
+
+/// What 1 run reads besides its arguments.
+pub(super) struct Feed {
+    pub(super) stdin: Vec<u8>,
+    pub(super) cwd: PathBuf,
+    pub(super) home: Option<PathBuf>,
+    pub(super) tty: Tty,
+}
+
+/// `chert <args>` fed by `feed`, at [`NOW`].
+pub(super) fn exec(args: &[&str], feed: &Feed) -> Ran {
+    let mut input = feed.stdin.as_slice();
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let mut io = Io {
+        stdin: &mut input,
+        stdout: &mut out,
+        stderr: &mut err,
+        cwd: &feed.cwd,
+        home: feed.home.as_deref(),
+        now,
+        chert: CHERT,
+        tty: feed.tty,
+    };
+    let code = run(argv(args), &mut io);
+    ran(code, &out, &err)
+}
+
+fn ran(code: u8, out: &[u8], err: &[u8]) -> Ran {
+    let text = |b: &[u8]| String::from_utf8_lossy(b).into_owned();
+    let (out, err) = (text(out), text(err));
+    Ran { code, out, err }
 }
 
 /// `chert`, then `args`.

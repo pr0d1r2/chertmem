@@ -77,6 +77,8 @@ no file sets the key; `~` there stands for your home directory.
 | `statusline.size_amber` | size | `"5GiB"` | Below this the size is amber; at or above it, red. |
 | `statusline.fit_amber` | integer, 1 to 100 | `80` | The observation count shows how well the cache window fits `cache.max_bytes`: green while the window's estimate is below this percent of it, amber from this percent up to the limit, red over the limit. |
 
+The `statusline.*` keys color the badge of [Integration](INTEGRATION.md#statusline-badge).
+
 ## Before you turn on `inject.on_prompt`
 
 With `inject.on_prompt = true`, every prompt you send waits for chert
