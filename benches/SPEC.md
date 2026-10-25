@@ -25,6 +25,16 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 
 - cmd: `cargo bench -p chertmem`; `cargo run -p dev -- bench-gate` compares to baseline.
 - file: `benches/baseline.toml`.
+- target (as built, wave 9): `[[bench]] latency` = `benches/latency/main.rs`, `harness = false`; `[[bench]] latency-tests` = same modules via `lib.rs` under libtest, `test = true`, `bench = false` ∴ nextest runs V1, V2. bench id `<suite>/<size>-p<parts>` (`1k-p52`); filter: `cargo bench -p chertmem -- '/100k-p'`. criterion output `target/criterion/<suite>/<label>/new/estimates.json`.
+- dir: `target/bench-fixtures/<seed>-<size>-<parts>/` (`project/`, `data/`, `stamp` = generator version, key, digest); stale stamp → rebuilt.
+
+## §R RESEARCH
+
+id|topic|finding|src
+R1|harness, wave 9|criterion 0.8.2 over divan 0.1.21. statistics: criterion bootstrap CI & outlier classes; divan median, mean, min, max. baselines: criterion writes per bench `new/estimates.json` (median point estimate & CI) & `sample.json` (raw ∴ p95) & `--save-baseline`; divan prints a table only ∴ T4 gate would scrape text. push: both configurable; criterion ≥ 10 samples; `PUSH` = 10 samples, 300 ms warm-up, 1 s ∴ ~1.3 s/bench, ~80 benches. deps, default features off: criterion +32 lock entries, 7 Windows-only (ciborium, half, zerocopy, clap, tinytemplate, ...), divan +14; all MIT \| Apache-2.0 (zerocopy + BSD-2-Clause option, walkdir & same-file + Unlicense option) ∴ `cargo deny` ok. criterion turns on serde `derive` ∴ syn 3 (serde_derive) beside syn 2 (zerocopy-derive), dev-only: deny's `multiple-versions` skips dev deps by default; divan alone added no 2nd version|`cargo tree -d -e normal,dev,build`, `cargo deny check`, `cargo metadata`
+R2|fixtures, wave 9|SplitMix64, ⊥ crate. sessions of 10..79 events: `session-start` first, `session-end` + session summary last, middle 70% tool call (Bash, Read, Edit, Grep), 5% failure, 15% prompt, 10% stop; bodies as `src/hook` stores them, compressed at `full` on write. words Zipf-like (`P(k)` ~ `ln(n/k)`) over 64 common + 4032 syllable words; paths `src/`, `tests/`, `docs/`. events spread evenly over `parts` weeks ending at week 2930 (2026-02-26), the benches' clock ∴ every weekly partition filled when size ≥ parts. V2: FNV-1a over each row's Debug text; ULIDs random ∴ store bytes differ, rows ⊥. build via `Store::append` 1 row at a time: 10^5 rows ~23 s, M1 Pro|`benches/latency/fixture.rs`, `fixture/rows.rs`
+R3|in-process & stand-ins, wave 9|`session-start` & `user-prompt-submit` through `hook::run` on a scratch copy (each run appends); process start left to hook-write suite (V4). semantic re-rank: `Engine` reads `OLLAMA_HOST` only from env & `set_var` needs `unsafe` ∴ bench starts loopback `/api/embed` stand-in (768-d bag-of-words) & reruns itself as child w/ it set; measures chert's side + stand-in's reply, ⊥ model. `get_observations` = `Store::get` of 5 refs of newest partition; recent window = `since` 28 d, warm = `cache::Handle`, cold = disk; cross = all time; scan = newest weekly partition whole|`benches/latency/ops/*.rs`, `ollama.rs`
+R4|first run, wave 9, ⊥ baseline (T4)|release, M1 Pro, 2026-10-25, criterion median, ms at 1k-p52 / 100k-p52 / 1M-p52: `get_observations` 0.08 / 0.08 / 0.09 (< 2); recent warm 0.7 / 11.1 / 115, cold 1.4 / 2.0 / 7.4 (< 10); semantic 1.2 / 13.0 / 113 (< 20); session-start 26 / 30 / 45 & prompt 26 / 28 / 59 (in process, vs hook < 5). 100k at p1 / p520: warm 140 / 9.3, session-start 13 / 241, cross 16 / 121 ∴ over target: warm cache scans whole window in memory (10^5 rows/week at p1), injection opens every partition per run. fixture build 10^5 ~23 s, 10^6 240 s, 837 MiB. recount: `cargo bench -p chertmem -- '/(1k\|10k\|100k)-p'`|`target/criterion/*/*/new/estimates.json`
 
 ## §V INVARIANTS
 
@@ -36,9 +46,9 @@ V4: hook-write suite spawns real `chert` process ∴ startup counted, ⊥ in-pro
 ## §T TASKS
 
 id|status|task|cites
-T1|.|harness choice, §R row|-
-T2|.|seeded fixture generator|V2
-T3|.|suites ∀ target|V1,V4
+T1|x|harness choice, §R row: criterion (R1)|-
+T2|x|seeded fixture generator, cached under `target/bench-fixtures/` (R2)|V2
+T3|~|suites ∀ target (R3): 11 ready; hook write registered pending, waits for `src/cli` (`chert hook run` spawned, V4)|V1,V4
 T4|.|baseline file & `bench-gate`|V3
 
 ## §B BUGS
