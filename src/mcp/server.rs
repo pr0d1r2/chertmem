@@ -24,13 +24,15 @@ pub(super) struct Server {
 
 impl Server {
     /// Open the engine and store of `ctx`'s project and start its cache,
-    /// which warms in the background and logs only to `ctx.env` (V3).
+    /// which warms in the background and logs only to `ctx.env` (V3),
+    /// keeping search's keyword index (src/search T9).
     pub(super) fn open(ctx: &Ctx<'_>) -> Result<Self, Error> {
         let (cfg, root) = (ctx.config, ctx.root);
         let window = Store::open(cfg, root, Mode::Read)?;
+        let env = ctx.env.clone();
         Ok(Self {
             engine: Engine::open(cfg, root)?,
-            cache: Cache::start_with(window, cfg, ctx.env.clone()),
+            cache: Cache::start_indexed(window, cfg, env, search::index()),
             store: Store::open(cfg, root, Mode::Read)?,
         })
     }

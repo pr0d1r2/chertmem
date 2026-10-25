@@ -41,15 +41,19 @@ impl Rater {
     /// `row` scored, or `None` when a filter refuses it or no term
     /// occurs in it.
     pub(super) fn rate(&self, row: Observation) -> Option<Scored> {
-        let wants = |want: &Option<String>, have: &str| {
-            want.as_deref().is_none_or(|w| w == have)
-        };
-        if !wants(&self.kind, &row.kind) || !wants(&self.session, &row.session)
-        {
+        if !self.admits(&row) {
             return None;
         }
         let score = score(&self.stats, &self.terms, &row.body);
         (score > 0.0).then_some(Scored { score, row })
+    }
+
+    /// Whether the row filters past the store's own take `row`.
+    fn admits(&self, row: &Observation) -> bool {
+        let wants = |want: &Option<String>, have: &str| {
+            want.as_deref().is_none_or(|w| w == have)
+        };
+        wants(&self.kind, &row.kind) && wants(&self.session, &row.session)
     }
 
     /// The best [`Rater::keep`] of `rows`, best first.
@@ -59,15 +63,59 @@ impl Rater {
             self.keep,
         )
     }
+
+    /// [`Rater::best`] of lent rows an index counted: scored from their
+    /// [`Counts`] by [`score`]'s arithmetic (V1), only the kept cloned.
+    pub(super) fn best_counted<'a>(
+        &self,
+        rows: impl IntoIterator<Item = (&'a Observation, Counts)>,
+    ) -> Vec<Scored> {
+        let mut rated: Vec<(f64, &Observation)> = rows
+            .into_iter()
+            .filter(|(row, _)| self.admits(row))
+            .map(|(row, c)| (counted(&self.stats, &c), row))
+            .filter(|(score, _)| *score > 0.0)
+            .collect();
+        rated.sort_by(|a, b| order_of(*a, *b));
+        rated.truncate(self.keep);
+        let kept = rated.into_iter().map(|(score, row)| Scored {
+            score,
+            row: row.clone(),
+        });
+        kept.collect()
+    }
+}
+
+/// A row's counts as an index keeps them: its token count and, per
+/// query term in order, how often that term occurs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Counts {
+    pub(super) dl: u32,
+    pub(super) tf: Vec<u32>,
 }
 
 /// BM25 of `body` for `terms` under `stats`, summed in term order, so
 /// the same row gets the same bits every time (V1).
 pub(super) fn score(stats: &Stats, terms: &[String], body: &str) -> f64 {
     let tokens = token::tokens(body);
-    let norm = length_norm(stats, count(tokens.len()));
-    let each = terms.iter().zip(&stats.df).map(|(term, &df)| {
-        let tf = count(tokens.iter().filter(|t| *t == term).count());
+    let tf = terms
+        .iter()
+        .map(|term| count(tokens.iter().filter(|t| *t == term).count()));
+    bm25(stats, count(tokens.len()), tf)
+}
+
+/// [`score`] from a row's [`Counts`]: the same terms in the same order
+/// give the same bits (V1).
+fn counted(stats: &Stats, c: &Counts) -> f64 {
+    let tf = c.tf.iter().map(|&n| real(u64::from(n)));
+    bm25(stats, real(u64::from(c.dl)), tf)
+}
+
+/// BM25 of a row of `dl` tokens, each term's `tf` aligned with
+/// `stats.df`, summed in term order.
+fn bm25(stats: &Stats, dl: f64, tf: impl Iterator<Item = f64>) -> f64 {
+    let norm = length_norm(stats, dl);
+    let each = tf.zip(&stats.df).map(|(tf, &df)| {
         idf(stats.docs, df) * tf * (K1 + 1.0) / K1.mul_add(norm, tf)
     });
     each.sum()
@@ -92,10 +140,15 @@ fn idf(docs: u64, df: u64) -> f64 {
 /// Best first: score desc, then ts desc, then id desc, so the order is
 /// total and the same on every run (V4).
 pub(super) fn order(a: &Scored, b: &Scored) -> Ordering {
-    let by_score = b.score.total_cmp(&a.score);
-    by_score
-        .then(b.row.ts.cmp(&a.row.ts))
-        .then_with(|| b.row.id.cmp(&a.row.id))
+    order_of((a.score, &a.row), (b.score, &b.row))
+}
+
+/// [`order`] of a score and a lent row each.
+fn order_of(a: (f64, &Observation), b: (f64, &Observation)) -> Ordering {
+    let ((sa, ra), (sb, rb)) = (a, b);
+    sb.total_cmp(&sa)
+        .then(rb.ts.cmp(&ra.ts))
+        .then_with(|| rb.id.cmp(&ra.id))
 }
 
 /// The best `k` of `rows`, best first.
