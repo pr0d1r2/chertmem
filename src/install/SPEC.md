@@ -41,13 +41,16 @@ R2|wiring, wave 7|as cavemem: 1 group/event `<chert> hook run <event> --ide clau
 V1: install then uninstall → IDE config byte-identical to before.
 V2: install twice → same config as once (idempotent).
 V3: `doctor` exits 1 naming each broken wiring, catalog drift (`src/store:V6`), stale spool.
+V4: chert's MCP server is registered where Claude Code reads MCP servers, so `chert mcp` actually launches (B1).
 
 ## §T TASKS
 
 id|status|task|cites
 T1|x|Claude Code settings: hooks & MCP entry|V1,V2
 T2|x|status & doctor|V3
+T3|.|MCP entry goes to `~/.claude.json` `mcpServers.chert` (user scope), ⊥ `settings.json`, under V1 & V2 (B1)|V1,V2,V4
 
 ## §B BUGS
 
 id|date|cause|fix
+B1|2026-10-25|install wrote `mcpServers.chert` into `settings.json` as cavemem 0.2.1 does, but Claude Code's settings schema has no `mcpServers` key (MCP servers live in `~/.claude.json` or `.mcp.json`) ∴ the server is never launched|V4
