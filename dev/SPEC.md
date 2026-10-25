@@ -57,6 +57,8 @@ T7|x|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
 T8|x|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
 T9|x|`perf-doc [--check]`: `docs/PERFORMANCE.md` from `benches/baseline.toml` & root §C targets, RED → GREEN → gate row at commit|V6
 T10|x|`name-guard` allowlist half + `dev/public-repos.toml` seeded from ∀ repo committed text names, `gh repo view` 2026-10-25, RED → GREEN|V14,V6
+T11|x|`notices [--check]`: `THIRD-PARTY-NOTICES.md` Rust crates block from `cargo tree` (normal+build, 4 release targets, default & `bpe`) & `cargo metadata`; MIT when offered, else most permissive, `AND` kept (owner 2026-10-25); failed cargo call = error w/ stderr (rekall#47); RED → GREEN → gate row at commit after clippy|V6
+T12|x|`package-list`: `cargo package --list` ⊥ `SPEC.md`, ⊥ `.githooks/`, ∋ build & license files, ∀ relative README link ships; root `[package]` `include`; RED → GREEN → gate row at commit|V6
 
 ## §B BUGS
 
