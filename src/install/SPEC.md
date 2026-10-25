@@ -30,6 +30,12 @@ sib|src/mine|behaviour findings & awareness report
 
 - cmd: `chert install`, `chert uninstall`, `chert status`, `chert doctor` (`.:§I`).
 
+## §R RESEARCH
+
+id|topic|finding|src
+R1|bytes, wave 7|⊥ `preserve_order` (`src/hook` V3 needs sorted keys) ∴ write = sorted, 2-space. 1st write → `<file>.chert.bak`; uninstall: rest ≡ backup JSON → backup bytes back; no backup & rest `{}` → file removed; else rest written, backup kept|`install.rs`
+R2|wiring, wave 7|as cavemem: 1 group/event `<chert> hook run <event> --ide claude-code`, `mcpServers.chert = {command, args: [mcp]}`; appended ⊥ replacing. doctor: rebuild & diff catalog; files left in `spool/`, `sealed/`, `unreadable/` = stale|cavemem `dist/index.js` installers; `doctor.rs`
+
 ## §V INVARIANTS
 
 V1: install then uninstall → IDE config byte-identical to before.
@@ -39,8 +45,8 @@ V3: `doctor` exits 1 naming each broken wiring, catalog drift (`src/store:V6`), 
 ## §T TASKS
 
 id|status|task|cites
-T1|.|Claude Code settings: hooks & MCP entry|V1,V2
-T2|.|status & doctor|V3
+T1|x|Claude Code settings: hooks & MCP entry|V1,V2
+T2|x|status & doctor|V3
 
 ## §B BUGS
 
