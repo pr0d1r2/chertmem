@@ -46,14 +46,14 @@ V13: `.coverage` floor = `sherd coverage --record` result − 0.10, rounded down
 
 id|status|task|cites
 T1|x|root `flake.nix` devShell + `.envrc`|V1,V2
-T2|.|`dev` crate w/ `bench-gate`|-
+T2|x|`dev` crate w/ `bench-gate`: `bench-record` + gate on push, 1k & 10k-p52 (`benches:R5`)|V6
 T3|x|`name-guard`, RED → GREEN → gate row|V3,V6
 T4|x|`no-core-worktree`, RED → GREEN → gate row|V4,V6
 T5|x|`lock-graph`, RED → GREEN → gate row|V5,V6
 T6|x|`rust-mirror`, RED → GREEN → gate row|V7,V6
 T7|x|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
 T8|x|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
-T9|.|`perf-doc [--check]`: `docs/PERFORMANCE.md` from `benches/baseline.toml`, RED → GREEN → gate row|V6
+T9|x|`perf-doc [--check]`: `docs/PERFORMANCE.md` from `benches/baseline.toml` & root §C targets, RED → GREEN → gate row at commit|V6
 
 ## §B BUGS
 
