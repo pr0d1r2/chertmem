@@ -166,4 +166,8 @@ push: Mapping<String, Config.Step> = new {
     glob = List("**/*.rs", "Cargo.toml", ".coverage")
     check = "command -v sherd >/dev/null 2>&1 || { echo 'coverage: sherd is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; sherd coverage --check || { echo 'coverage: line coverage fell below .coverage' >&2; exit 1; }"
   }
+  ["bench-gate"] {
+    glob = List("**/*.rs", "Cargo.toml", "Cargo.lock", "benches/baseline.toml")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'bench-gate: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo bench -q -p chertmem --bench latency -- '/10?k-p52$' && cargo run -q -p chertmem-dev -- bench-gate 1k-p52 10k-p52 || { echo 'bench-gate: a bench median is over its baseline x (1 + tolerance) on this machine class; see docs/BENCHMARKS.md' >&2; exit 1; }"
+  }
 }

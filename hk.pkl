@@ -24,6 +24,9 @@ local all = (fast) {
   ["test"] = (generated.push["test"]) { exclusive = true }
   ["tdd-order"] = (generated.push["tdd-order"]) { exclusive = true }
   ["coverage"] = (generated.push["coverage"]) { exclusive = true }
+  // dev T2: the release bench must run alone, or its medians measure the
+  // other steps; it is a `cargo bench` and a `cargo run` too (dev V10).
+  ["bench-gate"] = (generated.push["bench-gate"]) { exclusive = true }
 }
 
 hooks {
