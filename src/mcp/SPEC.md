@@ -52,6 +52,7 @@ T1|x|transport lib choice, §R row|V2
 T2|x|4 tools w/ golden JSON incl. `list_sessions` (R3)|V1
 T3|x|start cache on launch|V3
 T4|x|heartbeat for `chert statusline`: file lock per server, median of last 20 replies after each (R4)|V3
+T5|.|1 process-wide partition budget: the cache window store, server store & engine share ≤ 64 connections in total ⊥ 64 each (worst ~192 × 3 fds > 256), test under a 256 fd limit (search B2 follow-up)|V3
 
 ## §B BUGS
 
