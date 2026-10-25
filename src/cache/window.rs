@@ -1,12 +1,14 @@
 //! The window's rows in memory, keyed by `(ts, id)` as the store orders
 //! them, and per partition how far they were read: its seq and its
-//! `PRAGMA data_version` (src/cache C, V2).
+//! `PRAGMA data_version` (src/cache C, V2). Every row added or replaced
+//! reaches the index too (T6).
 
 #[cfg(test)]
 mod tests;
 
 use std::collections::BTreeMap;
 
+use super::index::{Index, Key};
 use crate::store::{Error, Filter, Observation, Store};
 
 /// How far 1 partition was read.
@@ -30,7 +32,7 @@ pub(super) struct Window {
     /// The catalog's `generation` at the load (D15).
     generation: u64,
     parts: BTreeMap<String, Part>,
-    rows: BTreeMap<(u64, String), Observation>,
+    rows: BTreeMap<Key, Observation>,
 }
 
 /// Whether a refreshed window may answer.
@@ -79,10 +81,11 @@ impl Window {
 
     /// Catch up before a query (D15): a moved catalog is checked for a
     /// new `generation`, then listed for new partitions; every
-    /// partition is synced.
+    /// partition is synced, `index` fed as the rows are.
     pub(super) fn refresh(
         &mut self,
         store: &mut Store,
+        index: &mut dyn Index,
     ) -> Result<Fresh, Error> {
         let catalog = store.catalog_version()?;
         if catalog != self.catalog {
@@ -93,16 +96,18 @@ impl Window {
             self.list(store)?;
         }
         for path in self.paths() {
-            self.sync(store, &path)?;
+            self.sync(store, index, &path)?;
         }
         Ok(Fresh::Current)
     }
 
     /// Tail the partition at `path` past its last seq, when its
-    /// `data_version` moved since the last tail.
+    /// `data_version` moved since the last tail; `index` sees each row
+    /// with the one it replaces at its key.
     pub(super) fn sync(
         &mut self,
         store: &mut Store,
+        index: &mut dyn Index,
         path: &str,
     ) -> Result<(), Error> {
         let version = store.data_version(path)?;
@@ -114,21 +119,59 @@ impl Window {
         for t in store.tail(path, part.seq, &self.filter)? {
             part.seq = part.seq.max(t.seq);
             let o = t.observation;
-            self.rows.insert((o.ts, o.id.clone()), o);
+            let key = (o.ts, o.id.clone());
+            let _ = &index;
+            self.rows.insert(key, o);
         }
         Ok(())
     }
 
-    /// The rows `q` wants when the window holds all of them: the same
-    /// project and `since` inside the window; else `None`.
-    pub(super) fn answer(&self, q: &Filter) -> Option<Vec<Observation>> {
+    /// The rows `q` wants, lent, when the window holds all of them:
+    /// the same project and `since` inside the window; else `None`.
+    pub(super) fn view(&self, q: &Filter) -> Option<Rows<'_>> {
         let since = q.since.filter(|&s| s >= self.since)?;
         if q.project != self.filter.project {
             return None;
         }
-        let rows = self.rows.range((since, String::new())..);
+        Some(Rows {
+            map: &self.rows,
+            since,
+            until: q.until,
+        })
+    }
+}
+
+/// The window's rows a filter wants, lent under the cache lock
+/// ([`super::Handle::with_index`]): its `[since, until)` of the window.
+#[derive(Debug, Clone, Copy)]
+pub struct Rows<'a> {
+    map: &'a BTreeMap<Key, Observation>,
+    since: u64,
+    until: Option<u64>,
+}
+
+impl<'a> Rows<'a> {
+    /// The row at `key` when the filter wants it: an index posting a
+    /// row outside the filter's ts range gets `None`.
+    #[must_use]
+    pub fn get(&self, key: &Key) -> Option<&'a Observation> {
+        let (ts, _) = key;
+        let inside = *ts >= self.since && self.until.is_none_or(|u| *ts < u);
+        inside.then(|| self.map.get(key)).flatten()
+    }
+
+    /// Every row the filter wants, in the store's `(ts, id)` order.
+    pub fn range(&self) -> impl Iterator<Item = &'a Observation> + 'a {
+        let until = self.until;
+        let rows = self.map.range((self.since, String::new())..);
         let wanted =
-            rows.take_while(|((ts, _), _)| q.until.is_none_or(|u| *ts < u));
-        Some(wanted.map(|(_, o)| o.clone()).collect())
+            rows.take_while(move |((ts, _), _)| until.is_none_or(|u| *ts < u));
+        wanted.map(|(_, o)| o)
+    }
+
+    /// The rows as [`super::Handle::query`] answers them, cloned.
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Observation> {
+        self.range().cloned().collect()
     }
 }

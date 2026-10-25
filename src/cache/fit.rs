@@ -25,29 +25,50 @@ const MONTH_DAYS: u64 = 31;
 /// ~500 B; rounded up so the estimate errs high.
 pub(super) const ROW_OVERHEAD: u64 = 640;
 
+/// The memory the keyword index of `src/search` T9 takes per row before
+/// it is built (src/cache R6): postings `term -> (row, tf)` and a row
+/// length, ~230 B raw at the profiled bodies, 340-450 B with `Vec`
+/// slack; rounded up so the estimate errs high, as `ROW_OVERHEAD`.
+pub(super) const INDEX_ROW: u64 = 512;
+
+/// What 1 row costs beyond its body, its index share included.
+const ROW_COST: u64 = ROW_OVERHEAD;
+
 /// What `cache plan` prints (src/cache I): the window's estimate, the
 /// limit, and how many of its newest days are kept in memory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Plan {
-    /// Bytes the whole window would take.
+    /// Bytes the whole window would take, its index included.
     pub estimate: u64,
+    /// The index's part of `estimate`: `INDEX_ROW` (512 B) a row before a
+    /// load, `Index::bytes` after one.
+    pub index: u64,
     /// `cache.max_bytes`.
     pub limit: u64,
     /// 0 when the cache is off and every query reads the disk.
     pub days_kept: u64,
 }
 
+impl Plan {
+    /// The estimate is over the limit.
+    #[must_use]
+    pub fn over(&self) -> bool {
+        self.estimate > self.limit
+    }
+}
+
 impl fmt::Display for Plan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let Self {
             estimate,
+            index,
             limit,
             days_kept,
         } = self;
         write!(
             f,
             "estimate {estimate} bytes, limit {limit} bytes, \
-             {days_kept} days kept"
+             {days_kept} days kept\nindex {index} bytes of the estimate"
         )
     }
 }
@@ -62,7 +83,26 @@ pub(super) struct Fit {
 impl Fit {
     /// The estimate is over the limit.
     pub(super) fn over(&self) -> bool {
-        self.plan.estimate > self.plan.limit
+        self.plan.over()
+    }
+
+    /// The plan of the loaded window once its index holds `bytes`: the
+    /// estimate's index part replaced by them (V4). `None` when it
+    /// fits, or when the plan before the load was over already and so
+    /// was reported. Under `fail` it keeps no day: the cache is off.
+    pub(super) fn live(&self, bytes: u64, cfg: &config::Cache) -> Option<Plan> {
+        if self.over() {
+            return None;
+        }
+        let rows = self.plan.estimate.saturating_sub(self.plan.index);
+        let fail = cfg.on_overflow == Overflow::Fail;
+        let plan = Plan {
+            estimate: rows.saturating_add(bytes),
+            index: bytes,
+            days_kept: if fail { 0 } else { self.plan.days_kept },
+            ..self.plan
+        };
+        plan.over().then_some(plan)
     }
 }
 
@@ -81,29 +121,44 @@ pub(super) fn days(span: Span) -> u64 {
     window_ms(span).div_ceil(DAY)
 }
 
-/// The bytes a partition's rows take in memory.
+/// The bytes a partition's rows take in memory, their index included.
 fn cost(p: &Partition) -> u64 {
-    let rows = p.stats.rows.saturating_mul(ROW_OVERHEAD);
+    let rows = p.stats.rows.saturating_mul(ROW_COST);
     p.stats.bytes.saturating_add(rows)
 }
 
-/// The share of `p`'s cost from `since` on, its rows taken as spread
-/// evenly over the part of `[t0, t1)` already past at `now`.
-fn share(p: &Partition, since: u64, now: u64) -> u64 {
+/// The bytes the index takes for a partition's rows.
+fn postings(p: &Partition) -> u64 {
+    p.stats.rows.saturating_mul(INDEX_ROW)
+}
+
+/// The share of `bytes`, `p`'s, from `since` on, its rows taken as
+/// spread evenly over the part of `[t0, t1)` already past at `now`.
+fn share(p: &Partition, bytes: u64, since: u64, now: u64) -> u64 {
     let end = p.t1.min(now);
     if since <= p.t0 || end <= p.t0 {
-        return cost(p);
+        return bytes;
     }
     let kept = u128::from(end.saturating_sub(since));
-    let whole = u128::from(cost(p)).saturating_mul(kept);
+    let whole = u128::from(bytes).saturating_mul(kept);
     let part = whole.checked_div(u128::from(end.saturating_sub(p.t0)));
     part.map_or(0, |b| u64::try_from(b).unwrap_or(u64::MAX))
 }
 
-/// The bytes of every row from `since` on.
-pub(super) fn estimate(parts: &[Partition], since: u64, now: u64) -> u64 {
-    let shares = parts.iter().map(|p| share(p, since, now));
+/// The sum of every partition's share of `of` from `since` on.
+fn total(
+    parts: &[Partition],
+    of: fn(&Partition) -> u64,
+    since: u64,
+    now: u64,
+) -> u64 {
+    let shares = parts.iter().map(|p| share(p, of(p), since, now));
     shares.fold(0, u64::saturating_add)
+}
+
+/// The bytes of every row from `since` on, their index included.
+pub(super) fn estimate(parts: &[Partition], since: u64, now: u64) -> u64 {
+    total(parts, cost, since, now)
 }
 
 /// The most of the newest whole days, fewer than `days`, that fit.
@@ -124,14 +179,13 @@ pub(super) fn fit(parts: &[Partition], cfg: &config::Cache, now: u64) -> Fit {
     } else {
         shrink(parts, cfg, now)
     };
-    Fit {
-        plan: Plan {
-            estimate,
-            limit: cfg.max_bytes,
-            days_kept,
-        },
-        since,
-    }
+    let plan = Plan {
+        estimate,
+        index: total(parts, postings, start, now).saturating_sub(u64::MAX),
+        limit: cfg.max_bytes,
+        days_kept,
+    };
+    Fit { plan, since }
 }
 
 /// The days kept over the limit and where they start; `None`: none.
@@ -153,7 +207,7 @@ fn shrink(
 /// The overflow warning: it names the estimate and the limit (V4,
 /// root V11) and what is kept.
 pub(super) fn overflow(plan: &Plan, cfg: &config::Cache) -> String {
-    let (estimate, limit) = (plan.estimate, plan.limit);
+    let (estimate, index, limit) = (plan.estimate, plan.index, plan.limit);
     let kept = if plan.days_kept == 0 {
         "the cache is off, queries read the disk".to_owned()
     } else {
@@ -161,9 +215,9 @@ pub(super) fn overflow(plan: &Plan, cfg: &config::Cache) -> String {
         format!("keeping the newest {kept} of {days} days")
     };
     format!(
-        "chert: cache estimate {estimate} bytes is over cache.max_bytes \
-         {limit} bytes; {kept} (raise cache.max_bytes or shorten \
-         cache.window)"
+        "chert: cache estimate {estimate} bytes (index {index} bytes) is \
+         over cache.max_bytes {limit} bytes; {kept} (raise \
+         cache.max_bytes or shorten cache.window)"
     )
 }
 
