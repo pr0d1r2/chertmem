@@ -1,0 +1,21 @@
+format 1
+
+# This repository's GitHub workflows (root T12, D26, paradigm/V28),
+# rendered by `actlith gen` into .github/workflows/; never edit those by
+# hand: the actlith-gen-check and actlith-check steps refuse drift.
+#
+# The gate kind runs the push gate, `hk check --all --check`, on every
+# paradigm/V28 system GitHub hosts, with the pr0d1r2 cache, as lablith's
+# row does. x86_64-darwin has no hosted runner in actlith 0.1.0 (it
+# refuses the system), and the flake has no x86_64-darwin build of most
+# fleet tools, so that system is gated by pre-push on the owner's Intel
+# Mac, as paradigm/V28 has it: pre-push native on every owner laptop, CI
+# the rest. The push gate builds the crate, runs every test, coverage and
+# the release bench, so the job gets 60 minutes, not the default 30.
+#
+# There is no `build` row: it needs a flake package, and the flake has
+# only the dev shell until `packages.default` lands (root T18).
+
+## workflows
+id|kind|systems|cache|args
+ci|gate|x86_64-linux,aarch64-linux,aarch64-darwin|pr0d1r2|timeout=60
