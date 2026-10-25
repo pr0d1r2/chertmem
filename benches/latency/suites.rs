@@ -50,7 +50,7 @@ pub(crate) const GET: Target = Target {
 };
 pub(crate) const RERANK: Target = Target {
     name: "semantic re-rank",
-    ms: 25,
+    ms: 20,
 };
 
 #[derive(Debug, Clone, Copy)]

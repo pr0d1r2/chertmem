@@ -20,7 +20,7 @@ const WINDOW: u64 = 28 * DAY;
 
 /// 2 common words, as an agent's search has them: ranks 27 and 43.
 pub(crate) fn text() -> String {
-    format!("{} {}", word(27), word(44))
+    format!("{} {}", word(27), word(43))
 }
 
 /// The query: recent or over all time, semantic or not.
