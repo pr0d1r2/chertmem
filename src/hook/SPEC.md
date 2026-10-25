@@ -69,6 +69,8 @@ T8|x|unparsable payload via `Store::spool_raw` (`src/store:T14`), ⊥ hook writi
 T9|x|register Claude Code `PostToolUseFailure`: record its payload first (as T1), store failed tool calls as their own kind w/ the error text ∴ `src/mine` T1 sees failures|V3
 T10|x|store each session's `cwd`, `started_at` (session-start) & `ended_at` (session-end) for `src/store` T16|V3
 T11|x|`session-start` injection < 5 ms in process at 1k–1M rows & 1–520 partitions (benches `session_start`): read newest partitions only until `inject.max_tokens` is filled ⊥ every partition; today 26 ms at 1k, 241 ms at 520 partitions; after `src/store:T19`|V5
+T12|.|calibrated estimate ⊥ flat bytes/4: ⌈bytes × r⌉, r = p95 o200k tokens per byte over injected texts of a committed corpus (grammar corpus, docs, fixtures), constant w/ its measurement in §R; `bpe` test: ∀ corpus text estimate ≥ exact & ≤ exact × 1.15 (owner 2026-10-25, step 1)|V5
+T13|.|exact counts off the hook path: `chert mcp` counts new rows w/ o200k in background, store keeps a `tokens` column, injection uses stored counts & T12 for the rest; needs `bpe` in default build = owner decision (step 2)|V5
 
 ## §B BUGS
 
