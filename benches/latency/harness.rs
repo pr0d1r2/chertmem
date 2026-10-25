@@ -15,9 +15,10 @@ pub(crate) struct Timing {
     pub(crate) measure: Duration,
 }
 
-/// On push (root V10): criterion's defaults, for now.
+/// On push (root V10): criterion's least sample count, short windows,
+/// so a bench costs about 1.3 s after its fixture is built.
 pub(crate) const PUSH: Timing =
-    Timing::new(100, Duration::from_secs(3), Duration::from_secs(5));
+    Timing::new(10, Duration::from_millis(300), Duration::from_secs(1));
 
 impl Timing {
     pub(crate) const fn new(
