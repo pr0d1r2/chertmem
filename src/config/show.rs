@@ -6,7 +6,10 @@ mod tests;
 
 use std::path::{Path, PathBuf};
 
-use super::Error;
+use toml::Value;
+
+use super::source::{KEYS, Source, TABLES, files, paths};
+use super::{Config, Error};
 
 /// Where an effective value came from (src/config V1).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,32 +53,62 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("inject.on_prompt", "false"),
 ];
 
-/// Every leaf key with its effective value; a stub, values all unset.
+/// Every leaf key, in src/config I order, with its effective value;
+/// the files are validated as [`super::load_from`] does.
 ///
 /// # Errors
-/// None yet.
+/// An unreadable or invalid file, an unknown key or a bad value.
 pub fn show(
     home: Option<&Path>,
     project_root: &Path,
 ) -> Result<Vec<Entry>, Error> {
-    let _ = (home, project_root);
-    let stub = |&(key, _): &(&'static str, &str)| Entry {
-        key,
-        value: None,
-        origin: Origin::Default,
-    };
-    Ok(DEFAULTS.iter().map(stub).collect())
+    let source = Source::gather(&files(home, project_root))?;
+    Config::build(&source, home)?;
+    let project = paths(home, project_root).project;
+    let leaves = KEYS.iter().copied().filter(|k| !TABLES.contains(k));
+    let entry = |key| effective(&source, key, home, &project);
+    Ok(leaves.map(entry).collect())
 }
 
-/// 1 key of [`show`]; a stub, never found.
+/// 1 key of [`show`]; `None` when `key` is not a leaf key.
 ///
 /// # Errors
-/// None yet.
+/// As [`show`].
 pub fn get(
     home: Option<&Path>,
     project_root: &Path,
     key: &str,
 ) -> Result<Option<Entry>, Error> {
-    let _ = (home, project_root, key);
-    Ok(None)
+    let entries = show(home, project_root)?;
+    Ok(entries.into_iter().find(|e| e.key == key))
+}
+
+fn effective(
+    source: &Source,
+    key: &'static str,
+    home: Option<&Path>,
+    project: &Path,
+) -> Entry {
+    let Some((value, file)) = source.origin(key) else {
+        let value = default_text(key, home);
+        let origin = Origin::Default;
+        return Entry { key, value, origin };
+    };
+    let origin = if file == project {
+        Origin::Project(file.to_path_buf())
+    } else {
+        Origin::User(file.to_path_buf())
+    };
+    let value = Some(value.to_string());
+    Entry { key, value, origin }
+}
+
+fn default_text(key: &str, home: Option<&Path>) -> Option<String> {
+    if key == "storage.data_dir" {
+        let dir = home?.join(".local/share/chert");
+        let text = dir.to_string_lossy().into_owned();
+        return Some(Value::String(text).to_string());
+    }
+    let found = DEFAULTS.iter().find(|(k, _)| *k == key);
+    found.map(|(_, text)| (*text).to_owned())
 }

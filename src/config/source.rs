@@ -109,6 +109,19 @@ impl Source {
         Ok(source)
     }
 
+    /// The values of 1 file holding `text`, not yet written (T6).
+    pub(super) fn of_text(file: &Path, text: &str) -> Result<Self, Error> {
+        let mut source = Self::default();
+        source.merge(file, parse(file, text)?)?;
+        Ok(source)
+    }
+
+    /// The key's value as written and the file that set it (T6).
+    pub(super) fn origin(&self, key: &str) -> Option<(&Value, &Path)> {
+        let entry = self.entries.get(key)?;
+        Some((&entry.value, entry.file.as_path()))
+    }
+
     fn merge(&mut self, file: &Path, table: Table) -> Result<(), Error> {
         for (key, value) in flatten(table) {
             self.insert(file, key, value)?;
