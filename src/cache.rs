@@ -90,12 +90,25 @@ impl Cache {
     /// # Errors
     /// A failed catalog read.
     pub fn plan_at(
-        _store: &Store,
-        _cfg: &Config,
-        _now: u64,
+        store: &Store,
+        cfg: &Config,
+        now: u64,
     ) -> Result<Plan, Error> {
-        Err(Error::Poisoned)
+        Ok(fit_at(store, &cfg.cache, now)?.plan)
     }
+}
+
+/// The window of `cfg` ending at `now` fitted from `store`'s catalog
+/// stats (D16): the 1 estimate [`Cache::plan`] and a handle share.
+fn fit_at(store: &Store, cfg: &config::Cache, now: u64) -> Result<Fit, Error> {
+    let start = now.saturating_sub(fit::window_ms(cfg.window));
+    let filter = Filter {
+        project: Some(store.project().to_owned()),
+        since: Some(start),
+        until: None,
+    };
+    let parts = store.partitions(&filter)?;
+    Ok(fit::fit(&parts, cfg, now))
 }
 
 /// Which side answered a query.
@@ -140,14 +153,7 @@ impl Inner {
 
     /// The window ending at `now` fitted from catalog stats (D16).
     fn fit(&self, now: u64) -> Result<Fit, Error> {
-        let start = now.saturating_sub(fit::window_ms(self.cfg.window));
-        let filter = Filter {
-            project: Some(self.store.project().to_owned()),
-            since: Some(start),
-            until: None,
-        };
-        let parts = self.store.partitions(&filter)?;
-        Ok(fit::fit(&parts, &self.cfg, now))
+        fit_at(&self.store, &self.cfg, now)
     }
 
     /// Log an overflow: `warn` and `fail` on every load, `shrink` once.
