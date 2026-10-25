@@ -52,3 +52,12 @@ fn a_readme_link_to_a_file_left_out_is_a_finding() {
         .collect();
     assert_eq!(got, want);
 }
+
+/// A shortcut link opening a prose line is not a definition: only
+/// `[label]: target` with a target of 1 word is.
+#[test]
+fn prose_after_a_shortcut_link_is_not_a_link() {
+    let readme = "- [Bench]: why;\n  [Perf]: the latest numbers, from the\n  baseline.\n\n\
+                  [Perf]: https://x.test/PERFORMANCE.md\n";
+    assert!(findings(LIST, readme).is_empty());
+}
