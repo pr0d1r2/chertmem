@@ -6,29 +6,61 @@ mod tests;
 
 use std::path::Path;
 
-use clap::Subcommand;
+use clap::{ArgMatches, value_parser};
 
+use super::args::{flag, one, value, verb};
 use super::setup::no_home;
 use super::{Done, Io, fail, say};
 use crate::config::{self, Entry, Origin};
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug)]
 pub(super) enum Config {
-    /// Every key's effective value and the file it came from
     Show,
-    /// 1 key's effective value
-    Get { key: String },
-    /// Set 1 key in the project file, or the user file with --user
+    Get {
+        key: String,
+    },
     Set {
         key: String,
-        /// A TOML value; text that is not one is taken as a string
         value: String,
-        /// Write `~/.config/chert/chert.toml` instead
-        #[arg(long)]
         user: bool,
     },
-    /// The user and project `chert.toml` paths
     Path,
+}
+
+/// `config show|get|set|path`.
+pub(super) fn commands() -> [clap::Command; 4] {
+    let key = || value("key", "KEY", value_parser!(String));
+    let value = value("value", "VALUE", value_parser!(String));
+    let user = flag("user", "USER", "user");
+    let set = verb("set", SET)
+        .arg(key())
+        .arg(value.help(VALUE))
+        .arg(user.help("Write `~/.config/chert/chert.toml` instead"));
+    [
+        verb("show", SHOW),
+        verb("get", "1 key's effective value").arg(key()),
+        set,
+        verb("path", "The user and project `chert.toml` paths"),
+    ]
+}
+
+const SHOW: &str = "Every key's effective value and the file it came from";
+const SET: &str = "Set 1 key in the project file, or the user file with --user";
+const VALUE: &str = "A TOML value; text that is not one is taken as a string";
+
+/// The action `name` names, when it is 1 of `config`'s.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Config> {
+    match name {
+        "show" => Some(Config::Show),
+        "get" => one(m, "key").map(|key| Config::Get { key }),
+        "set" => Some(Config::Set {
+            key: one(m, "key")?,
+            value: one(m, "value")?,
+            user: m.get_flag("user"),
+        }),
+        "path" => Some(Config::Path),
+        _ => None,
+    }
 }
 
 pub(super) fn run(action: Config, io: &mut Io<'_>) -> Done {

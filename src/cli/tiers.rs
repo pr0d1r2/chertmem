@@ -4,55 +4,100 @@
 #[cfg(test)]
 mod tests;
 
-use clap::Subcommand;
+use clap::{ArgMatches, value_parser};
 
+use super::args::{one, value, verb};
 use super::{Done, Io, fail, load, open, say};
 use crate::cache::Cache;
 use crate::config::Config;
 use crate::store::{Filter, Partition, Store};
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug)]
 pub(super) enum Verb {
-    /// The store's partitions; `list` when no action is given
-    Partitions {
-        #[command(subcommand)]
-        action: Option<Partitions>,
-    },
-    /// The recent-window cache; `plan` when no action is given
-    Cache {
-        #[command(subcommand)]
-        action: Option<CachePlan>,
-    },
+    /// `partitions`; `list` when no action is given.
+    Partitions { action: Partitions },
+    /// `cache`; `plan` is its 1 action.
+    Cache,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug)]
 pub(super) enum Partitions {
-    /// Every partition: path, tier, rows, bytes, time span, project
     List,
-    /// Seal a partition: warm, refusing appends
     Seal { path: String },
-    /// Seal, then zstd a partition into the cold tier
     Compact { path: String },
-    /// Drop a partition; its refs answer `dropped`
     Drop { path: String },
-    /// Rewrite partitions written under another `partition.*` spec
     Repartition,
 }
 
-#[derive(Debug, Subcommand)]
-pub(super) enum CachePlan {
-    /// The window's estimate against `cache.max_bytes`; exit 1 when over
-    Plan,
+/// The `partitions` actions that take a `<PATH>`.
+const ON_PATH: [(&str, &str); 3] = [
+    ("seal", "Seal a partition: warm, refusing appends"),
+    ("compact", "Seal, then zstd a partition into the cold tier"),
+    ("drop", "Drop a partition; its refs answer `dropped`"),
+];
+
+/// `partitions [list|seal|compact|drop|repartition]` and `cache [plan]`.
+pub(super) fn commands() -> Vec<clap::Command> {
+    let on_path = ON_PATH.into_iter().map(|(name, about)| {
+        verb(name, about).arg(value("path", "PATH", value_parser!(String)))
+    });
+    let list = verb("list", LIST);
+    let repartition = verb("repartition", REPARTITION);
+    let actions = [list].into_iter().chain(on_path).chain([repartition]);
+    vec![
+        optional("partitions", PARTITIONS).subcommands(actions),
+        optional("cache", CACHE).subcommand(verb("plan", PLAN)),
+    ]
+}
+
+const PARTITIONS: &str =
+    "The store's partitions; `list` when no action is given";
+const LIST: &str =
+    "Every partition: path, tier, rows, bytes, time span, project";
+const REPARTITION: &str =
+    "Rewrite partitions written under another `partition.*` spec";
+const CACHE: &str = "The recent-window cache; `plan` when no action is given";
+const PLAN: &str =
+    "The window's estimate against `cache.max_bytes`; exit 1 when over";
+
+/// A verb whose action may be left out.
+fn optional(name: &'static str, about: &'static str) -> clap::Command {
+    verb(name, about)
+        .subcommand_required(false)
+        .arg_required_else_help(false)
+}
+
+/// The verb `name` names, when it is 1 of this group's.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
+    match name {
+        "partitions" => {
+            let action = m.subcommand().map_or(Some(Partitions::List), action);
+            action.map(|action| Verb::Partitions { action })
+        }
+        "cache" => Some(Verb::Cache),
+        _ => None,
+    }
+}
+
+/// The `partitions` action `name` names.
+fn action((name, m): (&str, &ArgMatches)) -> Option<Partitions> {
+    let path = || one::<String>(m, "path");
+    match name {
+        "list" => Some(Partitions::List),
+        "seal" => path().map(|path| Partitions::Seal { path }),
+        "compact" => path().map(|path| Partitions::Compact { path }),
+        "drop" => path().map(|path| Partitions::Drop { path }),
+        "repartition" => Some(Partitions::Repartition),
+        _ => None,
+    }
 }
 
 pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
     let config = load(io)?;
     let store = open(&config, io)?;
     match verb {
-        Verb::Partitions { action } => {
-            partitions(store, &action.unwrap_or(Partitions::List), io)
-        }
-        Verb::Cache { action: _ } => plan(&store, &config, io),
+        Verb::Partitions { action } => partitions(store, &action, io),
+        Verb::Cache => plan(&store, &config, io),
     }
 }
 

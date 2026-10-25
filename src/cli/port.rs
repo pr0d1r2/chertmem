@@ -9,38 +9,85 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use clap::{Subcommand, ValueEnum};
+use clap::builder::PossibleValue;
+use clap::{ArgMatches, ValueEnum, value_parser};
 
+use super::args::{one, option, value, verb};
 use super::{Done, Io, fail, load, open, say};
 use crate::import;
 use crate::store::Filter;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug)]
 pub(super) enum Verb {
-    /// Every observation as JSONL, 1 per line with its ref
     Export {
         out: PathBuf,
-        /// The reader's shape
-        #[arg(long = "for", value_enum)]
         reader: Option<Reader>,
     },
-    /// Restore a `chert export`, or a cavemem 0.2.1 database
     Import {
         input: PathBuf,
-        /// What wrote the input
-        #[arg(long, value_enum)]
         from: Option<Writer>,
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Reader {
     Rekall,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+impl ValueEnum for Reader {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Rekall]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(PossibleValue::new("rekall"))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Writer {
     Cavemem,
+}
+
+impl ValueEnum for Writer {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Cavemem]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(PossibleValue::new("cavemem"))
+    }
+}
+
+/// `export <OUT> [--for]` and `import <INPUT> [--from]`.
+pub(super) fn commands() -> Vec<clap::Command> {
+    let reader = option("reader", "READER", value_parser!(Reader));
+    let from = option("from", "FROM", value_parser!(Writer));
+    let export = verb("export", EXPORT)
+        .arg(value("out", "OUT", value_parser!(PathBuf)))
+        .arg(reader.long("for").help("The reader's shape"));
+    let import = verb("import", IMPORT)
+        .arg(value("input", "INPUT", value_parser!(PathBuf)))
+        .arg(from.help("What wrote the input"));
+    vec![export, import]
+}
+
+const EXPORT: &str = "Every observation as JSONL, 1 per line with its ref";
+const IMPORT: &str = "Restore a `chert export`, or a cavemem 0.2.1 database";
+
+/// The verb `name` names, when it is 1 of this group's.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
+    match name {
+        "export" => Some(Verb::Export {
+            out: one(m, "out")?,
+            reader: one(m, "reader"),
+        }),
+        "import" => Some(Verb::Import {
+            input: one(m, "input")?,
+            from: one(m, "from"),
+        }),
+        _ => None,
+    }
 }
 
 pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {

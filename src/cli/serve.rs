@@ -6,35 +6,56 @@
 mod tests;
 
 use clap::builder::PossibleValue;
-use clap::{Subcommand, ValueEnum};
+use clap::{ArgMatches, ValueEnum};
 
-use super::args::IdeName;
+use super::args::{IdeName, ide, one, parent, value, verb};
 use super::{Done, Io, fail, load, put};
 use crate::cache::Env;
 use crate::config::Config;
 use crate::hook::{self, Kind};
 use crate::mcp;
 
-#[derive(Debug, Clone, Copy, Subcommand)]
+#[derive(Debug, Clone, Copy)]
 pub(super) enum Verb {
-    /// IDE hook events: JSON on stdin, 1 write, then exit
+    /// `hook <action>`.
     Hook {
-        #[command(subcommand)]
         action: Hook,
     },
-    /// MCP server on stdio, hosting the recent-window cache
     Mcp,
 }
 
-#[derive(Debug, Clone, Copy, Subcommand)]
+#[derive(Debug, Clone, Copy)]
 pub(super) enum Hook {
-    /// Store 1 event read from stdin; injecting events print context
-    Run {
-        event: Event,
-        /// The IDE whose payload dialect stdin holds
-        #[arg(long, value_enum, default_value = "claude-code")]
-        ide: IdeName,
-    },
+    Run { event: Event, ide: IdeName },
+}
+
+/// `hook run <EVENT> [--ide]` and `mcp`.
+pub(super) fn commands() -> Vec<clap::Command> {
+    let run = verb("run", RUN)
+        .arg(value("event", "EVENT", clap::value_parser!(Event)))
+        .arg(ide("The IDE whose payload dialect stdin holds"));
+    let hook = parent("hook", HOOK).subcommand(run);
+    vec![hook, verb("mcp", MCP)]
+}
+
+const HOOK: &str = "IDE hook events: JSON on stdin, 1 write, then exit";
+const RUN: &str =
+    "Store 1 event read from stdin; injecting events print context";
+const MCP: &str = "MCP server on stdio, hosting the recent-window cache";
+
+/// The verb `name` names, when it is 1 of this group's.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
+    match name {
+        "hook" => {
+            let run = m.subcommand_matches("run")?;
+            let (event, ide) = (one(run, "event")?, one(run, "ide")?);
+            Some(Verb::Hook {
+                action: Hook::Run { event, ide },
+            })
+        }
+        "mcp" => Some(Verb::Mcp),
+        _ => None,
+    }
 }
 
 /// A hook event as `hook::Kind` names it.

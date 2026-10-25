@@ -4,19 +4,37 @@
 #[cfg(test)]
 mod tests;
 
-use clap::{CommandFactory, Subcommand};
+use clap::{ArgMatches, CommandFactory, value_parser};
 use clap_complete::Shell;
 use clap_mangen::Man;
 
-use super::args::Cli;
+use super::args::{Cli, one, value, verb};
 use super::{Done, Io, fail};
 
-#[derive(Debug, Clone, Copy, Subcommand)]
+#[derive(Debug, Clone, Copy)]
 pub(super) enum Verb {
-    /// A shell completion script on stdout
     Completions { shell: Shell },
-    /// The man page (roff) on stdout
     Man,
+}
+
+/// `completions <SHELL>` and `man`.
+pub(super) fn commands() -> Vec<clap::Command> {
+    let shell = value("shell", "SHELL", value_parser!(Shell));
+    vec![
+        verb("completions", "A shell completion script on stdout").arg(shell),
+        verb("man", "The man page (roff) on stdout"),
+    ]
+}
+
+/// The verb `name` names, when it is 1 of this group's.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
+    match name {
+        "completions" => {
+            one(m, "shell").map(|shell| Verb::Completions { shell })
+        }
+        "man" => Some(Verb::Man),
+        _ => None,
+    }
 }
 
 pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {

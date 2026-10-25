@@ -4,9 +4,9 @@
 #[cfg(test)]
 mod tests;
 
-use clap::Subcommand;
+use clap::ArgMatches;
 
-use super::args::IdeName;
+use super::args::{IdeName, ide, one, parent, verb};
 use super::settings::{self, Config};
 use super::{Done, Io, fail, say};
 use crate::hook::Ide;
@@ -14,28 +14,55 @@ use crate::install::{
     self, Change, Target, WireState, mcp_path, settings_path,
 };
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug)]
 pub(super) enum Verb {
-    /// Wire chert's hooks and MCP server into the IDE's config
-    Install(Ides),
-    /// Remove only chert's entries from the IDE's config
-    Uninstall(Ides),
-    /// Each of chert's entries in the IDE's config
-    Status(Ides),
-    /// Check wiring, catalog drift and stale spool; exit 1 on findings
-    Doctor(Ides),
-    /// `chert.toml`: show, get, set, path
-    Config {
-        #[command(subcommand)]
-        action: Config,
-    },
+    Install(IdeName),
+    Uninstall(IdeName),
+    Status(IdeName),
+    Doctor(IdeName),
+    Config { action: Config },
 }
 
-#[derive(Debug, clap::Args)]
-pub(super) struct Ides {
-    /// The IDE to wire
-    #[arg(long, value_enum, default_value = "claude-code")]
-    ide: IdeName,
+/// The 4 wiring verbs, each with `--ide`, then `config <action>`.
+const WIRING: [(&str, &str); 4] = [
+    (
+        "install",
+        "Wire chert's hooks and MCP server into the IDE's config",
+    ),
+    (
+        "uninstall",
+        "Remove only chert's entries from the IDE's config",
+    ),
+    ("status", "Each of chert's entries in the IDE's config"),
+    (
+        "doctor",
+        "Check wiring, catalog drift and stale spool; exit 1 on findings",
+    ),
+];
+
+/// `install`, `uninstall`, `status`, `doctor` and `config`.
+pub(super) fn commands() -> Vec<clap::Command> {
+    let wiring = WIRING
+        .into_iter()
+        .map(|(name, about)| verb(name, about).arg(ide("The IDE to wire")));
+    let config = parent("config", "`chert.toml`: show, get, set, path")
+        .subcommands(settings::commands());
+    wiring.chain([config]).collect()
+}
+
+/// The verb `name` names, when it is 1 of this group's.
+pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
+    let ide = || one::<IdeName>(m, "ide");
+    match name {
+        "install" => ide().map(Verb::Install),
+        "uninstall" => ide().map(Verb::Uninstall),
+        "status" => ide().map(Verb::Status),
+        "doctor" => ide().map(Verb::Doctor),
+        "config" => m.subcommand().and_then(|(n, sub)| {
+            settings::parse(n, sub).map(|action| Verb::Config { action })
+        }),
+        _ => None,
+    }
 }
 
 /// A verb on 1 IDE's 2 config files.
@@ -43,10 +70,10 @@ type Wiring = fn(&Target<'_>, Ide, &mut Io<'_>) -> Done;
 
 pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
     match verb {
-        Verb::Install(a) => wired(a.ide.0, io, install),
-        Verb::Uninstall(a) => wired(a.ide.0, io, uninstall),
-        Verb::Status(a) => wired(a.ide.0, io, status),
-        Verb::Doctor(a) => wired(a.ide.0, io, doctor),
+        Verb::Install(a) => wired(a.0, io, install),
+        Verb::Uninstall(a) => wired(a.0, io, uninstall),
+        Verb::Status(a) => wired(a.0, io, status),
+        Verb::Doctor(a) => wired(a.0, io, doctor),
         Verb::Config { action } => settings::run(action, io),
     }
 }
