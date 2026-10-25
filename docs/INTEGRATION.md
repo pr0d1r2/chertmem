@@ -113,6 +113,80 @@ compressed form costs fewer tokens.
 Every `id` of an observation is its `chert:<id>` ref. `search` and
 `list_sessions` cover the current project.
 
+## Statusline badge
+
+`chert statusline` prints a one-line badge for Claude Code's status
+line, modeled after [itok](https://github.com/pr0d1r2/itok)'s
+`itok rate --statusline`:
+
+```text
+chert:3ms,13k,17.3MB
+```
+
+- `3ms` is the median reply time of the last 20 replies of the
+  project's running `chert mcp`, rounded up. With no `chert mcp` of the
+  project running it is `-ms`, and the `chert` label turns red; while
+  one runs the label is orange.
+- `13k` is how many observations the project has, shortened as itok
+  shortens its counts and rounded up: `99`, `1k`, `13k`, `1m`.
+- `17.3MB` is the size of the project's stored text, in `B`, `KB`,
+  `MB` or `GB` (1024-based), rounded up to a tenth.
+
+Each value is green, amber or red against the `statusline.*` keys in
+[Configuration](CONFIG.md): the reply time against `ms_green` and
+`ms_amber`, the size against `size_green` and `size_amber`, and the
+count by how well the cache window fits `cache.max_bytes`: amber from
+`fit_amber` percent of it, red once over it. A value with nothing
+measured behind it, such as the count before anything is stored, has
+no color.
+
+The badge reads only the catalog and the small heartbeat files a
+running `chert mcp` keeps under the data directory's `mcp/`: it never
+starts the cache or opens a partition file, and it always exits 0, so a
+missing data directory or a bad `chert.toml` shows `chert:-ms,0,0B`
+rather than an error.
+
+`--color auto`, the default, colors the badge when standard input
+holds Claude Code's statusline JSON or standard output is a terminal;
+`--color always` and `--color never` decide for it. The project is the
+JSON's `workspace.project_dir`, else its `cwd`, else the directory
+`chert statusline` runs in.
+
+To show it, set `statusLine` in `~/.claude/settings.json` to the
+command, by its full path:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/full/path/to/chert statusline"
+  }
+}
+```
+
+Or, to show it beside other badges, point `statusLine` at a script,
+for example `~/.claude/hooks/chert-statusline.sh`, that hands the same
+JSON to each:
+
+```sh
+#!/bin/sh
+# Claude Code's statusline JSON arrives once on stdin: keep it and pass
+# it to each badge.
+input=$(cat)
+chert=$(printf '%s' "$input" | chert statusline --color always)
+itok=$(printf '%s' "$input" | itok rate --statusline)
+printf '(%s) %s\n' "$chert" "$itok"
+```
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/hooks/chert-statusline.sh"
+  }
+}
+```
+
 ## Coming from cavemem
 
 chert keeps its own data directory and never touches cavemem's files,
