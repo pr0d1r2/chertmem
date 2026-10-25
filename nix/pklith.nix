@@ -2,6 +2,7 @@
 # The packages the generated hk steps run: `import ./nix/pklith.nix catalog`,
 # with pklith's catalog namespace (nixpkgs plus the tools nixpkgs lacks).
 catalog: [
+  catalog.actionlint
   catalog.cargo
   catalog.cargo-deny
   catalog.cargo-nextest

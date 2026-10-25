@@ -71,6 +71,10 @@ steps: Mapping<String, Config.Step> = new {
     glob = List("**/*.rs", "Cargo.toml", "clippy.toml")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'clippy: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; command -v cargo-clippy >/dev/null 2>&1 || { echo 'clippy: cargo-clippy is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo clippy --workspace --all-targets -q -- -D warnings || { echo 'clippy: clippy finding' >&2; exit 1; }"
   }
+  ["actionlint"] {
+    glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
+    check = "command -v actionlint >/dev/null 2>&1 || { echo 'actionlint: actionlint is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; actionlint {{files}} || { echo 'actionlint: workflow does not parse or type-check' >&2; exit 1; }"
+  }
   ["statix"] {
     glob = List("**/*.nix")
     check = #"command -v statix >/dev/null 2>&1 || { echo 'statix: statix is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; (for f in {{files}}; do statix check "$f" || exit 1; done) || { echo 'statix: nix anti-pattern; statix names the lint and its fix' >&2; exit 1; }"#
