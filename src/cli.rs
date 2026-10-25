@@ -30,6 +30,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 
+use crate::config::{self, Config};
+use crate::store::{Mode, Store};
 use args::{Cli, Command};
 
 /// What a verb reads and writes besides its arguments.
@@ -129,8 +131,23 @@ fn fail<E: Display>(e: E) -> String {
     e.to_string()
 }
 
-/// What every verb answers until it is wired (src/cli T1, T2).
-fn not_built<T>(verb: T) -> Done {
-    drop(verb);
-    Err("chert: not built yet (src/cli T2)".to_owned())
+/// The merged `chert.toml` of the home and project scope.
+fn load(io: &Io<'_>) -> Result<Config, String> {
+    let loaded = config::load_from(io.home, io.cwd).map_err(fail)?;
+    Ok(loaded.config)
+}
+
+/// The project's store, opened for reading.
+fn open(config: &Config, io: &Io<'_>) -> Result<Store, String> {
+    Store::open(config, io.cwd, Mode::Read).map_err(fail)
+}
+
+/// `text` and a newline on stdout.
+fn say(io: &mut Io<'_>, text: &str) -> Result<(), String> {
+    writeln!(io.stdout, "{text}").map_err(fail)
+}
+
+/// `text` on stdout as it is.
+fn put(io: &mut Io<'_>, text: &str) -> Result<(), String> {
+    write!(io.stdout, "{text}").map_err(fail)
 }

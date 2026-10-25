@@ -10,7 +10,7 @@ use clap::builder::PossibleValue;
 use clap::{Parser, Subcommand, ValueEnum};
 
 use super::{insight, meta, port, query, serve, setup, text, tiers};
-use crate::config::Span;
+use crate::config::{Span, Unit};
 use crate::hook::Ide;
 
 /// Persistent, partitioned memory for coding agents.
@@ -63,6 +63,30 @@ pub(super) enum Since {
     Ago(Span),
     /// Milliseconds since the Unix epoch.
     At(u64),
+}
+
+const HOUR: u64 = 3_600_000;
+const DAY: u64 = 86_400_000;
+/// A month as the cache counts it: 31 days, so `mo` errs long.
+const MONTH: u64 = 2_678_400_000;
+
+impl Since {
+    /// The time this names, in ms, at `now`.
+    pub(super) fn ms(self, now: u64) -> u64 {
+        match self {
+            Self::At(ms) => ms,
+            Self::Ago(span) => now.saturating_sub(span_ms(span)),
+        }
+    }
+}
+
+fn span_ms(span: Span) -> u64 {
+    let unit = match span.unit {
+        Unit::Hours => HOUR,
+        Unit::Days => DAY,
+        Unit::Months => MONTH,
+    };
+    u64::from(span.amount).saturating_mul(unit)
 }
 
 /// Parse a `--since` value: `<n>h|d|mo` (`config::Span`) or raw ms.

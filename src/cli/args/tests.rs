@@ -48,13 +48,23 @@ fn every_root_verb_is_a_top_level_subcommand() {
 }
 
 #[test]
-fn since_reads_a_span_or_raw_milliseconds() -> Test {
+fn since_reads_hours_days_and_months_back_from_now() -> Test {
+    // NOW less 2 h, 14 d and 31 d (a month as the cache counts it).
+    assert_eq!(since("2h")?.ms(NOW), 1_792_792_800_000);
+    assert_eq!(since("14d")?.ms(NOW), 1_791_590_400_000);
+    assert_eq!(since("1mo")?.ms(NOW), 1_790_121_600_000);
     let span = Span {
         amount: 3,
         unit: Unit::Days,
     };
     assert_eq!(since("3d")?, Since::Ago(span));
+    Ok(())
+}
+
+#[test]
+fn since_reads_raw_milliseconds_as_a_time() -> Test {
     assert_eq!(since("1792800000000")?, Since::At(NOW));
+    assert_eq!(since("5")?.ms(NOW), 5);
     Ok(())
 }
 
@@ -65,6 +75,12 @@ fn since_refuses_other_forms_naming_them() -> Test {
         return Err(format!("accepted: {refused:?}").into());
     };
     assert!(why.contains("<n>mo") && why.contains("yesterday"), "{why}");
+    Ok(())
+}
+
+#[test]
+fn a_span_past_the_epoch_saturates_at_0() -> Test {
+    assert_eq!(since("100000mo")?.ms(NOW), 0);
     Ok(())
 }
 
