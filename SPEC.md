@@ -85,7 +85,7 @@ V10: §C latency targets measured by benchmark step on push; regression fails ga
 V11: cache estimate > `cache.max_bytes` → warning names estimate & limit (D7); warnings → MCP log, `status`, `doctor`, ⊥ agent context (D16).
 V12: ⊥ private repo named in committed text (`paradigm/V37`).
 V13: ∀ outward act (push, publish, issue in other repo) has owner approval on record.
-V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 benchmark on generated fixtures of stated size; `docs/BENCHMARKS.md` explains run, read, targets & why, & ∀ measured number w/ date, machine, recount command (D29, `paradigm/V4`).
+V14: ∀ §C latency target, cache warm-up & partition scan at stated sizes: 1 benchmark on generated fixtures of stated size; `docs/BENCHMARKS.md` explains run, read, targets & why; `docs/PERFORMANCE.md`, generated from `benches/baseline.toml`, lists ∀ measured number w/ date, machine, recount command (D29, owner 2026-10-25, `paradigm/V4`).
 V15: ref resolution = exact match on stored issued ref, ⊥ prefix match ∴ later rows ⊥ make old ref ambiguous. lookup: current project first, then all; ∃ in > 1 project → error naming projects, ⊥ guess (B1).
 V16: dedupe only by event identity dialect supplies (e.g. a tool-use id), verified in recorded fixtures; ⊥ identity → every event kept. ⊥ dedupe by payload content ∵ identical payload = real repeat (same command twice) & mining counts it (D23) (B2).
 V17: injected context ≤ `inject.max_tokens` estimated tokens (bytes/4 as itok; exact o200k with feature `bpe`), refs & gists only (D28).

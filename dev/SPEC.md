@@ -22,7 +22,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 ## §I INTERFACES
 
 - cmd: `nix develop`; `.envrc` = `use flake`.
-- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `commit-msg <file>` `bench-gate`.
+- cmd: `cargo run -q -p chertmem-dev -- <guard> [files...]`; guard ∈ `name-guard` `no-core-worktree` `lock-graph` `rust-mirror` `tdd-order` `commit-msg <file>` `bench-gate` `perf-doc [--check]`.
 - file: `dev/tdd-order.exempt` — full commit id + reason per line; ∀ entry has a §B row. exit 0 hold · 1 finding (file:line & fix on stderr) · 2 usage | unreadable input.
 - file: `.private/denylist` — untracked, 1 name per line, `#` comments (`paradigm/V37`).
 
@@ -53,6 +53,7 @@ T5|x|`lock-graph`, RED → GREEN → gate row|V5,V6
 T6|x|`rust-mirror`, RED → GREEN → gate row|V7,V6
 T7|x|`tdd-order` + exempt file, RED → GREEN → gate row|V8,V6
 T8|x|`commit-msg` guard + hook, RED → GREEN → gate|V11,V6
+T9|.|`perf-doc [--check]`: `docs/PERFORMANCE.md` from `benches/baseline.toml`, RED → GREEN → gate row|V6
 
 ## §B BUGS
 
