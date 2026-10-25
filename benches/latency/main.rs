@@ -17,7 +17,8 @@ fn main() {
     } else {
         let c = criterion::Criterion::default();
         let c = harness::configured(c, &harness::PUSH).configure_from_args();
-        harness::run(c, &suites::ALL, suites::grid)
+        let out = harness::criterion_dir();
+        harness::bench(c, &out, &suites::ALL, suites::grid)
     };
     std::process::exit(code);
 }

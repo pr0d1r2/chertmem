@@ -47,3 +47,46 @@ fn a_hook_that_injects_nothing_or_notes_is_refused() -> crate::fixture::Res<()>
     let mut fine = super::measured(copy()?, move || outcome(Some("x"), None))?;
     fine()
 }
+
+#[test]
+fn a_note_on_any_measured_run_fails_it() -> crate::fixture::Res<()> {
+    // benches T5: a hook that stops writing mid-run must not be timed as
+    // a fast one.
+    let mut runs = 0_u32;
+    let run = move || {
+        runs = runs.saturating_add(1);
+        chertmem::hook::Outcome {
+            stdout: Some("x".to_owned()),
+            exit: 0,
+            note: (runs > 1).then(|| "no new id".to_owned()),
+        }
+    };
+    let copy = crate::fixture::Scratch::new("hook-noted-later")?;
+    let mut op = super::measured(copy, run)?;
+    let got = op().err().map(|e| e.to_string());
+    assert_eq!(got.as_deref(), Some("no new id"));
+    Ok(())
+}
+
+#[test]
+fn an_injecting_hook_outlasts_one_ms_worth_of_ids() -> crate::fixture::Res<()> {
+    // benches T5: a ms holds at least 768 ids (src/store R6); 2000 runs
+    // at one fixed ms ran out.
+    use crate::fixture::{Scratch, Spec, cached_in};
+    let base = Scratch::new("hook-ids")?;
+    let fx = cached_in(base.path(), Spec::new(41, 40, 1))?;
+    let mut op = super::session_start(&fx)?;
+    for _ in 0..2000 {
+        op()?;
+    }
+    Ok(())
+}
+
+#[test]
+fn the_clock_moves_back_1_ms_a_run_inside_the_newest_week() {
+    use crate::fixture::{END, WEEK};
+    let mut clock = super::Clock::default();
+    let ticks: Vec<u64> = (0..3).map(|_| clock.tick()).collect();
+    assert_eq!(ticks, [END - 1, END - 2, END - 3]);
+    assert_eq!((END - 1) / WEEK, (END - 1_000_000) / WEEK);
+}

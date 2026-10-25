@@ -146,6 +146,7 @@ name = "chertmem-dev"
 version = "0.1.0"
 dependencies = [
  "tinyjson",
+ "toml",
 ]
 
 [[package]]

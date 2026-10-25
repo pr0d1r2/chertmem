@@ -24,7 +24,7 @@ pub(crate) type Res<T> = Result<T, Box<dyn StdError>>;
 
 /// The generator's version: a change to the rows changes it, so a
 /// cached fixture of an older generator is built again.
-pub(crate) const GENERATOR: &str = "fixture-1";
+pub(crate) const GENERATOR: &str = "fixture-2";
 pub(crate) const DAY: u64 = 86_400_000;
 /// 1 `time_bucket` of the default `7d`, which partitions are cut by.
 pub(crate) const WEEK: u64 = 604_800_000;
@@ -99,7 +99,13 @@ impl Fnv {
     }
 }
 
-/// A built fixture: `project/`, the project root, and `data/`.
+/// Every fixture's project root (benches T5): a path never made, so
+/// its project id hashes this text, not the checkout the fixture was
+/// built in, and a copied fixture finds its rows. No `chert.toml` is
+/// read there, so the defaults hold.
+pub(crate) const ROOT: &str = "/chert-bench/project";
+
+/// A built fixture: `data/` and its `stamp`; the project is [`ROOT`].
 #[derive(Debug, Clone)]
 pub(crate) struct Fixture {
     pub(crate) dir: PathBuf,
@@ -107,8 +113,10 @@ pub(crate) struct Fixture {
 }
 
 impl Fixture {
-    pub(crate) fn root(&self) -> PathBuf {
-        self.dir.join("project")
+    /// The project root, [`ROOT`] for every fixture.
+    #[expect(clippy::unused_self, reason = "every fixture has 1 root")]
+    pub(crate) fn root(&self) -> &'static Path {
+        Path::new(ROOT)
     }
 
     pub(crate) fn data(&self) -> PathBuf {
@@ -117,14 +125,14 @@ impl Fixture {
 
     /// The defaults, no user file, data in `data/`.
     pub(crate) fn config(&self) -> Res<Config> {
-        let mut cfg = load_from(None, &self.root())?.config;
+        let mut cfg = load_from(None, self.root())?.config;
         cfg.storage.data_dir = Some(self.data());
         Ok(cfg)
     }
 
     /// A reading store on the fixture as cached.
     pub(crate) fn store(&self) -> Res<Store> {
-        Ok(Store::open(&self.config()?, &self.root(), Mode::Read)?)
+        Ok(Store::open(&self.config()?, self.root(), Mode::Read)?)
     }
 
     fn stamp(&self) -> PathBuf {
@@ -154,6 +162,9 @@ pub(crate) fn cached(spec: Spec) -> Res<Fixture> {
 /// The fixture of `spec` under `base`: built when its stamp is missing
 /// or of another generator, the stamp written last.
 pub(crate) fn cached_in(base: &Path, spec: Spec) -> Res<Fixture> {
+    if Path::new(ROOT).exists() {
+        return Err(format!("{ROOT} exists; fixture ids would hash it").into());
+    }
     let fx = Fixture {
         dir: base.join(spec.key()),
         spec,
@@ -168,7 +179,7 @@ pub(crate) fn cached_in(base: &Path, spec: Spec) -> Res<Fixture> {
 fn rebuild(fx: &Fixture) -> Res<()> {
     match fs::remove_dir_all(&fx.dir) {
         Err(e) if e.kind() != io::ErrorKind::NotFound => return Err(e.into()),
-        _ => fs::create_dir_all(fx.root())?,
+        _ => fs::create_dir_all(fx.data())?,
     }
     let start = Instant::now();
     build(fx)?;
@@ -182,7 +193,7 @@ fn rebuild(fx: &Fixture) -> Res<()> {
 /// Write every row of the fixture's spec.
 fn build(fx: &Fixture) -> Res<()> {
     let cfg = fx.config()?;
-    let mut store = Store::open(&cfg, &fx.root(), Mode::Read)?;
+    let mut store = Store::open(&cfg, fx.root(), Mode::Read)?;
     let grammar = cfg.compression.grammar.intensity();
     for row in Rows::new(fx.spec) {
         apply(&mut store, row, grammar)?;

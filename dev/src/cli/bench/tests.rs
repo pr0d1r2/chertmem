@@ -1,0 +1,128 @@
+use super::{BASELINE, INDEX, PAGE};
+use crate::cli::run;
+use std::error::Error;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+type Res = Result<(), Box<dyn Error>>;
+
+fn scratch(name: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let dir = std::env::temp_dir()
+        .join(format!("chertmem-dev-{}-bench-{name}", std::process::id()));
+    if dir.exists() {
+        fs::remove_dir_all(&dir)?;
+    }
+    fs::create_dir_all(dir.join("benches"))?;
+    fs::create_dir_all(dir.join("docs"))?;
+    Ok(dir)
+}
+
+fn args(list: &[&str]) -> Vec<String> {
+    list.iter().map(|s| (*s).to_owned()).collect()
+}
+
+/// A criterion run of 1 bench whose calls all took `ns`.
+fn plant(root: &Path, suite: &str, fixture: &str, ns: u32) -> Res {
+    let crit = root.join("target/criterion");
+    let new = crit.join(suite).join(fixture).join("new");
+    fs::create_dir_all(&new)?;
+    let estimates = format!(r#"{{"median":{{"point_estimate":{ns}.0}}}}"#);
+    fs::write(new.join("estimates.json"), estimates)?;
+    let sample = format!(
+        r#"{{"iters":[1.0,2.0],"times":[{ns}.0,{}.0]}}"#,
+        u64::from(ns).saturating_mul(2)
+    );
+    fs::write(new.join("sample.json"), sample)?;
+    fs::write(crit.join(INDEX), "get_observations\tget_observations\n")?;
+    Ok(())
+}
+
+/// A repository with 1 bench recorded at 1 ms.
+fn recorded(name: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let root = scratch(name)?;
+    plant(&root, "get_observations", "1k-p52", 1_000_000)?;
+    assert_eq!(run(&args(&["bench-record"]), &root), 0);
+    Ok(root)
+}
+
+#[test]
+fn bench_record_writes_a_row_of_this_machine() -> Res {
+    let root = recorded("record")?;
+    let text = fs::read_to_string(root.join(BASELINE))?;
+    let rows = crate::baseline::parse(&text)?;
+    let host = crate::host::this().ok_or("no host")?;
+    let r = rows.first().ok_or("no row")?;
+    assert_eq!(
+        (r.machine.as_str(), r.os.as_str()),
+        (host.machine.as_str(), host.os.as_str())
+    );
+    assert_eq!((rows.len(), r.median_ms), (1, 1.0));
+    Ok(())
+}
+
+#[test]
+fn bench_record_without_a_run_is_unreadable_input() -> Res {
+    assert_eq!(run(&args(&["bench-record"]), &scratch("no-run")?), 2);
+    let root = scratch("bad-baseline")?;
+    plant(&root, "get_observations", "1k-p52", 5)?;
+    fs::write(root.join(BASELINE), "[[row]]\n")?;
+    assert_eq!(run(&args(&["bench-record"]), &root), 2);
+    Ok(())
+}
+
+#[test]
+fn bench_gate_fails_a_planted_regression_and_holds_its_twin() -> Res {
+    // dev V6: 1 ms recorded; 1.4 ms holds, 1.6 ms is over 1 ms x 1.5.
+    let root = recorded("gate")?;
+    plant(&root, "get_observations", "1k-p52", 1_400_000)?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 0);
+    plant(&root, "get_observations", "1k-p52", 1_600_000)?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 1);
+    let unmeasured = args(&["bench-gate", "10k-p52"]);
+    assert_eq!(run(&unmeasured, &root), 2, "no fresh median to compare");
+    Ok(())
+}
+
+#[test]
+fn bench_gate_holds_on_another_machine_and_without_a_baseline() -> Res {
+    let root = recorded("other")?;
+    let text = fs::read_to_string(root.join(BASELINE))?;
+    let host = crate::host::this().ok_or("no host")?;
+    let other = text.replace(&host.machine, "Other CPU");
+    fs::write(root.join(BASELINE), other)?;
+    plant(&root, "get_observations", "1k-p52", 9_000_000)?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 0);
+    assert_eq!(run(&args(&["bench-gate"]), &scratch("none")?), 0);
+    fs::write(root.join(BASELINE), "not toml [")?;
+    assert_eq!(run(&args(&["bench-gate"]), &root), 2);
+    Ok(())
+}
+
+#[test]
+fn perf_doc_writes_the_page_and_check_finds_a_hand_edit() -> Res {
+    // dev V6: the planted hand edit fails --check; the written page holds.
+    let root = recorded("doc")?;
+    let spec = "- latency targets (D20), x: `get_observations` < 2 ms.\n";
+    fs::write(root.join("SPEC.md"), spec)?;
+    let check = args(&["perf-doc", "--check"]);
+    assert_eq!(run(&check, &root), 1, "no page yet");
+    assert_eq!(run(&args(&["perf-doc"]), &root), 0);
+    assert_eq!(run(&check, &root), 0);
+    let page = fs::read_to_string(root.join(PAGE))?;
+    let line = "| 1k-p52 | 1.000 ms | 1.000 ms | 2 ms | yes |";
+    assert!(page.contains(line), "{page}");
+    fs::write(root.join(PAGE), page.replace("1.000 ms", "0.500 ms"))?;
+    assert_eq!(run(&check, &root), 1);
+    Ok(())
+}
+
+#[test]
+fn perf_doc_without_inputs_or_with_a_bad_flag_exits_2() -> Res {
+    let root = recorded("doc-inputs")?;
+    assert_eq!(run(&args(&["perf-doc"]), &root), 2, "no SPEC.md");
+    assert_eq!(run(&args(&["perf-doc"]), &scratch("doc-empty")?), 2);
+    assert_eq!(run(&args(&["perf-doc", "--fix"]), &root), 2);
+    fs::write(root.join("SPEC.md"), "- latency targets: none\n")?;
+    assert_eq!(run(&args(&["perf-doc"]), &root), 2);
+    Ok(())
+}

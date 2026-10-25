@@ -28,7 +28,7 @@ sib|dev|root `flake.nix` devShell & `dev` crate (`publish = false`) gate steps
 ## §R RESEARCH
 
 id|topic|finding|src
-R1|as built, wave 9|V2 runner = `src/config/tests.rs` `config_page_names_every_key_and_no_other` (key rows ≡ `KEYS`) & `config_page_defaults_are_the_built_ones` (default cell ≡ `chert config show` w/o files, home → `~`); key row = table row, 1st cell backticked `section.key`; page read at run time ∴ missing page fails test ⊥ build. ∀ command & output on pages run 2026-10-25 vs release build in temp HOME & project, ⊥ real home. open TODOs: on_prompt cost (T2), conduct contact|`src/config/tests.rs`
+R1|as built, wave 9|V2 runner = `src/config/tests.rs` `config_page_names_every_key_and_no_other` (key rows ≡ `KEYS`) & `config_page_defaults_are_the_built_ones` (default cell ≡ `chert config show` w/o files, home → `~`); key row = table row, 1st cell backticked `section.key`; page read at run time ∴ missing page fails test ⊥ build. ∀ command & output on pages run 2026-10-25 vs release build in temp HOME & project, ⊥ real home. open TODO: conduct contact|`src/config/tests.rs`
 
 ## §V INVARIANTS
 
@@ -40,10 +40,10 @@ V3: ⊥ private repo named (`.:V12`).
 
 id|status|task|cites
 T1|x|`README.md` + routing|-
-T2|.|`docs/BENCHMARKS.md` from first baseline (`.:T16`)|V1
+T2|x|`docs/BENCHMARKS.md` from first baseline (`.:T16`); `docs/CONFIG.md` on_prompt links `prompt_inject`|V1
 T3|x|`docs/CONFIG.md` w/ parity test|V2
 T4|x|`docs/INTEGRATION.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `docs/LLM-DISCLAIMER.md`, `THIRD-PARTY-NOTICES.md`|V3
-T5|.|`docs/PERFORMANCE.md` generated from first baseline (`benches:T4`, `dev:T9`)|V1
+T5|x|`docs/PERFORMANCE.md` generated from first baseline (`benches:T4`, `dev:T9`)|V1
 
 ## §B BUGS
 
