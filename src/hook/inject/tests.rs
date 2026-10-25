@@ -169,6 +169,7 @@ fn from(source: &str) -> Payload {
         body: String::new(),
         paths: Vec::new(),
         source: Some(source.to_owned()),
+        cwd: None,
     }
 }
 

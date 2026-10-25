@@ -3,8 +3,10 @@
 //!
 //! Read per event: `source` (session-start), `prompt`
 //! (user-prompt-submit), `tool_name`, `tool_input`, `tool_response` and
-//! `tool_use_id` (post-tool-use), `last_assistant_message` (stop),
-//! `reason` (session-end). Only `tool_use_id` is an identity (root V16).
+//! `tool_use_id` (post-tool-use), the same with `error` for
+//! `tool_response` (post-tool-use-failure), `last_assistant_message`
+//! (stop), `reason` (session-end), `cwd` (every event, kept on the
+//! session's row, T10). Only `tool_use_id` is an identity (root V16).
 
 #[cfg(test)]
 mod tests;
@@ -30,6 +32,7 @@ pub(super) fn parse(kind: Kind, raw: &[u8]) -> Option<Payload> {
         body: body(kind, obj),
         paths: paths(kind, obj),
         source: text(obj, "source").map(str::to_owned),
+        cwd: text(obj, "cwd").map(str::to_owned),
     })
 }
 
@@ -37,10 +40,15 @@ fn text<'a>(obj: &'a Object, key: &str) -> Option<&'a str> {
     obj.get(key).and_then(Value::as_str)
 }
 
+/// Whether `kind` reports 1 tool call, done or failed.
+fn calls_tool(kind: Kind) -> bool {
+    matches!(kind, Kind::PostToolUse | Kind::PostToolUseFailure)
+}
+
 /// `tool_use_id`, the only identity Claude Code documents (root V16).
 fn identity(kind: Kind, obj: &Object) -> Option<String> {
     let id = text(obj, "tool_use_id").filter(|id| !id.is_empty());
-    id.filter(|_| kind == Kind::PostToolUse).map(str::to_owned)
+    id.filter(|_| calls_tool(kind)).map(str::to_owned)
 }
 
 fn body(kind: Kind, obj: &Object) -> String {
@@ -48,24 +56,30 @@ fn body(kind: Kind, obj: &Object) -> String {
     match kind {
         Kind::SessionStart => field("source"),
         Kind::UserPromptSubmit => field("prompt"),
-        Kind::PostToolUse => tool(obj),
+        Kind::PostToolUse => tool(obj, &json(obj, "tool_response")),
+        Kind::PostToolUseFailure => tool(obj, &field("error")),
         Kind::Stop => field("last_assistant_message"),
         Kind::SessionEnd => field("reason"),
     }
 }
 
-/// Tool name, input and response, 1 line each; input and response as
-/// compact JSON with sorted keys, so the same bytes every run (V3).
-fn tool(obj: &Object) -> String {
-    let json = |key| obj.get(key).map_or_else(String::new, Value::to_string);
+/// `obj[key]` as compact JSON with sorted keys, so the same bytes every
+/// run (V3); empty when absent.
+fn json(obj: &Object, key: &str) -> String {
+    obj.get(key).map_or_else(String::new, Value::to_string)
+}
+
+/// Tool name, input as JSON, then `outcome`, 1 line each: the response
+/// as JSON for a done call, the error text for a failed one (T9).
+fn tool(obj: &Object, outcome: &str) -> String {
     let name = text(obj, "tool_name").unwrap_or_default();
-    let (input, response) = (json("tool_input"), json("tool_response"));
-    format!("{name}\n{input}\n{response}")
+    let input = json(obj, "tool_input");
+    format!("{name}\n{input}\n{outcome}")
 }
 
 fn paths(kind: Kind, obj: &Object) -> Vec<String> {
     let input = obj.get("tool_input").and_then(Value::as_object);
-    let Some(input) = input.filter(|_| kind == Kind::PostToolUse) else {
+    let Some(input) = input.filter(|_| calls_tool(kind)) else {
         return Vec::new();
     };
     let found = PATH_KEYS.iter().filter_map(|key| text(input, key));

@@ -1,5 +1,7 @@
 use super::parse;
-use crate::hook::tests::{Res, SESSION, SESSION_2, Test, fixture, fixture_2};
+use crate::hook::tests::{
+    Res, SESSION, SESSION_2, SESSION_FAILURE, TWICE, Test, fixture, fixture_2,
+};
 use crate::hook::{Kind, Payload};
 
 fn parsed(kind: Kind) -> Res<Payload> {
@@ -13,15 +15,32 @@ fn payload(body: &str) -> Payload {
         body: body.to_owned(),
         paths: Vec::new(),
         source: None,
+        cwd: None,
     }
 }
+
+/// The `cwd` every recorded fixture reports (src/hook R1).
+const CWD: &str = "/workspace/project";
 
 /// `body` as the first recorded session's payload.
 fn recorded(body: &str) -> Payload {
     Payload {
         session: SESSION.to_owned(),
+        cwd: Some(CWD.to_owned()),
         ..payload(body)
     }
+}
+
+/// Every event reports its `cwd`; a payload without one has none (T10).
+#[test]
+fn every_event_keeps_its_cwd() -> Test {
+    for kind in Kind::ALL {
+        assert_eq!(parsed(kind)?.cwd.as_deref(), Some(CWD), "{kind:?}");
+    }
+    let bare = br#"{"session_id":"abc123","cwd":7}"#;
+    let got = parse(Kind::SessionStart, bare).map(|p| p.cwd);
+    assert_eq!(got, Some(None));
+    Ok(())
 }
 
 #[test]
@@ -62,11 +81,32 @@ fn post_tool_use_keeps_tool_input_response_and_id() -> Test {
     Ok(())
 }
 
+/// The recorded failure has no `tool_response`: its `error` takes the
+/// third line (src/hook T9).
+#[test]
+fn post_tool_use_failure_keeps_tool_input_error_and_id() -> Test {
+    let input = r#"{"command":"false","description":"Run the false command"}"#;
+    let want = Payload {
+        session: SESSION_FAILURE.to_owned(),
+        identity: Some("toolu_01FIXTURE000000000000003".to_owned()),
+        ..recorded(&format!("Bash\n{input}\nExit code 1"))
+    };
+    assert_eq!(parsed(Kind::PostToolUseFailure)?, want);
+    Ok(())
+}
+
+#[test]
+fn a_failure_without_its_fields_gives_empty_lines() {
+    let bare = br#"{"session_id":"abc123"}"#;
+    let got = parse(Kind::PostToolUseFailure, bare);
+    assert_eq!(got, Some(payload("\n\n")));
+}
+
 /// The second recorded session ran the same prompt: same payloads but
 /// its session and, for the tool call, its `tool_use_id`.
 #[test]
 fn the_second_session_differs_only_in_session_and_tool_use_id() -> Test {
-    for kind in Kind::ALL {
+    for kind in TWICE {
         let raw = fixture_2(kind)?;
         let second = parse(kind, &raw).ok_or("fixture did not parse")?;
         assert_eq!(second.session, SESSION_2, "{kind:?}");
@@ -106,6 +146,16 @@ fn only_post_tool_use_has_an_identity_or_paths() {
     let empty = br#"{"session_id":"abc123","tool_use_id":""}"#;
     let got = parse(Kind::PostToolUse, empty).and_then(|p| p.identity);
     assert_eq!(got, None);
+}
+
+/// A failed call is a tool call too: same identity and paths (T9).
+#[test]
+fn a_tool_failure_has_the_identity_and_paths_of_a_tool_use() {
+    let text = br#"{"session_id":"abc123","tool_use_id":"toolu_1",
+        "tool_input":{"file_path":"a.rs"}}"#;
+    let tool = parse(Kind::PostToolUse, text).map(|p| (p.identity, p.paths));
+    let failed = parse(Kind::PostToolUseFailure, text);
+    assert_eq!(failed.map(|p| (p.identity, p.paths)), tool);
 }
 
 #[test]

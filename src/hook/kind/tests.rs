@@ -10,6 +10,7 @@ fn every_kind_parses_back_from_its_cli_name() {
         "session-start",
         "user-prompt-submit",
         "post-tool-use",
+        "post-tool-use-failure",
         "stop",
         "session-end",
     ];
@@ -24,6 +25,7 @@ fn every_kind_names_its_claude_code_event() {
         "SessionStart",
         "UserPromptSubmit",
         "PostToolUse",
+        "PostToolUseFailure",
         "Stop",
         "SessionEnd",
     ];
