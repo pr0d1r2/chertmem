@@ -1,9 +1,12 @@
-//! Claude Code's `settings.json`: chert's hook entries and its MCP
-//! server entry, added, removed and read back (src/install T1, R2).
+//! Claude Code's config: chert's hook entries in `settings.json` and
+//! its MCP server entry in `~/.claude.json`, added, removed and read
+//! back (src/install T1, T3, R2, V4).
 //!
 //! An entry is chert's when it is what chert writes: a hook command
 //! `<chert> hook run <event> --ide claude-code` whose program is named
 //! `chert`, and the server `mcpServers.chert`. Nothing else is touched.
+//! A server under `mcpServers.chert` in `settings.json`, where chert
+//! once put it (B1), goes on install: Claude Code never read it there.
 
 #[cfg(test)]
 mod tests;
@@ -13,20 +16,23 @@ use std::path::Path;
 use serde_json::{Map, Value, json};
 
 use super::{Wire, WireState};
-use crate::hook::Kind;
 
-/// Each hook chert registers and Claude Code's name for its event. The
-/// `PostToolUseFailure` row joins once `src/hook` T9 reads it.
-const EVENTS: [(Kind, &str); 5] = [
-    (Kind::SessionStart, "SessionStart"),
-    (Kind::UserPromptSubmit, "UserPromptSubmit"),
-    (Kind::PostToolUse, "PostToolUse"),
-    (Kind::Stop, "Stop"),
-    (Kind::SessionEnd, "SessionEnd"),
+/// Each hook chert registers: the event as `chert hook run` names it,
+/// and Claude Code's name for it.
+const EVENTS: [(&str, &str); 6] = [
+    ("session-start", "SessionStart"),
+    ("user-prompt-submit", "UserPromptSubmit"),
+    ("post-tool-use", "PostToolUse"),
+    ("post-tool-use-failure", "PostToolUseFailure"),
+    ("stop", "Stop"),
+    ("session-end", "SessionEnd"),
 ];
 
 /// The `mcpServers` key chert's server sits under.
 pub(super) const SERVER: &str = "chert";
+
+/// The name a wrong-typed top of `~/.claude.json` is reported under.
+const MCP_FILE: &str = "claude.json";
 
 /// `text` safe as 1 shell word: as it is when it holds only characters
 /// no shell reads specially, else in single quotes.
@@ -44,16 +50,15 @@ pub(super) fn unquote(word: &str) -> String {
     inner.map_or_else(|| word.to_owned(), |w| w.replace(r"'\''", "'"))
 }
 
-/// The hook command for `kind`, running `chert`.
-pub(super) fn command(chert: &str, kind: Kind) -> String {
-    let event = kind.as_str();
+/// The hook command for `event`, running `chert`.
+pub(super) fn command(chert: &str, event: &str) -> String {
     format!("{} hook run {event} --ide claude-code", quote(chert))
 }
 
-/// Whether `command` is a hook chert wrote for `kind`, whichever
+/// Whether `command` is a hook chert wrote for `event`, whichever
 /// `chert` program it runs.
-pub(super) fn owned(command: &str, kind: Kind) -> bool {
-    let tail = format!(" hook run {} --ide claude-code", kind.as_str());
+pub(super) fn owned(command: &str, event: &str) -> bool {
+    let tail = format!(" hook run {event} --ide claude-code");
     command.strip_suffix(&tail).is_some_and(|program| {
         let program = unquote(program);
         Path::new(&program)
@@ -62,9 +67,10 @@ pub(super) fn owned(command: &str, kind: Kind) -> bool {
     })
 }
 
-/// The MCP server entry, as cavemem writes its own (src/install R2).
+/// The MCP server entry, as `claude mcp add --scope user chert --
+/// <chert> mcp` writes it (src/install T3).
 pub(super) fn server(chert: &str) -> Value {
-    json!({"command": chert, "args": ["mcp"]})
+    json!({"type": "stdio", "command": chert, "args": ["mcp"], "env": {}})
 }
 
 /// The object `value` holds, else the key it sits under as the error.
@@ -92,53 +98,82 @@ fn commands(groups: &[Value]) -> impl Iterator<Item = &str> {
         .filter_map(|h| h.get("command").and_then(Value::as_str))
 }
 
-/// Whether hook object `hook` is chert's for `kind`.
-fn owned_hook(hook: &Value, kind: Kind) -> bool {
+/// Whether hook object `hook` is chert's for `event`.
+fn owned_hook(hook: &Value, event: &str) -> bool {
     let command = hook.get("command").and_then(Value::as_str);
-    command.is_some_and(|c| owned(c, kind))
+    command.is_some_and(|c| owned(c, event))
 }
 
-/// Add chert's hooks and MCP server to `root`; a hook already there is
-/// kept as it is, and 1 running another `chert` is replaced.
+/// Add chert's hooks to settings `root`, and drop a server chert put
+/// there (B1); a hook already there is kept as it is, and 1 running
+/// another `chert` is replaced.
 ///
 /// # Errors
 /// The key whose value is of the wrong JSON type.
 pub(super) fn wire(root: &mut Value, chert: &str) -> Result<(), String> {
     let top = object(root, "settings")?;
     let hooks = object_at(top, "hooks")?;
-    for (kind, name) in EVENTS {
+    for (event, name) in EVENTS {
         let entry = hooks.entry(name).or_insert_with(|| json!([]));
         let groups = entry.as_array_mut().ok_or_else(|| name.to_owned())?;
-        hook_in(groups, &command(chert, kind), kind);
+        hook_in(groups, &command(chert, event), event);
     }
+    drop_server(top);
+    Ok(())
+}
+
+/// Add chert's server to `~/.claude.json` `root`.
+///
+/// # Errors
+/// The key whose value is of the wrong JSON type.
+pub(super) fn serve(root: &mut Value, chert: &str) -> Result<(), String> {
+    let top = object(root, MCP_FILE)?;
     object_at(top, "mcpServers")?.insert(SERVER.to_owned(), server(chert));
     Ok(())
 }
 
+/// Drop chert's server from `~/.claude.json` `root`, and `mcpServers`
+/// when that emptied it.
+///
+/// # Errors
+/// The top is not an object.
+pub(super) fn unserve(root: &mut Value) -> Result<(), String> {
+    drop_server(object(root, MCP_FILE)?);
+    Ok(())
+}
+
+/// Drop `mcpServers.chert` from `top`, and `mcpServers` when that
+/// emptied it; a wrong-typed `mcpServers` is left alone.
+fn drop_server(top: &mut Map<String, Value>) {
+    let servers = top.get_mut("mcpServers").and_then(Value::as_object_mut);
+    let gone = servers.is_some_and(|s| s.remove(SERVER).is_some());
+    prune(top, "mcpServers", gone);
+}
+
 /// Append a group running `cmd` unless 1 runs it already.
-fn hook_in(groups: &mut Vec<Value>, cmd: &str, kind: Kind) {
+fn hook_in(groups: &mut Vec<Value>, cmd: &str, event: &str) {
     if commands(groups).any(|c| c == cmd) {
         return;
     }
-    drop_owned(groups, kind);
+    drop_owned(groups, event);
     let hook = json!({"type": "command", "command": cmd});
     groups.push(json!({"hooks": [hook]}));
 }
 
-/// Drop chert's hooks for `kind`, and each group they leave empty;
+/// Drop chert's hooks for `event`, and each group they leave empty;
 /// whether any went.
-fn drop_owned(groups: &mut Vec<Value>, kind: Kind) -> bool {
+fn drop_owned(groups: &mut Vec<Value>, event: &str) -> bool {
     let mut changed = false;
-    groups.retain_mut(|g| keep_group(g, kind, &mut changed));
+    groups.retain_mut(|g| keep_group(g, event, &mut changed));
     changed
 }
 
 /// Drop chert's hooks from `group`; `false` when that emptied it.
-fn keep_group(group: &mut Value, kind: Kind, changed: &mut bool) -> bool {
+fn keep_group(group: &mut Value, event: &str, changed: &mut bool) -> bool {
     let inner = group.get_mut("hooks").and_then(Value::as_array_mut);
     let Some(inner) = inner else { return true };
     let before = inner.len();
-    inner.retain(|h| !owned_hook(h, kind));
+    inner.retain(|h| !owned_hook(h, event));
     if inner.len() == before {
         return true;
     }
@@ -146,8 +181,8 @@ fn keep_group(group: &mut Value, kind: Kind, changed: &mut bool) -> bool {
     !inner.is_empty()
 }
 
-/// Remove every entry chert wrote from `root`, and each container only
-/// that removal left empty; nothing else.
+/// Remove every entry chert wrote from settings `root`, and each
+/// container only that removal left empty; nothing else.
 ///
 /// # Errors
 /// The key whose value is of the wrong JSON type.
@@ -156,14 +191,12 @@ pub(super) fn unwire(root: &mut Value) -> Result<(), String> {
     let mut changed = false;
     if let Some(hooks) = top.get_mut("hooks") {
         let hooks = object(hooks, "hooks")?;
-        for (kind, name) in EVENTS {
-            changed |= unhook(hooks, name, kind)?;
+        for (event, name) in EVENTS {
+            changed |= unhook(hooks, name, event)?;
         }
     }
     prune(top, "hooks", changed);
-    let servers = top.get_mut("mcpServers").and_then(Value::as_object_mut);
-    let gone = servers.is_some_and(|s| s.remove(SERVER).is_some());
-    prune(top, "mcpServers", gone);
+    drop_server(top);
     Ok(())
 }
 
@@ -172,13 +205,13 @@ pub(super) fn unwire(root: &mut Value) -> Result<(), String> {
 fn unhook(
     hooks: &mut Map<String, Value>,
     name: &str,
-    kind: Kind,
+    event: &str,
 ) -> Result<bool, String> {
     let Some(entry) = hooks.get_mut(name) else {
         return Ok(false);
     };
     let groups = entry.as_array_mut().ok_or_else(|| name.to_owned())?;
-    let changed = drop_owned(groups, kind);
+    let changed = drop_owned(groups, event);
     prune(hooks, name, changed);
     Ok(changed)
 }
@@ -195,19 +228,22 @@ fn prune(map: &mut Map<String, Value>, key: &str, changed: bool) {
     }
 }
 
-/// How each of chert's entries stands in `root`, against the ones
-/// `chert` would write: hooks in event order, then the server.
-pub(super) fn wiring(root: &Value, chert: &str) -> Vec<Wire> {
-    let hooks = EVENTS.iter().map(|&(k, name)| hook(root, chert, k, name));
-    hooks.chain([server_wire(root, chert)]).collect()
+/// How each of chert's entries stands, hooks in `settings` in event
+/// order, then the server in `mcp`, against the ones `chert` would
+/// write.
+pub(super) fn wiring(settings: &Value, mcp: &Value, chert: &str) -> Vec<Wire> {
+    let hooks = EVENTS
+        .iter()
+        .map(|&(e, name)| hook(settings, chert, e, name));
+    hooks.chain([server_wire(mcp, chert)]).collect()
 }
 
 /// How the hook of event `name` stands.
-fn hook(root: &Value, chert: &str, kind: Kind, name: &str) -> Wire {
+fn hook(root: &Value, chert: &str, event: &str, name: &str) -> Wire {
     let at = root.get("hooks").and_then(|h| h.get(name));
     let groups = at.and_then(Value::as_array).map_or(&[][..], Vec::as_slice);
-    let want = command(chert, kind);
-    let other = commands(groups).find(|c| owned(c, kind));
+    let want = command(chert, event);
+    let other = commands(groups).find(|c| owned(c, event));
     let state = if commands(groups).any(|c| c == want) {
         WireState::Ok
     } else {

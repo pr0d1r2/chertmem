@@ -12,7 +12,7 @@ use crate::install::tests::{Scratch, Test};
 #[test]
 fn no_file_loads_as_an_empty_object_without_bytes() -> Test {
     let s = Scratch::new("settings-absent")?;
-    let got = load(&s.settings())?;
+    let got = load(&s.settings)?;
     assert_eq!((got.bytes, got.value), (None, json!({})));
     Ok(())
 }
@@ -41,7 +41,7 @@ fn the_backup_sits_beside_the_file() {
 #[test]
 fn back_up_keeps_the_first_bytes_only() -> Test {
     let s = Scratch::new("settings-backup")?;
-    let path = s.settings();
+    let path = s.settings.clone();
     back_up(&path, b"first")?;
     back_up(&path, b"second")?;
     assert_eq!(fs::read(backup(&path))?, b"first");
@@ -51,7 +51,7 @@ fn back_up_keeps_the_first_bytes_only() -> Test {
 #[test]
 fn write_makes_the_dir_and_leaves_no_temp_file() -> Test {
     let s = Scratch::new("settings-write")?;
-    let path = s.settings();
+    let path = s.settings.clone();
     write(&path, b"{}\n")?;
     assert_eq!(fs::read(&path)?, b"{}\n");
     let names: Vec<_> = fs::read_dir(path.parent().ok_or("no parent")?)?

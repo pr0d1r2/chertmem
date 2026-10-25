@@ -34,10 +34,11 @@ pub enum WireState {
     Other(String),
 }
 
-/// What `chert status` prints: each entry of the config file.
+/// What `chert status` prints: each entry of the 2 config files.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Status {
     pub settings: PathBuf,
+    pub mcp: PathBuf,
     pub wires: Vec<Wire>,
 }
 
@@ -123,17 +124,20 @@ impl Report {
     }
 }
 
-/// Each of chert's entries for `ide` in `target`.
+/// Each of chert's entries for `ide` in `target`: hooks read from its
+/// settings file, the server from its MCP file (V4).
 ///
 /// # Errors
-/// The config is unreadable or not JSON.
+/// A config file is unreadable or not JSON.
 pub fn status(target: &Target<'_>, ide: Ide) -> Result<Status, Error> {
-    let found = settings::load(target.settings)?;
+    let hooks = settings::load(target.settings)?.value;
+    let servers = settings::load(target.mcp)?.value;
     let wires = match ide {
-        Ide::ClaudeCode => claude_code::wiring(&found.value, target.chert),
+        Ide::ClaudeCode => claude_code::wiring(&hooks, &servers, target.chert),
     };
     Ok(Status {
         settings: target.settings.to_path_buf(),
+        mcp: target.mcp.to_path_buf(),
         wires,
     })
 }
