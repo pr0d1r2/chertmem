@@ -27,10 +27,24 @@ pub(super) struct Job<'a> {
     pub(super) rater: &'a Rater,
 }
 
+/// The partition connections the engine's own store keeps (V6): it
+/// opens only partitions with rows not yet counted, and a timeline's.
+pub(super) const OWN: usize = 4;
+
+/// The partition connections the pool keeps in total (V6, T11):
+/// with [`OWN`], [`Store::KEEP_OPEN`], about 200 files at most.
+const BUDGET: usize = 60;
+
+/// The most workers, so a store's share of [`BUDGET`] still holds 1
+/// year of weekly partitions: 52 dealt to 12 keep 5 each, the share.
+const MAX_WORKERS: usize = 12;
+
 /// The workers' reading stores, kept from query to query so a query
 /// opens no catalog and no partition file again (T6); dropped when the
 /// store's generation moves, as a seal, compaction, drop or repartition
-/// moves it, so no worker reads a file the catalog let go.
+/// moves it, so no worker reads a file the catalog let go. Each keeps
+/// an equal share of [`BUDGET`] open, the least recently used closed
+/// first, so the pool holds a bounded number of files (V6, T11).
 #[derive(Debug, Default)]
 pub(super) struct Pool {
     generation: u64,
@@ -38,16 +52,22 @@ pub(super) struct Pool {
 }
 
 impl Pool {
-    /// At least `n` stores, every one opened in `job`'s generation.
+    /// At least `n` stores, every one opened in `job`'s generation and
+    /// keeping its share of [`BUDGET`] open.
     fn fill(&mut self, job: &Job<'_>, n: usize) -> Result<(), Error> {
         if self.generation != job.generation {
             self.stores.clear();
             self.generation = job.generation;
         }
+        if self.stores.len() >= n {
+            return Ok(());
+        }
         while self.stores.len() < n {
             self.stores
                 .push(Store::open(job.cfg, job.root, Mode::Read)?);
         }
+        let share = BUDGET.checked_div(n).unwrap_or(BUDGET);
+        self.stores.iter_mut().for_each(|s| s.keep_open(share));
         Ok(())
     }
 }
@@ -101,10 +121,10 @@ fn candidates(
     Ok(rows.into_iter().map(|t| t.observation).collect())
 }
 
-/// 1 thread per partition, at most 1 per core.
+/// 1 thread per partition, at most 1 per core and [`MAX_WORKERS`].
 fn workers(parts: usize) -> usize {
     let cores = thread::available_parallelism().map_or(1, NonZeroUsize::get);
-    cores.min(parts).max(1)
+    cores.min(parts).clamp(1, MAX_WORKERS)
 }
 
 /// `paths` dealt round-robin into `n` groups; none empty when `n` does

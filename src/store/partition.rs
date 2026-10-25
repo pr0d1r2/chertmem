@@ -1,5 +1,6 @@
-//! Partition files: 1 connection each, opened on first use and kept
-//! (src/store C, root R5), and the rows they hold.
+//! Partition files: 1 connection each, opened on first use and kept,
+//! at most [`Store::KEEP_OPEN`] a store with the least recently used
+//! closed first (src/store C, T20, root R5), and the rows they hold.
 
 #[cfg(test)]
 mod tests;
@@ -13,15 +14,38 @@ use rusqlite::{Connection, OptionalExtension, params};
 use super::layout::{FNV_OFFSET, Place, Plan};
 use super::write::Row;
 use super::{
-    Error, Filter, Observation, Ref, State, Stats, catalog, cold, schema,
+    Error, Filter, Observation, Ref, State, Stats, Store, catalog, cold, schema,
 };
+
+impl Store {
+    /// The most partition connections a store keeps open unless told
+    /// otherwise; each holds up to 3 files (the file, `-wal`, `-shm`),
+    /// so 1 store stays under a 256 file limit (src/store T20).
+    pub const KEEP_OPEN: usize = 64;
+
+    /// Keep at most `n` partition connections open from now on, the
+    /// least recently used closed first; the 1 in use stays open even
+    /// when `n` is 0 (src/store T20, src/search V6).
+    pub fn keep_open(&mut self, n: usize) {
+        self.chunks.keep(n);
+    }
+}
+
+/// 1 open partition file and when it was last used.
+#[derive(Debug)]
+struct Kept {
+    conn: Connection,
+    used: u64,
+}
 
 /// The open partition files of 1 store.
 #[derive(Debug)]
 pub(super) struct Chunks {
     root: PathBuf,
     busy: Duration,
-    open: BTreeMap<String, Connection>,
+    open: BTreeMap<String, Kept>,
+    keep: usize,
+    clock: u64,
 }
 
 impl Chunks {
@@ -30,7 +54,28 @@ impl Chunks {
             root,
             busy,
             open: BTreeMap::new(),
+            keep: Store::KEEP_OPEN,
+            clock: 0,
         }
+    }
+
+    /// Keep at most `n` connections, the least recent closed now.
+    pub(super) fn keep(&mut self, n: usize) {
+        self.keep = n;
+        self.trim(n);
+    }
+
+    /// Close the least recently used connections until `n` are left.
+    fn trim(&mut self, n: usize) {
+        while let Some(path) = self.oldest().filter(|_| self.open.len() > n) {
+            self.open.remove(&path);
+        }
+    }
+
+    /// The path of the least recently used connection.
+    fn oldest(&self) -> Option<String> {
+        let oldest = self.open.iter().min_by_key(|(_, k)| k.used);
+        oldest.map(|(p, _)| p.clone())
     }
 
     /// The partition at `path` (relative to the data dir), made when new.
@@ -45,12 +90,18 @@ impl Chunks {
         path: &str,
         file: &Path,
     ) -> Result<&Connection, Error> {
-        if !self.open.contains_key(path) {
+        self.clock = self.clock.wrapping_add(1);
+        if let Some(kept) = self.open.get_mut(path) {
+            kept.used = self.clock;
+        } else {
             cold::dir_of(file)?;
             let conn = schema::open(file, self.busy, schema::PARTITION)?;
-            self.open.insert(path.to_owned(), conn);
+            self.trim(self.keep.saturating_sub(1));
+            let used = self.clock;
+            self.open.insert(path.to_owned(), Kept { conn, used });
         }
-        self.open.get(path).ok_or(Error::NoDataDir)
+        let kept = self.open.get(path).map(|k| &k.conn);
+        kept.ok_or(Error::NoDataDir)
     }
 
     /// The partition at `path` when its file exists, a cold one through

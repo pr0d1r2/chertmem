@@ -3,7 +3,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::{Job, Pool, candidates, parallel, split, workers};
+use super::{
+    BUDGET, Job, MAX_WORKERS, OWN, Pool, candidates, parallel, split, workers,
+};
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::search::rank::{Rater, top};
 use crate::search::terms::{Stats, Terms};
@@ -51,7 +53,13 @@ fn split_deals_every_path_once_and_no_group_empty() {
 fn workers_are_at_least_1_and_at_most_1_per_partition() {
     assert_eq!(workers(0), 1);
     assert_eq!(workers(1), 1);
-    assert!(workers(64) >= 1 && workers(64) <= 64);
+    assert!(workers(64) >= 1 && workers(64) <= MAX_WORKERS);
+}
+
+#[test]
+fn the_engine_and_its_pool_keep_at_most_64_partitions_open() {
+    assert_eq!(OWN.checked_add(BUDGET), Some(Store::KEEP_OPEN));
+    assert!(BUDGET / MAX_WORKERS >= 52_usize.div_ceil(MAX_WORKERS));
 }
 
 /// 12 rows, 1 per weekly partition, every 3rd scoring higher.
@@ -367,5 +375,42 @@ fn bench_a_2_term_query_over_10_5_rows_takes_under_10_ms() -> Test {
     let median = median(&mut e, &q)?;
     eprintln!("src/search T6: {ROWS} rows, 2 terms, median {median:?}");
     assert!(found > 0 && median < TARGET, "{found} hits, {median:?}");
+    Ok(())
+}
+
+// V6 (B2): a search over 520 partitions holds a bounded number of open
+// files, so it works under macOS's default limit of 256. `ulimit`
+// cannot be set without `unsafe`, so the test counts this process's
+// open descriptors instead.
+
+/// The descriptors this process holds open, as its fd dir lists them.
+fn open_fds() -> Result<usize, Box<dyn StdError>> {
+    let dir = if cfg!(target_os = "linux") {
+        "/proc/self/fd"
+    } else {
+        "/dev/fd"
+    };
+    Ok(fs::read_dir(dir)?.count())
+}
+
+/// 3 descriptors a partition connection (file, `-wal`, `-shm`) for at
+/// most 64 connections, and slack for the workers' catalogs and the
+/// terms file: under 256 with what the process held before.
+const FD_BOUND: usize = 3 * 64 + 48;
+
+#[test]
+fn a_search_over_520_partitions_holds_a_bounded_number_of_files() -> Test {
+    let (s, cfg, mut store) = fresh("merge-fds")?;
+    for i in 0..520_u64 {
+        let ts = BASE.saturating_add(i.saturating_mul(8 * DAY));
+        store.append(&event(ts, "s", "cargo test"))?;
+    }
+    drop(store);
+    let before = open_fds()?;
+    let mut e = engine(&s, &cfg)?;
+    let found = e.run(&query("cargo"), None)?.len();
+    let held = open_fds()?.saturating_sub(before);
+    eprintln!("V6: {before} fds before, {held} more after a search");
+    assert!(found > 0 && held <= FD_BOUND, "{found} hits, {held} fds");
     Ok(())
 }

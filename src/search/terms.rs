@@ -1,8 +1,10 @@
 //! Global term statistics, so BM25 IDF compares across partitions
 //! (src/search C, V2): `<data_dir>/search/terms.db`, kept from the
 //! store's public reads (src/search R1). Per partition it remembers the
-//! last seq counted and tails past it; a new `generation`, or a counted
-//! partition gone from the catalog, recounts from scratch.
+//! last seq counted and tails past it, and the catalog checksum it last
+//! saw, so a partition whose checksum stands is not opened at all (T11);
+//! a new `generation`, or a counted partition gone from the catalog,
+//! recounts from scratch.
 
 #[cfg(test)]
 mod tests;
@@ -21,6 +23,7 @@ const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS parts (path TEXT PRIMARY KEY, seq INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS terms (term TEXT PRIMARY KEY, df INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS seen (path TEXT PRIMARY KEY, sum TEXT NOT NULL);
 ";
 
 /// Recounts when the store moves during a refresh, before giving up.
@@ -110,8 +113,29 @@ fn count_all(
         clear(tx, generation)?;
     }
     for p in &parts {
-        absorb(tx, store, &p.path)?;
+        if !seen(tx, p)? {
+            absorb(tx, store, &p.path)?;
+            see(tx, p)?;
+        }
     }
+    Ok(())
+}
+
+/// Whether `p`'s catalog checksum is the 1 last counted: no row came
+/// since (src/store V6: the file is written first), so its file need
+/// not be opened (T11, V6).
+fn seen(tx: &Transaction<'_>, p: &Partition) -> Result<bool, Error> {
+    let sql = "SELECT sum FROM seen WHERE path = ?1";
+    let sum: Option<String> =
+        tx.query_row(sql, [&p.path], |r| r.get(0)).optional()?;
+    Ok(sum.as_ref() == Some(&p.stats.checksum))
+}
+
+/// Remember `p`'s catalog checksum as counted.
+fn see(tx: &Transaction<'_>, p: &Partition) -> Result<(), Error> {
+    let sql = "INSERT INTO seen (path, sum) VALUES (?1, ?2)
+      ON CONFLICT (path) DO UPDATE SET sum = excluded.sum";
+    tx.execute(sql, [&p.path, &p.stats.checksum])?;
     Ok(())
 }
 
@@ -138,7 +162,10 @@ fn stale(
 
 /// Forget every count; the next passes recount from seq 0.
 fn clear(tx: &Transaction<'_>, generation: u64) -> Result<(), Error> {
-    tx.execute_batch("DELETE FROM parts; DELETE FROM terms; DELETE FROM meta")?;
+    tx.execute_batch(
+        "DELETE FROM parts; DELETE FROM terms; DELETE FROM meta;
+        DELETE FROM seen",
+    )?;
     let sql = "INSERT INTO meta (key, value) VALUES ('generation', ?1),
       ('docs', 0), ('tokens', 0)";
     tx.execute(sql, [generation])?;

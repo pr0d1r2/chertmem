@@ -102,3 +102,21 @@ fn a_counted_partition_the_catalog_lost_forces_a_recount() -> Test {
     assert_eq!(terms.stats(&words(&["cargo"]))?.df, [2]);
     Ok(())
 }
+
+#[test]
+fn a_partition_whose_checksum_stands_is_not_read_again() -> Test {
+    let s = Scratch::new("terms-seen")?;
+    let mut store = s.open(&s.config()?)?;
+    three(&mut store)?;
+    let mut terms = Terms::open(&s.data())?;
+    terms.refresh(&mut store)?;
+    // Were a partition tailed again, it would count its rows twice.
+    terms.conn.execute("UPDATE parts SET seq = 0", [])?;
+    terms.refresh(&mut store)?;
+    assert_eq!(terms.stats(&words(&["cargo"]))?.df, [2]);
+    store.append(&event(BASE + DAY, "s", "cargo again"))?;
+    terms.refresh(&mut store)?;
+    let got = terms.stats(&words(&["cargo"]))?;
+    assert_eq!((got.docs, got.df), (5, vec![4]));
+    Ok(())
+}
