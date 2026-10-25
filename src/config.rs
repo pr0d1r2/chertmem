@@ -14,6 +14,7 @@ mod partition;
 mod sections;
 mod show;
 mod source;
+mod statusline;
 mod storage;
 
 use std::path::{Path, PathBuf};
@@ -28,6 +29,7 @@ pub use partition::{Dimension, Partition};
 pub use sections::{Embedding, Mining, Privacy, Provider, Search};
 pub use show::{Entry, Origin, get, show};
 pub use source::{Paths, paths};
+pub use statusline::Statusline;
 pub use storage::Storage;
 
 use cache::window_warning;
@@ -45,6 +47,7 @@ pub struct Config {
     pub privacy: Privacy,
     pub mining: Mining,
     pub inject: Inject,
+    pub statusline: Statusline,
 }
 
 /// A loaded [`Config`] and the warnings found on the way (src/config V2).
@@ -91,6 +94,7 @@ impl Config {
             privacy: Privacy::build(src)?,
             mining: Mining::build(src)?,
             inject: Inject::build(src)?,
+            statusline: Statusline::build(src)?,
         })
     }
 }
