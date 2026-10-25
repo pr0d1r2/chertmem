@@ -4,10 +4,12 @@
 #[cfg(test)]
 mod tests;
 
-use clap::Subcommand;
+use clap::{CommandFactory, Subcommand};
 use clap_complete::Shell;
+use clap_mangen::Man;
 
-use super::{Done, Io};
+use super::args::Cli;
+use super::{Done, Io, fail};
 
 #[derive(Debug, Clone, Copy, Subcommand)]
 pub(super) enum Verb {
@@ -17,6 +19,13 @@ pub(super) enum Verb {
     Man,
 }
 
-pub(super) fn run(verb: Verb, _io: &mut Io<'_>) -> Done {
-    super::not_built(verb)
+pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
+    let mut command = Cli::command();
+    match verb {
+        Verb::Completions { shell } => {
+            clap_complete::generate(shell, &mut command, "chert", io.stdout);
+        }
+        Verb::Man => Man::new(command).render(io.stdout).map_err(fail)?,
+    }
+    Ok(0)
 }

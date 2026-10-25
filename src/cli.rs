@@ -22,6 +22,7 @@ mod text;
 mod tiers;
 
 use std::ffi::OsString;
+use std::fmt::Display;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -121,6 +122,11 @@ fn refused(e: &clap::Error, io: &mut Io<'_>) -> u8 {
     };
     let _ = write!(sink, "{text}");
     u8::try_from(e.exit_code()).unwrap_or(2)
+}
+
+/// A library error as its message.
+fn fail<E: Display>(e: E) -> String {
+    e.to_string()
 }
 
 /// What every verb answers until it is wired (src/cli T1, T2).
