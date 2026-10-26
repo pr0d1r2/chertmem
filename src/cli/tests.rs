@@ -168,7 +168,8 @@ fn help_is_exit_0_on_stdout() -> Test {
 fn version_is_exit_0() -> Test {
     let s = Sandbox::new("version")?;
     let ran = s.run(&["--version"]);
-    assert_eq!((ran.code, ran.out.trim()), (0, "chert 0.0.0"));
+    let want = concat!("chert ", env!("CARGO_PKG_VERSION"));
+    assert_eq!((ran.code, ran.out.trim()), (0, want));
     Ok(())
 }
 

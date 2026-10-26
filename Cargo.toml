@@ -1,7 +1,9 @@
 [package]
 name = "chertmem"
-# Unpublished until the first release (T18).
-version = "0.0.0"
+# Bumped in a reviewed PR, then tagged from main by cargo-release; the
+# owner publishes separately with `cargo publish -p chertmem --locked`
+# (release.toml, paradigm/V32).
+version = "0.1.0"
 edition = "2024"
 # The fleet pin: nixpkgs-lock (nixos-26.05) carries rustc 1.95.
 rust-version = "1.95"
@@ -22,6 +24,7 @@ include = [
   "src/**/*.bin",
   "Cargo.toml",
   "Cargo.lock",
+  "CHANGELOG.md",
   "LICENSE",
   "README.md",
   "THIRD-PARTY-NOTICES.md",
