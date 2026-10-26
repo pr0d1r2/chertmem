@@ -22,6 +22,7 @@ include = [
   "src/**/*.bin",
   "Cargo.toml",
   "Cargo.lock",
+  "CHANGELOG.md",
   "LICENSE",
   "README.md",
   "THIRD-PARTY-NOTICES.md",
