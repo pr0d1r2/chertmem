@@ -20,7 +20,7 @@ Pre-1.0 SemVer permits a minor to break, and here each rung *is* a
 behaviour change, so that permission is used honestly rather than worked
 around.
 
-`0.1.0` is the first version published to crates.io.
+`0.1.0` is the first version for crates.io.
 
 ## [Unreleased]
 
