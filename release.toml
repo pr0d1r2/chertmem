@@ -1,0 +1,42 @@
+# The release, configured rather than scripted: cargo-release already does
+# the whole list (clean tree, allowed branch, tag scheme, dry run first,
+# verify, publish, push), as in lablith, pklith, sherd, itok and rekall
+# (paradigm/V32).
+#
+# THE BUMP DOES NOT HAPPEN HERE. cargo-release's default flow bumps the
+# version, commits it and pushes to the release branch; `main` is
+# protected (a pull request with the gate checks is required, admins
+# included), so the version is bumped in a reviewed change like any
+# other, and only the tail runs from `main` once it lands. Dry run is the
+# default; nothing happens without `--execute`:
+#
+#     cargo release hook                  # the gate; dry run is enough
+#     cargo release tag --execute
+#     cargo release publish --execute
+#     cargo release push --execute
+#
+# `hook` IS FIRST ON PURPOSE. `tag`, `publish` and `push` do not run
+# `pre-release-hook`; only the full flow and `cargo release hook` do.
+# Started at `tag`, a release would publish whatever the tree happens to
+# hold. Publishing needs the owner's explicit approval (root T18).
+
+# The branch a release may happen from: the one whose tree passed every
+# check, and whose commit the `.crate` records in `.cargo_vcs_info.json`.
+allow-branch = ["main"]
+
+# The gate, called rather than re-checked; a non-zero return aborts the
+# release. `--check` because a fixer would rewrite a tree cargo-release
+# has just found clean; `--no-fail-fast` because at release a complete
+# list beats an early one.
+pre-release-hook = ["hk", "check", "--all", "--check", "--no-fail-fast"]
+
+# `v<x.y.z>`, the fleet's tag scheme: the first tag decides the shape a
+# later API diff (`cargo semver-checks`) looks for.
+tag-name = "v{{version}}"
+
+# `verify` builds the packaged tarball alone before upload; the gate's
+# package-verify step already does, and this keeps the last word at the
+# upload. Written down because a default nobody wrote down is one
+# somebody turns off.
+publish = true
+verify = true
