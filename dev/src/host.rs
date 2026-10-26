@@ -45,7 +45,7 @@ fn machine() -> Option<String> {
 /// unreadable or names none.
 #[cfg(any(test, not(target_os = "macos")))]
 fn named(info: Option<&str>) -> Option<String> {
-    model(info?).or_else(|| output("uname", &["-m"]))
+    info.and_then(model).or_else(|| output("uname", &["-m"]))
 }
 
 /// The CPU model a Linux `/proc/cpuinfo` names.
@@ -54,21 +54,34 @@ fn model(info: &str) -> Option<String> {
     field(info, "model name").or_else(|| arm(info))
 }
 
-/// An ARM kernel prints no `model name`, only who designed the core and
-/// which part it is (Neoverse N1: implementer 0x41, part 0xd0c).
+/// An ARM kernel prints no `model name`, only who designed each core and
+/// which part it is (Neoverse N1: implementer 0x41, part 0xd0c). A mixed
+/// host names every distinct core, sorted, so its class is its own.
 #[cfg(any(test, not(target_os = "macos")))]
 fn arm(info: &str) -> Option<String> {
-    let implementer = field(info, "CPU implementer")?;
-    let part = field(info, "CPU part")?;
-    Some(format!("ARM implementer {implementer} part {part}"))
+    let parts = values(info, "CPU implementer").zip(values(info, "CPU part"));
+    let cores: std::collections::BTreeSet<String> = parts
+        .map(|(i, p)| format!("implementer {i} part {p}"))
+        .collect();
+    let cores: Vec<String> = cores.into_iter().collect();
+    (!cores.is_empty()).then(|| format!("ARM {}", cores.join(" + ")))
 }
 
 /// The trimmed value of the first `key : value` line whose key is `key`.
 #[cfg(any(test, not(target_os = "macos")))]
 fn field(info: &str, key: &str) -> Option<String> {
+    values(info, key).next().map(str::to_owned)
+}
+
+/// Every non-empty trimmed value of a `key : value` line keyed `key`.
+#[cfg(any(test, not(target_os = "macos")))]
+fn values<'a>(
+    info: &'a str,
+    key: &'a str,
+) -> impl Iterator<Item = &'a str> + 'a {
     info.lines()
-        .find_map(|l| l.split_once(':').filter(|(k, _)| k.trim() == key))
-        .map(|(_, v)| v.trim().to_owned())
+        .filter_map(move |l| l.split_once(':').filter(|(k, _)| k.trim() == key))
+        .map(|(_, v)| v.trim())
         .filter(|v| !v.is_empty())
 }
 
