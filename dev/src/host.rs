@@ -38,8 +38,14 @@ fn os() -> Option<String> {
 
 #[cfg(not(target_os = "macos"))]
 fn machine() -> Option<String> {
-    let info = std::fs::read_to_string("/proc/cpuinfo").ok()?;
-    model(&info).or_else(|| output("uname", &["-m"]))
+    named(std::fs::read_to_string("/proc/cpuinfo").ok().as_deref())
+}
+
+/// The CPU `/proc/cpuinfo` names, read or not; `uname -m` when it is
+/// unreadable or names none.
+#[cfg(any(test, not(target_os = "macos")))]
+fn named(info: Option<&str>) -> Option<String> {
+    model(info?).or_else(|| output("uname", &["-m"]))
 }
 
 /// The CPU model a Linux `/proc/cpuinfo` names.
