@@ -212,4 +212,8 @@ push: Mapping<String, Config.Step> = new {
     glob = List("**/*.rs", "Cargo.toml", "Cargo.lock", "benches/baseline.toml")
     check = "command -v cargo >/dev/null 2>&1 || { echo 'bench-gate: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo bench -q -p chertmem --bench latency -- '/10?k-p52$' && cargo run -q -p chertmem-dev -- bench-gate 1k-p52 10k-p52 || { echo 'bench-gate: a bench median is over its baseline x (1 + tolerance) on this machine class; see docs/BENCHMARKS.md' >&2; exit 1; }"
   }
+  ["package-verify"] {
+    glob = List("**/*.rs", "**/*.bin", "Cargo.toml", "Cargo.lock")
+    check = "command -v cargo >/dev/null 2>&1 || { echo 'package-verify: cargo is not on PATH; re-enter the dev shell. A MISSING TOOL, not a finding.' >&2; exit 1; }; cargo package -q -p chertmem --locked --allow-dirty || { echo 'package-verify: the packaged crate failed to build (cargo package); one cause: a file it reads is missing from Cargo.toml include' >&2; exit 1; }"
+  }
 }
