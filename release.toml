@@ -1,7 +1,8 @@
-# The release, configured rather than scripted: cargo-release already does
-# the whole list (clean tree, allowed branch, tag scheme, dry run first,
-# verify, publish, push), as in lablith, pklith, sherd, itok and rekall
-# (paradigm/V32).
+# The release, configured rather than scripted: cargo-release checks the
+# tree is clean and on an allowed branch, runs the gate, tags and pushes,
+# each a dry run first, as in lablith, pklith, sherd, itok and rekall
+# (paradigm/V32). It does NOT publish here (`publish = false` below):
+# the upload is a separate `cargo publish -p chertmem --locked`.
 #
 # THE BUMP DOES NOT HAPPEN HERE. cargo-release's default flow bumps the
 # version, commits it and pushes to the release branch; `main` is
@@ -17,8 +18,8 @@
 #
 # `hook` IS FIRST ON PURPOSE. `tag` and `push` do not run
 # `pre-release-hook`; only the full flow and `cargo release hook` do.
-# Started at `tag`, a release would publish whatever the tree happens to
-# hold. Publishing needs the owner's explicit approval (root T18).
+# Started at `tag`, a release would tag, and then publish, whatever the
+# tree happens to hold. Publishing needs the owner's explicit approval (root T18).
 
 # The branch a release may happen from: the one whose tree passed every
 # check, and whose commit the `.crate` records in `.cargo_vcs_info.json`.
