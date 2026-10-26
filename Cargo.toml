@@ -1,7 +1,8 @@
 [package]
 name = "chertmem"
-# Unpublished until the first release (T18).
-version = "0.0.0"
+# Bumped in a reviewed PR, then tagged and published from main by
+# cargo-release (release.toml, paradigm/V32).
+version = "0.1.0"
 edition = "2024"
 # The fleet pin: nixpkgs-lock (nixos-26.05) carries rustc 1.95.
 rust-version = "1.95"

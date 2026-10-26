@@ -35,8 +35,8 @@ is kept:
 
 ## Status
 
-Early, with no release yet (version 0.0.0); the interface may still
-change. The one IDE wired in v1 is [Claude Code](https://claude.com/claude-code):
+Early: 0.1.0 is the first release ([CHANGELOG](CHANGELOG.md)), and the
+interface may still change before 1.0. The one IDE wired in v1 is [Claude Code](https://claude.com/claude-code):
 other IDEs follow once their hook payloads are recorded. Not built yet:
 `chert export --for rekall` (the plain export works) and
 `embedding.provider = "openai"` (search falls back to keywords).
@@ -46,7 +46,13 @@ message names its fix.
 
 ## Install
 
-From a checkout, with Rust 1.95 or newer:
+From crates.io, with Rust 1.95 or newer:
+
+```sh
+cargo install chertmem --locked
+```
+
+Or from a checkout:
 
 ```sh
 git clone https://github.com/pr0d1r2/chertmem

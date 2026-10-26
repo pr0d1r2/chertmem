@@ -112,7 +112,7 @@ T14|x|issue in rekall proposing `chert` dialect for `catch`, w/ approval (D27): 
 T15|.|owner review of agent-answered round 2 (D11–D26)|-
 T16|x|`docs/BENCHMARKS.md`: human page on benchmarks, first measured numbers (`docs:T2`, `docs:T5`)|V14
 T17|x|`LICENSE` MIT (D26), before first push|V13
-T18|.|release: flake `packages.default` = `chert` ∀ `paradigm/V28` system; crates.io `chertmem` via `cargo-release` & Keep a Changelog (`paradigm/V32`); publish only w/ owner approval|V13
+T18|~|release (crates.io prepared; flake open): flake `packages.default` = `chert` ∀ `paradigm/V28` system; crates.io `chertmem` via `cargo-release` & Keep a Changelog (`paradigm/V32`); publish only w/ owner approval|V13
 
 ## §B BUGS
 
