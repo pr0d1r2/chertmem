@@ -32,7 +32,7 @@ fn a_mixed_core_arm_cpuinfo_names_every_distinct_core_in_order() {
             "processor\t: 0\nCPU implementer\t: 0x41\nCPU part\t: {part}\n\n"
         )
     };
-    let mixed = [block("0xd05"), block("0xd05"), block("0xd0b")].concat();
+    let mixed = [block("0xd0b"), block("0xd05"), block("0xd0b")].concat();
     let named = model(&mixed);
     let want = "ARM implementer 0x41 part 0xd05 + implementer 0x41 part 0xd0b";
     assert_eq!(named.as_deref(), Some(want));
