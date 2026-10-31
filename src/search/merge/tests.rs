@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use super::{
-    BUDGET, Job, MAX_WORKERS, OWN, Pool, candidates, deal, parallel, split,
-    workers,
+    BUDGET, Job, MAX_WORKERS, OWN, Pool, candidates, deal, parallel, scored,
+    split, workers,
 };
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::search::rank::{Rater, top};
@@ -49,6 +49,24 @@ fn deal_cuts_rows_into_near_equal_parts_and_loses_none() {
     assert_eq!(all, (0..7).collect::<Vec<u32>>());
     assert_eq!(deal(vec![1, 2], 5).len(), 2);
     assert_eq!(deal(Vec::<u32>::new(), 3).len(), 0);
+}
+
+#[test]
+fn threads_score_the_same_best_as_1() -> Test {
+    let (s, _cfg, mut store) = fresh("merge-threads")?;
+    twelve(&mut store)?;
+    let mut terms = Terms::open(&s.data())?;
+    terms.refresh(&mut store)?;
+    let rater = rater(terms.stats(&["cargo".into()])?, 5);
+    let rows = store.observations(&Filter::default())?;
+    let mut many = Vec::new();
+    for _ in 0..500 {
+        many.extend(rows.iter().cloned());
+    }
+    assert!(many.len() > super::THREAD_ROWS);
+    let one = scored(&rater, many.clone(), 1)?;
+    assert_eq!(scored(&rater, many, 4)?, one);
+    Ok(())
 }
 
 #[test]
