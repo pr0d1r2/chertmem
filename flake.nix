@@ -1,5 +1,5 @@
 {
-  description = "chertmem -- persistent, partitioned memory for coding agents (dev shell)";
+  description = "chertmem -- persistent, partitioned memory for coding agents";
 
   # hk and the fleet tools are pushed to this cache. Without the substituter
   # every entry into the dev shell builds them from source.
@@ -151,6 +151,28 @@
       ];
     in
     {
+      # `chert` on every paradigm/V28 system (root T18). The test suite runs
+      # in the gate, not here: it needs Node for the grammar oracle.
+      packages = forAll (pkgs: {
+        default = pkgs.rustPlatform.buildRustPackage {
+          pname = "chertmem";
+          version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
+          src = pkgs.lib.cleanSource ./.;
+          cargoLock.lockFile = ./Cargo.lock;
+          cargoBuildFlags = [
+            "-p"
+            "chertmem"
+          ];
+          doCheck = false;
+          meta = {
+            description = "Persistent, partitioned memory for coding agents";
+            homepage = "https://github.com/pr0d1r2/chertmem";
+            license = pkgs.lib.licenses.mit;
+            mainProgram = "chert";
+          };
+        };
+      });
+
       devShells = forAll (
         pkgs:
         let

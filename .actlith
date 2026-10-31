@@ -13,9 +13,11 @@ format 1
 # the rest. The push gate builds the crate, runs every test, coverage and
 # the release bench, so the job gets 60 minutes, not the default 30.
 #
-# There is no `build` row: it needs a flake package, and the flake has
-# only the dev shell until `packages.default` lands (root T18).
+# The build kind runs `nix build` of the flake's `packages.default` on
+# every hosted system (root T18); x86_64-darwin is built on the owner's
+# Intel Mac, as the gate is.
 
 ## workflows
 id|kind|systems|cache|args
 ci|gate|x86_64-linux,aarch64-linux,aarch64-darwin|pr0d1r2|timeout=60
+build|build|x86_64-linux,aarch64-linux,aarch64-darwin|pr0d1r2|package=default
