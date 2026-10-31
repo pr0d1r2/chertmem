@@ -48,7 +48,7 @@ V2: `main.rs` only calls `cli::run` & maps its result to exit code.
 ## §T TASKS
 
 id|status|task|cites
-T1|.|`Cargo.toml` workspace + crate skeleton, `lib.rs` module list, `main.rs`|V2
+T1|x|`Cargo.toml` workspace + crate skeleton, `lib.rs` module list, `main.rs`|V2
 T2|.|module-edge test|V1
 
 ## §B BUGS
