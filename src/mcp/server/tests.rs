@@ -1,10 +1,19 @@
 //! Each tool over a whole session against a scratch store: names and
 //! fields as cavemem 0.2.1 (V1), errors as tool results.
 
+use std::fs;
+use std::thread;
+use std::time::{Duration, Instant};
+
 use serde_json::{Value, json};
 
-use crate::mcp::tests::{BASE, Boxed, Scratch, Test, req, session};
-use crate::store::{Mode, SessionStart, Store};
+use super::Server;
+use crate::config::{Span, Unit};
+use crate::mcp::Ctx;
+use crate::mcp::tests::{
+    BASE, Boxed, Lines, Scratch, Test, env, event, req, session,
+};
+use crate::store::{Appended, Mode, Ref, SessionStart, Store};
 
 /// The result of calling tool `name` with `arguments` in a session.
 fn tool(s: &Scratch, name: &str, arguments: &Value) -> Boxed<Value> {
@@ -140,5 +149,102 @@ fn list_sessions_answers_newest_first_ended_at_null_while_running() -> Test {
     assert_eq!(got, want);
     let one = payload(&tool(&s, "list_sessions", &json!({"limit": 1}))?)?;
     assert_eq!(one, json!([row("s2", LATER, None)]));
+    Ok(())
+}
+
+// T5: the 3 parts of a server share 1 budget of partition connections.
+// `ulimit` cannot be set without `unsafe`, so the test counts this
+// process's open descriptors, as src/search V6's does.
+
+/// The descriptors this process holds open, as its fd dir lists them.
+fn open_fds() -> Boxed<usize> {
+    let dir = if cfg!(target_os = "linux") {
+        "/proc/self/fd"
+    } else {
+        "/dev/fd"
+    };
+    Ok(fs::read_dir(dir)?.count())
+}
+
+/// 3 descriptors a partition connection for at most 64 connections, and
+/// slack for the catalogs and the terms file: under 256 with the rest.
+const FD_BOUND: usize = 3 * 64 + 48;
+
+/// 8 days, past the 7-day bucket: every row its own partition.
+const STEP: u64 = 8 * 24 * 3600 * 1000;
+
+/// 1 row in each of 520 partitions, newest first back from [`BASE`].
+fn spread(s: &Scratch) -> Boxed<Vec<Ref>> {
+    let mut store = Store::open(&s.cfg, &s.root(), Mode::Read)?;
+    let mut refs = Vec::new();
+    for i in 0..520_u64 {
+        let ts = BASE.saturating_sub(i.saturating_mul(STEP));
+        match store.append(&event(ts, "cargo test"))? {
+            Appended::Stored(r) => refs.push(r),
+            Appended::Spooled => return Err("spooled".into()),
+        }
+    }
+    Ok(refs)
+}
+
+/// Wait up to 60 s for the cache thread to finish its warm-up.
+fn warmed(server: &Server) -> Test {
+    let start = Instant::now();
+    while !server.cache.is_warm()? {
+        if start.elapsed() > Duration::from_mins(1) {
+            return Err("cache never warmed".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    Ok(())
+}
+
+/// Call tool `name` on `server`; it must not fail.
+fn call(server: &mut Server, name: &str, arguments: &Value) -> Test {
+    let params = json!({"name": name, "arguments": arguments});
+    let line = req(1, "tools/call", &params).to_string();
+    let got = server.reply(&line).ok_or("no reply")?;
+    assert!(got.pointer("/result/isError").is_none(), "{got}");
+    Ok(())
+}
+
+/// Reach every partition: warm-up the window's, `get_observations`
+/// each row's at the tool's 50 refs a call, a search's pool the rest.
+fn read_everything(server: &mut Server, refs: &[Ref]) -> Test {
+    warmed(server)?;
+    for chunk in refs.chunks(50) {
+        let ids: Vec<String> = chunk.iter().map(ToString::to_string).collect();
+        call(server, "get_observations", &json!({"ids": ids}))?;
+    }
+    call(server, "search", &json!({"query": "cargo"}))
+}
+
+/// A scratch of 520 partitions, half in the window and the rest for a
+/// search's pool, and the refs of its rows.
+fn spread_scratch() -> Boxed<(Scratch, Vec<Ref>)> {
+    let mut s = Scratch::new("fds")?;
+    s.cfg.cache.window = Span {
+        amount: 2000,
+        unit: Unit::Days,
+    };
+    let refs = spread(&s)?;
+    Ok((s, refs))
+}
+
+#[test]
+fn a_server_over_520_partitions_holds_a_bounded_number_of_files() -> Test {
+    let (s, refs) = spread_scratch()?;
+    let (before, root) = (open_fds()?, s.root());
+    let lines = Lines::default();
+    let (config, env) = (&s.cfg, env(&lines));
+    let mut server = Server::open(&Ctx {
+        config,
+        root: &root,
+        env,
+    })?;
+    read_everything(&mut server, &refs)?;
+    let held = open_fds()?.saturating_sub(before);
+    eprintln!("mcp T5: {before} fds before, {held} more with a server up");
+    assert!(held <= FD_BOUND, "{held} fds");
     Ok(())
 }
