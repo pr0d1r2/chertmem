@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use super::{
-    BUDGET, Job, MAX_WORKERS, OWN, Pool, candidates, parallel, split, workers,
+    BUDGET, Job, MAX_WORKERS, OWN, Pool, candidates, deal, parallel, split,
+    workers,
 };
 use crate::config::{Config, Dimension, Span, Unit};
 use crate::search::rank::{Rater, top};
@@ -36,6 +37,18 @@ fn rater(stats: Stats, keep: usize) -> Rater {
         session: None,
         keep,
     }
+}
+
+#[test]
+fn deal_cuts_rows_into_near_equal_parts_and_loses_none() {
+    let parts = deal((0..7).collect::<Vec<u32>>(), 3);
+    let sizes: Vec<usize> = parts.iter().map(Vec::len).collect();
+    assert_eq!(sizes, [3, 2, 2]);
+    let mut all = parts.concat();
+    all.sort_unstable();
+    assert_eq!(all, (0..7).collect::<Vec<u32>>());
+    assert_eq!(deal(vec![1, 2], 5).len(), 2);
+    assert_eq!(deal(Vec::<u32>::new(), 3).len(), 0);
 }
 
 #[test]

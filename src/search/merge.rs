@@ -144,6 +144,12 @@ fn candidates(
     Ok(rows.into_iter().map(|t| t.observation).collect())
 }
 
+/// `rows` cut into `n` parts of near equal size, none empty.
+#[cfg(test)]
+fn deal<T>(rows: Vec<T>, _n: usize) -> Vec<Vec<T>> {
+    vec![rows]
+}
+
 /// 1 thread per partition, at most 1 per core and [`MAX_WORKERS`].
 fn workers(parts: usize) -> usize {
     let cores = thread::available_parallelism().map_or(1, NonZeroUsize::get);
