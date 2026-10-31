@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
-use super::Server;
+use super::{ENGINE, GET, Server, WINDOW};
 use crate::config::{Span, Unit};
 use crate::mcp::Ctx;
 use crate::mcp::tests::{
@@ -229,6 +229,12 @@ fn spread_scratch() -> Boxed<(Scratch, Vec<Ref>)> {
     };
     let refs = spread(&s)?;
     Ok((s, refs))
+}
+
+#[test]
+fn the_3_parts_share_1_store_budget() {
+    let total = WINDOW.saturating_add(GET).saturating_add(ENGINE);
+    assert_eq!(total, Store::KEEP_OPEN);
 }
 
 #[test]

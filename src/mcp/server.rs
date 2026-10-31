@@ -14,6 +14,18 @@ use crate::cache::{Cache, Handle};
 use crate::search::{self, Engine, Query};
 use crate::store::{Mode, Ref, Store};
 
+/// The cache window store's partition connections (T5): the default
+/// 28 d window of 7 d buckets spans 5 partitions.
+const WINDOW: usize = 8;
+
+/// The `get_observations` store's partition connections (T5): rows
+/// asked for are mostly recent.
+const GET: usize = 4;
+
+/// The engine's partition connections (T5), the rest of
+/// [`Store::KEEP_OPEN`], so 1 server stays under a 256 file limit.
+const ENGINE: usize = 52;
+
 /// What a session reads: the engine for `search` and `timeline`, the
 /// cache it searches through, a store for `get_observations`.
 pub(super) struct Server {
@@ -28,12 +40,17 @@ impl Server {
     /// keeping search's keyword index (src/search T9).
     pub(super) fn open(ctx: &Ctx<'_>) -> Result<Self, Error> {
         let (cfg, root) = (ctx.config, ctx.root);
-        let window = Store::open(cfg, root, Mode::Read)?;
+        let mut window = Store::open(cfg, root, Mode::Read)?;
+        window.keep_open(WINDOW);
+        let mut store = Store::open(cfg, root, Mode::Read)?;
+        store.keep_open(GET);
+        let mut engine = Engine::open(cfg, root)?;
+        engine.keep_open(ENGINE);
         let env = ctx.env.clone();
         Ok(Self {
-            engine: Engine::open(cfg, root)?,
+            engine,
             cache: Cache::start_indexed(window, cfg, env, search::index()),
-            store: Store::open(cfg, root, Mode::Read)?,
+            store,
         })
     }
 

@@ -45,15 +45,39 @@ const MAX_WORKERS: usize = 12;
 /// moves it, so no worker reads a file the catalog let go. Each keeps
 /// an equal share of [`BUDGET`] open, the least recently used closed
 /// first, so the pool holds a bounded number of files (V6, T11).
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct Pool {
     generation: u64,
     stores: Vec<Store>,
+    budget: usize,
+}
+
+impl Default for Pool {
+    fn default() -> Self {
+        Self {
+            generation: 0,
+            stores: Vec::new(),
+            budget: BUDGET,
+        }
+    }
 }
 
 impl Pool {
+    /// Keep `budget` connections in total from now on (src/mcp T5).
+    pub(super) fn keep_open(&mut self, budget: usize) {
+        self.budget = budget;
+        self.share();
+    }
+
+    /// Give every store an equal share of the budget.
+    fn share(&mut self) {
+        let share = self.budget.checked_div(self.stores.len());
+        let share = share.unwrap_or(self.budget);
+        self.stores.iter_mut().for_each(|s| s.keep_open(share));
+    }
+
     /// At least `n` stores, every one opened in `job`'s generation and
-    /// keeping its share of [`BUDGET`] open.
+    /// keeping its share of the budget open.
     fn fill(&mut self, job: &Job<'_>, n: usize) -> Result<(), Error> {
         if self.generation != job.generation {
             self.stores.clear();
@@ -66,8 +90,7 @@ impl Pool {
             self.stores
                 .push(Store::open(job.cfg, job.root, Mode::Read)?);
         }
-        let share = BUDGET.checked_div(n).unwrap_or(BUDGET);
-        self.stores.iter_mut().for_each(|s| s.keep_open(share));
+        self.share();
         Ok(())
     }
 }
