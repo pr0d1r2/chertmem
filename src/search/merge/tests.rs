@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::error::Error as StdError;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -8,13 +9,13 @@ use super::{
     split, workers,
 };
 use crate::config::{Config, Dimension, Span, Unit};
-use crate::search::rank::{Rater, top};
+use crate::search::rank::{Rater, Scored, top};
 use crate::search::terms::{Stats, Terms};
 use crate::search::tests::{
     BASE, DAY, Scratch, Test, engine, event, fresh, query,
 };
 use crate::search::{Engine, Hit, Query};
-use crate::store::{Filter, Mode, Store, project_id};
+use crate::store::{Filter, Mode, Observation, Store, project_id};
 
 fn paths(n: usize) -> Vec<String> {
     (0..n).map(|i| format!("p{i}")).collect()
@@ -51,6 +52,32 @@ fn deal_cuts_rows_into_near_equal_parts_and_loses_none() {
     assert_eq!(deal(Vec::<u32>::new(), 3).len(), 0);
 }
 
+/// Where the 5 best rows sit among [`DISTINCT`]: at least 1 in each of 4
+/// dealt parts of 1000.
+const BEST_AT: [usize; 5] = [0, 1000, 2000, 3000, 3999];
+const DISTINCT: usize = 4000;
+
+/// [`DISTINCT`] rows from `like`: each its own id, the rows at
+/// [`BEST_AT`] the only ones saying `cargo` 3 times.
+fn distinct(like: &Observation) -> Vec<Observation> {
+    let row = |i: usize| {
+        let mut row = like.clone();
+        row.id = format!("{i:026}");
+        row.body = if BEST_AT.contains(&i) {
+            "cargo cargo cargo x".into()
+        } else {
+            format!("cargo test {i}")
+        };
+        row
+    };
+    (0..DISTINCT).map(row).collect()
+}
+
+/// The ids of `got`.
+fn ids(got: &[Scored]) -> BTreeSet<String> {
+    got.iter().map(|r| r.row.id.clone()).collect()
+}
+
 #[test]
 fn threads_score_the_same_best_as_1() -> Test {
     let (s, _cfg, mut store) = fresh("merge-threads")?;
@@ -59,12 +86,12 @@ fn threads_score_the_same_best_as_1() -> Test {
     terms.refresh(&mut store)?;
     let rater = rater(terms.stats(&["cargo".into()])?, 5);
     let rows = store.observations(&Filter::default())?;
-    let mut many = Vec::new();
-    for _ in 0..500 {
-        many.extend(rows.iter().cloned());
-    }
-    assert!(many.len() > super::THREAD_ROWS);
+    let many = distinct(rows.first().ok_or("no row")?);
     let one = scored(&rater, many.clone(), 1)?;
+    assert_eq!(
+        ids(&one),
+        BEST_AT.iter().map(|i| format!("{i:026}")).collect()
+    );
     assert_eq!(scored(&rater, many, 4)?, one);
     Ok(())
 }
