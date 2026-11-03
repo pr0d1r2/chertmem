@@ -13,6 +13,7 @@ use crate::mcp::Ctx;
 use crate::mcp::tests::{
     BASE, Boxed, Lines, Scratch, Test, env, event, req, session,
 };
+use crate::search::Query;
 use crate::store::{Appended, Mode, Ref, SessionStart, Store};
 
 /// The result of calling tool `name` with `arguments` in a session.
@@ -209,14 +210,23 @@ fn call(server: &mut Server, name: &str, arguments: &Value) -> Test {
 }
 
 /// Reach every partition: warm-up the window's, `get_observations`
-/// each row's at the tool's 50 refs a call, a search's pool the rest.
+/// each row's at the tool's 50 refs a call, and the engine's pool all of
+/// them in a search with no cache; the tool's search goes through the
+/// cache, so it alone would leave the pool closed.
 fn read_everything(server: &mut Server, refs: &[Ref]) -> Test {
     warmed(server)?;
     for chunk in refs.chunks(50) {
         let ids: Vec<String> = chunk.iter().map(ToString::to_string).collect();
         call(server, "get_observations", &json!({"ids": ids}))?;
     }
-    call(server, "search", &json!({"query": "cargo"}))
+    call(server, "search", &json!({"query": "cargo"}))?;
+    let q = Query {
+        text: "cargo".into(),
+        project: Some(server.engine.project().to_owned()),
+        ..Query::default()
+    };
+    assert!(!server.engine.run(&q, None)?.is_empty(), "no uncached hit");
+    Ok(())
 }
 
 /// A scratch of 520 partitions, half in the window and the rest for a
