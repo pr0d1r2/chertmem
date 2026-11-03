@@ -125,22 +125,34 @@ Target: recent-window search under 10 ms.
 | fixture | median | p95 | target | pass |
 | --- | ---: | ---: | ---: | --- |
 | 1k-p52 | 1.421 ms | 1.465 ms | 10 ms | yes |
+| 1k-p52 | 0.4327 ms | 0.4353 ms | 10 ms | yes |
 | 10k-p52 | 1.506 ms | 1.578 ms | 10 ms | yes |
 | 100k-p1 | 16.03 ms | 16.24 ms | 10 ms | no |
+| 100k-p1 | 7.901 ms | 8.008 ms | 10 ms | yes |
 | 100k-p4 | 7.439 ms | 7.533 ms | 10 ms | yes |
+| 100k-p4 | 4.461 ms | 4.509 ms | 10 ms | yes |
 | 100k-p52 | 2.052 ms | 2.092 ms | 10 ms | yes |
+| 100k-p52 | 0.8640 ms | 0.8803 ms | 10 ms | yes |
 | 100k-p520 | 8.922 ms | 9.407 ms | 10 ms | yes |
+| 100k-p520 | 1.479 ms | 1.495 ms | 10 ms | yes |
 | 1M-p52 | 6.639 ms | 6.762 ms | 10 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
+Measured 2026-11-03 on Apple M4, macOS 26.7.2: 1k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520.
+
 Recount:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/1k-p52$'`
+- 1k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/10k-p52$'`
 - 100k-p1: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p1$'`
+- 100k-p1: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p1$'`
+- 100k-p4: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p4$'`
 - 100k-p4: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p4$'`
 - 100k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p52$'`
+- 100k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p52$'`
+- 100k-p520: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p520$'`
 - 100k-p520: `cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p520$'`
 - 1M-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/1M-p52$'`
 
