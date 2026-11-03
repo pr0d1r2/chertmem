@@ -88,8 +88,8 @@ fn section(
     };
     let limit = limit(first, targets)?;
     let _ = writeln!(page, "\n## {}\n\n{}\n", first.suite, says(first, limit));
-    page.push_str("| fixture | median | p95 | target | pass |\n");
-    page.push_str("| --- | ---: | ---: | ---: | --- |\n");
+    page.push_str("| fixture | machine | median | p95 | target | pass |\n");
+    page.push_str("| --- | --- | ---: | ---: | ---: | --- |\n");
     for r in rows {
         let _ = writeln!(page, "{}", table_row(r, limit));
     }
@@ -125,8 +125,8 @@ fn table_row(r: &Row, limit: Option<f64>) -> String {
     };
     let (median, p95) = (ms(r.median_ms), ms(r.p95_ms));
     format!(
-        "| {} | {median} ms | {p95} ms | {target} | {pass} |",
-        r.fixture
+        "| {} | {} | {median} ms | {p95} ms | {target} | {pass} |",
+        r.fixture, r.machine
     )
 }
 
@@ -149,9 +149,16 @@ fn measured(page: &mut String, rows: &[&Row]) {
     }
 }
 
+/// 1 line per command: rows of 2 machines share theirs, run on the
+/// machine to measure.
 fn recounts(page: &mut String, rows: &[&Row]) {
-    page.push_str("\nRecount:\n\n");
+    page.push_str("\nRecount, on the machine to measure:\n\n");
+    let mut seen: Vec<String> = Vec::new();
     for r in rows {
-        let _ = writeln!(page, "- {}: `{}`", r.fixture, r.recount);
+        let line = format!("- {}: `{}`", r.fixture, r.recount);
+        if !seen.contains(&line) {
+            let _ = writeln!(page, "{line}");
+            seen.push(line);
+        }
     }
 }
