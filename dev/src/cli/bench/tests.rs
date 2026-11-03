@@ -109,8 +109,10 @@ fn perf_doc_writes_the_page_and_check_finds_a_hand_edit() -> Res {
     assert_eq!(run(&args(&["perf-doc"]), &root), 0);
     assert_eq!(run(&check, &root), 0);
     let page = fs::read_to_string(root.join(PAGE))?;
-    let line = "| 1k-p52 | 1.000 ms | 1.000 ms | 2 ms | yes |";
-    assert!(page.contains(line), "{page}");
+    // The machine column names this host's CPU, whatever it is.
+    let row = page.lines().find(|l| l.starts_with("| 1k-p52 | "));
+    let tail = "| 1.000 ms | 1.000 ms | 2 ms | yes |";
+    assert!(row.is_some_and(|l| l.ends_with(tail)), "{page}");
     fs::write(root.join(PAGE), page.replace("1.000 ms", "0.500 ms"))?;
     assert_eq!(run(&check, &root), 1);
     Ok(())

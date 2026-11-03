@@ -57,9 +57,9 @@ fn every_row_shows_median_p95_target_and_pass() -> Res {
         "\n## get_observations\n\nTarget: get_observations under 2 ms.\n";
     assert!(page.contains(head));
     for line in [
-        "| 1k-p52 | 0.08000 ms | 0.1600 ms | 2 ms | yes |",
-        "| 1M-p52 | 2.500 ms | 5.000 ms | 2 ms | no |",
-        "| 1k-p52 | 0.5000 ms | 1.000 ms | - | - |",
+        "| 1k-p52 | Test CPU | 0.08000 ms | 0.1600 ms | 2 ms | yes |",
+        "| 1M-p52 | Test CPU | 2.500 ms | 5.000 ms | 2 ms | no |",
+        "| 1k-p52 | Test CPU | 0.5000 ms | 1.000 ms | - | - |",
     ] {
         assert!(page.contains(&format!("\n{line}\n")), "{line}");
     }
@@ -89,6 +89,24 @@ fn each_run_is_named_by_date_and_machine() -> Res {
     assert!(page.contains(a), "{page}");
     let b = "\nMeasured 2026-10-26 on Test CPU, TestOS 1.0: 10k-p52.\n";
     assert!(page.contains(b), "{page}");
+    Ok(())
+}
+
+#[test]
+fn rows_of_2_machines_are_told_apart_and_recounted_once() -> Res {
+    let mut m4 = row("s", "1k-p52", 0.5, "-");
+    m4.machine = "Other CPU".to_owned();
+    let rows = [row("s", "1k-p52", 1.0, "-"), m4];
+    let page = render(&rows, &BTreeMap::new())?;
+    for line in [
+        "| fixture | machine | median |",
+        "| 1k-p52 | Test CPU | 1.000 ms |",
+        "| 1k-p52 | Other CPU | 0.5000 ms |",
+    ] {
+        assert!(page.contains(&format!("\n{line}")), "{page}");
+    }
+    let recount = "- 1k-p52: `cargo bench -- '^s/1k-p52$'`\n";
+    assert_eq!(page.matches(recount).count(), 1, "{page}");
     Ok(())
 }
 
