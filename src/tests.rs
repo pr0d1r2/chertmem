@@ -31,24 +31,40 @@ fn ident(text: &str) -> &str {
     text.split(|c| !is_ident(c)).next().unwrap_or_default()
 }
 
+/// The `{...}` group `group` opens, up to its closing brace, with every
+/// nested group cut out: `a::{b}, c}` -> `a::, c`.
+fn top_level(group: &str) -> String {
+    let mut depth = 0_usize;
+    let mut kept = String::new();
+    for c in group.chars() {
+        match c {
+            '{' => depth = depth.saturating_add(1),
+            '}' if depth == 0 => break,
+            '}' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => kept.push(c),
+            _ => {}
+        }
+    }
+    kept
+}
+
 /// The names 1 `crate::` path reaches, `rest` being what follows it.
 fn reached(rest: &str) -> Vec<String> {
     match rest.strip_prefix('{') {
-        Some(group) => group
-            .split('}')
-            .next()
-            .unwrap_or_default()
+        Some(group) => top_level(group)
             .split(',')
             .map(|item| ident(item).to_owned())
+            .filter(|name| !name.is_empty())
             .collect(),
         None => vec![ident(rest).to_owned()],
     }
 }
 
-/// The module names `line` of code reaches through `crate::`.
-fn paths_in(line: &str) -> Vec<String> {
-    line.match_indices("crate::")
-        .filter_map(|(at, word)| line.get(at.checked_add(word.len())?..))
+/// The module names `code` reaches through `crate::`, groups across
+/// lines included.
+fn paths_in(code: &str) -> Vec<String> {
+    code.match_indices("crate::")
+        .filter_map(|(at, word)| code.get(at.checked_add(word.len())?..))
         .flat_map(reached)
         .collect()
 }
@@ -77,8 +93,11 @@ fn uses(module: &str) -> Result<BTreeSet<String>, Box<dyn Error>> {
     let mut names = BTreeSet::new();
     for file in files {
         let text = fs::read_to_string(file)?;
-        let code = text.lines().filter(|l| !l.trim().starts_with("//"));
-        names.extend(code.flat_map(paths_in));
+        let code: Vec<&str> = text
+            .lines()
+            .filter(|l| !l.trim().starts_with("//"))
+            .collect();
+        names.extend(paths_in(&code.join("\n")));
     }
     names.retain(|n| n != module && MODULES.contains(&n.as_str()));
     Ok(names)
@@ -149,6 +168,15 @@ fn the_built_graph_has_no_cycle_and_nothing_uses_the_top() -> Test {
     assert!(acyclic(&graph), "{graph:?}");
     assert!(!graph.values().any(|to| to.contains(TOP)), "{graph:?}");
     Ok(())
+}
+
+#[test]
+fn nested_and_multi_line_groups_are_read_whole() {
+    let code =
+        "use crate::{\n    cache::{Cache, Handle},\n    store::Store,\n};";
+    assert_eq!(paths_in(code), ["cache", "store"]);
+    assert_eq!(paths_in("use crate::{a, b};"), ["a", "b"]);
+    assert_eq!(paths_in("let x = crate::grammar::expand(y);"), ["grammar"]);
 }
 
 #[test]
