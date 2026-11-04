@@ -14,6 +14,32 @@ and the 95th percentile of its samples. A row passes when its median is
 under its suite's target; a suite without a target is measured for
 scale.
 
+## hook_write
+
+Target: hook write under 5 ms.
+
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M4 | macOS 26.7.2 | 4.447 ms | 7.584 ms | 5 ms | yes |
+| 10k-p52 | Apple M4 | macOS 26.7.2 | 4.078 ms | 4.292 ms | 5 ms | yes |
+| 100k-p1 | Apple M4 | macOS 26.7.2 | 3.962 ms | 4.224 ms | 5 ms | yes |
+| 100k-p4 | Apple M4 | macOS 26.7.2 | 3.867 ms | 3.964 ms | 5 ms | yes |
+| 100k-p52 | Apple M4 | macOS 26.7.2 | 3.831 ms | 4.063 ms | 5 ms | yes |
+| 100k-p520 | Apple M4 | macOS 26.7.2 | 3.837 ms | 4.111 ms | 5 ms | yes |
+| 1M-p52 | Apple M4 | macOS 26.7.2 | 3.697 ms | 5.303 ms | 5 ms | yes |
+
+Measured 2026-11-04 on Apple M4, macOS 26.7.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
+
+Recount, on the machine to measure:
+
+- 1k-p52: `cargo bench -p chertmem --bench latency -- '^hook_write/1k-p52$'`
+- 10k-p52: `cargo bench -p chertmem --bench latency -- '^hook_write/10k-p52$'`
+- 100k-p1: `cargo bench -p chertmem --bench latency -- '^hook_write/100k-p1$'`
+- 100k-p4: `cargo bench -p chertmem --bench latency -- '^hook_write/100k-p4$'`
+- 100k-p52: `cargo bench -p chertmem --bench latency -- '^hook_write/100k-p52$'`
+- 100k-p520: `cargo bench -p chertmem --bench latency -- '^hook_write/100k-p520$'`
+- 1M-p52: `cargo bench -p chertmem --bench latency -- '^hook_write/1M-p52$'`
+
 ## session_start
 
 Target: hook write under 5 ms.
