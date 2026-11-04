@@ -88,8 +88,10 @@ fn section(
     };
     let limit = limit(first, targets)?;
     let _ = writeln!(page, "\n## {}\n\n{}\n", first.suite, says(first, limit));
-    page.push_str("| fixture | machine | median | p95 | target | pass |\n");
-    page.push_str("| --- | --- | ---: | ---: | ---: | --- |\n");
+    page.push_str(
+        "| fixture | machine | os | median | p95 | target | pass |\n",
+    );
+    page.push_str("| --- | --- | --- | ---: | ---: | ---: | --- |\n");
     for r in rows {
         let _ = writeln!(page, "{}", table_row(r, limit));
     }
@@ -125,8 +127,8 @@ fn table_row(r: &Row, limit: Option<f64>) -> String {
     };
     let (median, p95) = (ms(r.median_ms), ms(r.p95_ms));
     format!(
-        "| {} | {} | {median} ms | {p95} ms | {target} | {pass} |",
-        r.fixture, r.machine
+        "| {} | {} | {} | {median} ms | {p95} ms | {target} | {pass} |",
+        r.fixture, r.machine, r.os
     )
 }
 
