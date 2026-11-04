@@ -327,9 +327,9 @@ for that choice follow the table, each distinct text once.
 | vcpkg | 0.2.15 | MIT | default | <https://github.com/mcgoo/vcpkg-rs> | [29](#text-29) |
 | winnow | 1.0.4 | MIT | default | <https://github.com/winnow-rs/winnow> | [30](#text-30) |
 | zmij | 1.0.23 | MIT | default | <https://github.com/dtolnay/zmij> | [4](#text-4) |
-| zstd | 0.13.3 | MIT | default | <https://github.com/gyscos/zstd-rs> | [31](#text-31) |
-| zstd-safe | 7.3.0 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [32](#text-32) |
-| zstd-sys | 2.1.2+zstd.1.5.7 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [32](#text-32), [33](#text-33) |
+| zstd | 0.13.4 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [31](#text-31) |
+| zstd-safe | 7.4.0 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [31](#text-31) |
+| zstd-sys | 2.1.2+zstd.1.5.7 | BSD-3-Clause | default | <https://github.com/gyscos/zstd-rs> | [31](#text-31), [32](#text-32) |
 
 ### Text 1
 
@@ -1192,22 +1192,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### Text 31
 
-Shipped by `zstd 0.13.3`.
-
-```text
-The MIT License (MIT)
-Copyright (c) 2016 Alexandre Bury
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
-### Text 32
-
-Shipped by `zstd-safe 7.3.0`, `zstd-sys 2.1.2+zstd.1.5.7`.
+Shipped by `zstd 0.13.4`, `zstd-safe 7.4.0`, `zstd-sys 2.1.2+zstd.1.5.7`.
 
 ```text
 BSD 3-Clause License
@@ -1240,7 +1225,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### Text 33
+### Text 32
 
 Shipped by `zstd-sys 2.1.2+zstd.1.5.7`.
 
