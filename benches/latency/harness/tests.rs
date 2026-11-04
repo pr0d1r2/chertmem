@@ -60,7 +60,7 @@ fn every_ready_suite_runs_under_criterion() -> crate::fixture::Res<()> {
     let groups =
         entries.filter(|e| e.as_ref().is_ok_and(|e| e.path().is_dir()));
     let groups = groups.count();
-    assert_eq!(groups, picked.len().saturating_sub(1), "1 is pending");
+    assert_eq!(groups, picked.len());
     Ok(())
 }
 
@@ -72,7 +72,8 @@ fn the_index_names_each_ready_suites_target() -> crate::fixture::Res<()> {
     super::write_index(dir.path(), &ALL)?;
     let text = std::fs::read_to_string(dir.path().join(super::INDEX))?;
     let lines: Vec<&str> = text.lines().collect();
-    assert_eq!(lines.len(), 11, "every ready suite, not the pending one");
+    assert_eq!(lines.len(), 12, "every suite, hook write too");
+    assert!(lines.contains(&"hook_write\thook write"));
     assert!(lines.contains(&"session_start\thook write"));
     assert!(lines.contains(&"get_observations\tget_observations"));
     assert!(lines.contains(&"cross_partition\t-"));

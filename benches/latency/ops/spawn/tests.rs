@@ -28,7 +28,7 @@ fn a_process_that_stores_nothing_fails_the_run() -> crate::fixture::Res<()> {
     let process = super::Process::of(&fx)?;
     let err = process.run_with(b"not json").err().map(|e| e.to_string());
     assert!(
-        err.is_some_and(|e| e.contains("not stored")),
+        err.is_some_and(|e| e.contains("unreadable hook payload")),
         "a note fails it"
     );
     assert_eq!(process.rows()?, 0);

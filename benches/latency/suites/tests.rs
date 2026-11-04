@@ -46,15 +46,13 @@ fn every_suite_benches_spec_names_is_registered_and_no_other()
 }
 
 #[test]
-fn every_suite_is_ready_hook_write_too() {
-    // benches T3: `chert hook run` exists (src/cli), so no suite waits.
-    use super::{ALL, Status};
-    let pending: Vec<&str> = ALL
-        .iter()
-        .filter(|s| matches!(s.status, Status::Pending(_)))
-        .map(|s| s.id)
-        .collect();
-    assert!(pending.is_empty(), "{pending:?}");
+fn the_hook_write_suite_spawns_chert() {
+    // benches T3, V4: `chert hook run` exists (src/cli), so no suite
+    // waits; hook write runs the real process, not `hook::run`.
+    use super::ALL;
+    let suite = ALL.iter().find(|s| s.id == "hook_write");
+    let spawned: super::Make = crate::ops::spawn::write;
+    assert!(suite.is_some_and(|s| std::ptr::fn_addr_eq(s.make, spawned)));
 }
 
 #[test]
