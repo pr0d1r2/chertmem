@@ -36,6 +36,7 @@ R2|fixtures, wave 9|SplitMix64, ⊥ crate. sessions of 10..79 events: `session-s
 R3|in-process & stand-ins, wave 9|`session-start` & `user-prompt-submit` through `hook::run` on a scratch copy (each run appends); process start left to hook-write suite (V4). semantic re-rank: `Engine` reads `OLLAMA_HOST` only from env & `set_var` needs `unsafe` ∴ bench starts loopback `/api/embed` stand-in (768-d bag-of-words) & reruns itself as child w/ it set; measures chert's side + stand-in's reply, ⊥ model. `get_observations` = `Store::get` of 5 refs of newest partition; recent window = `since` 28 d, warm = `cache::Handle`, cold = disk; cross = all time; scan = newest weekly partition whole|`benches/latency/ops/*.rs`, `ollama.rs`
 R4|first run, wave 9|over target then: warm cache scanned whole window, injection opened every partition (since: `src/search` T9, `src/hook` T11). numbers now in `benches/baseline.toml` & `docs/PERFORMANCE.md`|`target/criterion/*/*/new/estimates.json`
 R5|wave 10 (T4, T5)|fixture project root = `/chert-bench/project` ∀ fixture, ⊥ made ∴ project id ⊥ checkout, `project/` ⊥ built, copies move (`fixture-2`). run writes `target/criterion/chert-suites.tsv` (suite ⇥ target); `chertmem-dev bench-record` → rows: median, nearest-rank p95 of `sample.json`, CPU & OS, date of `estimates.json`, recount, tolerance 0.5 kept when tuned. push gate: 1k & 10k-p52 only, ~45 s, local ∵ CI ⊥ baseline rows. 1M fixture ~250 s|`benches/latency/harness.rs`, `dev/src/record.rs`
+R6|hook write, wave 13|real `chert hook run post-tool-use` per call (`CARGO_BIN_EXE_chert`): env cleared but `HOME` = scratch w/ `.config/chert/chert.toml` → `storage.data_dir` = fixture copy; cwd = real scratch project ∵ process needs existing cwd ∴ project id ⊥ fixture's, starts empty beside it; system clock ∴ this week's partition, as live. exit ≠ 0 or stderr ≠ ∅ → run fails ∵ chert notes & exits 0 on unstorable payload (src/cli R1). setup run must store 1 row. first look, M4 under load ~4: 1k-p52 5.46 ms ≈ target ∴ quiet record needed|`benches/latency/ops/spawn.rs`
 
 ## §V INVARIANTS
 
@@ -49,7 +50,7 @@ V4: hook-write suite spawns real `chert` process ∴ startup counted, ⊥ in-pro
 id|status|task|cites
 T1|x|harness choice, §R row: criterion (R1)|-
 T2|x|seeded fixture generator, cached under `target/bench-fixtures/` (R2)|V2
-T3|~|suites ∀ target (R3): 11 ready; hook write registered pending, waits for `src/cli` (`chert hook run` spawned, V4)|V1,V4
+T3|~|suites ∀ target (R3, R6): 12 built; open until hook-write rows in `baseline.toml` (quiet machine)|V1,V4
 T4|x|baseline file & `bench-gate` (R5, `dev:T2`)|V3
 T5|x|ids advance per run: hook clock 1 ms back per run, note = failed run; fixtures movable: fixed root, `fixture-2`|V2
 
