@@ -18,19 +18,19 @@ scale.
 
 Target: hook write under 5 ms.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 2.701 ms | 2.842 ms | 5 ms | yes |
-| 10k-p52 | 2.388 ms | 2.441 ms | 5 ms | yes |
-| 100k-p1 | 3.826 ms | 3.972 ms | 5 ms | yes |
-| 100k-p4 | 2.762 ms | 2.800 ms | 5 ms | yes |
-| 100k-p52 | 2.449 ms | 2.483 ms | 5 ms | yes |
-| 100k-p520 | 2.729 ms | 2.875 ms | 5 ms | yes |
-| 1M-p52 | 2.796 ms | 3.034 ms | 5 ms | yes |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.701 ms | 2.842 ms | 5 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.388 ms | 2.441 ms | 5 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.826 ms | 3.972 ms | 5 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 2.762 ms | 2.800 ms | 5 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.449 ms | 2.483 ms | 5 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 2.729 ms | 2.875 ms | 5 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 2.796 ms | 3.034 ms | 5 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^session_start/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^session_start/10k-p52$'`
@@ -44,19 +44,19 @@ Recount:
 
 Target: hook write under 5 ms.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 2.701 ms | 2.857 ms | 5 ms | yes |
-| 10k-p52 | 2.321 ms | 2.427 ms | 5 ms | yes |
-| 100k-p1 | 3.746 ms | 3.814 ms | 5 ms | yes |
-| 100k-p4 | 2.752 ms | 2.802 ms | 5 ms | yes |
-| 100k-p52 | 2.436 ms | 2.541 ms | 5 ms | yes |
-| 100k-p520 | 2.751 ms | 2.827 ms | 5 ms | yes |
-| 1M-p52 | 2.732 ms | 2.786 ms | 5 ms | yes |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.701 ms | 2.857 ms | 5 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.321 ms | 2.427 ms | 5 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.746 ms | 3.814 ms | 5 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 2.752 ms | 2.802 ms | 5 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.436 ms | 2.541 ms | 5 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 2.751 ms | 2.827 ms | 5 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 2.732 ms | 2.786 ms | 5 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^prompt_inject/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^prompt_inject/10k-p52$'`
@@ -70,19 +70,19 @@ Recount:
 
 Target: get_observations under 2 ms.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 0.08078 ms | 0.08199 ms | 2 ms | yes |
-| 10k-p52 | 0.08162 ms | 0.08275 ms | 2 ms | yes |
-| 100k-p1 | 0.08319 ms | 0.08389 ms | 2 ms | yes |
-| 100k-p4 | 0.08302 ms | 0.08413 ms | 2 ms | yes |
-| 100k-p52 | 0.08262 ms | 0.08322 ms | 2 ms | yes |
-| 100k-p520 | 0.08267 ms | 0.08488 ms | 2 ms | yes |
-| 1M-p52 | 0.08340 ms | 0.08421 ms | 2 ms | yes |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.08078 ms | 0.08199 ms | 2 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.08162 ms | 0.08275 ms | 2 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 0.08319 ms | 0.08389 ms | 2 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 0.08302 ms | 0.08413 ms | 2 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.08262 ms | 0.08322 ms | 2 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 0.08267 ms | 0.08488 ms | 2 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 0.08340 ms | 0.08421 ms | 2 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^get_observations/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^get_observations/10k-p52$'`
@@ -96,19 +96,19 @@ Recount:
 
 Target: recent-window search under 10 ms.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 0.6277 ms | 0.6329 ms | 10 ms | yes |
-| 10k-p52 | 0.6216 ms | 0.6290 ms | 10 ms | yes |
-| 100k-p1 | 1.515 ms | 1.549 ms | 10 ms | yes |
-| 100k-p4 | 1.546 ms | 1.597 ms | 10 ms | yes |
-| 100k-p52 | 0.6782 ms | 0.6853 ms | 10 ms | yes |
-| 100k-p520 | 7.429 ms | 9.011 ms | 10 ms | yes |
-| 1M-p52 | 1.842 ms | 2.071 ms | 10 ms | yes |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6277 ms | 0.6329 ms | 10 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6216 ms | 0.6290 ms | 10 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 1.515 ms | 1.549 ms | 10 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 1.546 ms | 1.597 ms | 10 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6782 ms | 0.6853 ms | 10 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 7.429 ms | 9.011 ms | 10 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 1.842 ms | 2.071 ms | 10 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^recent_warm/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^recent_warm/10k-p52$'`
@@ -122,19 +122,26 @@ Recount:
 
 Target: recent-window search under 10 ms.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 1.421 ms | 1.465 ms | 10 ms | yes |
-| 10k-p52 | 1.506 ms | 1.578 ms | 10 ms | yes |
-| 100k-p1 | 16.03 ms | 16.24 ms | 10 ms | no |
-| 100k-p4 | 7.439 ms | 7.533 ms | 10 ms | yes |
-| 100k-p52 | 2.052 ms | 2.092 ms | 10 ms | yes |
-| 100k-p520 | 8.922 ms | 9.407 ms | 10 ms | yes |
-| 1M-p52 | 6.639 ms | 6.762 ms | 10 ms | yes |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.421 ms | 1.465 ms | 10 ms | yes |
+| 1k-p52 | Apple M4 | macOS 26.7.2 | 0.4327 ms | 0.4353 ms | 10 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.506 ms | 1.578 ms | 10 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 16.03 ms | 16.24 ms | 10 ms | no |
+| 100k-p1 | Apple M4 | macOS 26.7.2 | 7.901 ms | 8.008 ms | 10 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 7.439 ms | 7.533 ms | 10 ms | yes |
+| 100k-p4 | Apple M4 | macOS 26.7.2 | 4.461 ms | 4.509 ms | 10 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.052 ms | 2.092 ms | 10 ms | yes |
+| 100k-p52 | Apple M4 | macOS 26.7.2 | 0.8640 ms | 0.8803 ms | 10 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 8.922 ms | 9.407 ms | 10 ms | yes |
+| 100k-p520 | Apple M4 | macOS 26.7.2 | 1.479 ms | 1.495 ms | 10 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 6.639 ms | 6.762 ms | 10 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Measured 2026-11-03 on Apple M4, macOS 26.7.2: 1k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520.
+
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^recent_cold/10k-p52$'`
@@ -148,19 +155,19 @@ Recount:
 
 No latency target; measured for scale.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 9.354 ms | 9.753 ms | - | - |
-| 10k-p52 | 11.76 ms | 12.92 ms | - | - |
-| 100k-p1 | 16.04 ms | 17.54 ms | - | - |
-| 100k-p4 | 7.324 ms | 7.388 ms | - | - |
-| 100k-p52 | 15.50 ms | 15.67 ms | - | - |
-| 100k-p520 | 122.6 ms | 124.9 ms | - | - |
-| 1M-p52 | 47.97 ms | 51.04 ms | - | - |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 9.354 ms | 9.753 ms | - | - |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 11.76 ms | 12.92 ms | - | - |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 16.04 ms | 17.54 ms | - | - |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 7.324 ms | 7.388 ms | - | - |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 15.50 ms | 15.67 ms | - | - |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 122.6 ms | 124.9 ms | - | - |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 47.97 ms | 51.04 ms | - | - |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^cross_partition/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^cross_partition/10k-p52$'`
@@ -174,19 +181,19 @@ Recount:
 
 Target: semantic re-rank under 20 ms.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 1.052 ms | 1.080 ms | 20 ms | yes |
-| 10k-p52 | 2.244 ms | 2.292 ms | 20 ms | yes |
-| 100k-p1 | 3.264 ms | 3.332 ms | 20 ms | yes |
-| 100k-p4 | 3.321 ms | 3.367 ms | 20 ms | yes |
-| 100k-p52 | 2.327 ms | 2.405 ms | 20 ms | yes |
-| 100k-p520 | 9.730 ms | 9.990 ms | 20 ms | yes |
-| 1M-p52 | 3.608 ms | 3.692 ms | 20 ms | yes |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.052 ms | 1.080 ms | 20 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.244 ms | 2.292 ms | 20 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.264 ms | 3.332 ms | 20 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 3.321 ms | 3.367 ms | 20 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.327 ms | 2.405 ms | 20 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 9.730 ms | 9.990 ms | 20 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 3.608 ms | 3.692 ms | 20 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^semantic_rerank/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^semantic_rerank/10k-p52$'`
@@ -200,19 +207,19 @@ Recount:
 
 No latency target; measured for scale.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 3.089 ms | 3.239 ms | - | - |
-| 10k-p52 | 5.967 ms | 6.081 ms | - | - |
-| 100k-p1 | 332.5 ms | 339.1 ms | - | - |
-| 100k-p4 | 333.3 ms | 342.6 ms | - | - |
-| 100k-p52 | 29.98 ms | 30.74 ms | - | - |
-| 100k-p520 | 5.979 ms | 6.097 ms | - | - |
-| 1M-p52 | 257.2 ms | 264.1 ms | - | - |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 3.089 ms | 3.239 ms | - | - |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.967 ms | 6.081 ms | - | - |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 332.5 ms | 339.1 ms | - | - |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 333.3 ms | 342.6 ms | - | - |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 29.98 ms | 30.74 ms | - | - |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 5.979 ms | 6.097 ms | - | - |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 257.2 ms | 264.1 ms | - | - |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^cache_warmup/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^cache_warmup/10k-p52$'`
@@ -226,19 +233,19 @@ Recount:
 
 No latency target; measured for scale.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p52 | 0.03848 ms | 0.03881 ms | - | - |
-| 10k-p52 | 0.1773 ms | 0.1817 ms | - | - |
-| 100k-p1 | 95.09 ms | 99.86 ms | - | - |
-| 100k-p4 | 23.53 ms | 24.01 ms | - | - |
-| 100k-p52 | 1.571 ms | 1.616 ms | - | - |
-| 100k-p520 | 0.1900 ms | 0.1948 ms | - | - |
-| 1M-p52 | 17.73 ms | 18.20 ms | - | - |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.03848 ms | 0.03881 ms | - | - |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.1773 ms | 0.1817 ms | - | - |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 95.09 ms | 99.86 ms | - | - |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 23.53 ms | 24.01 ms | - | - |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.571 ms | 1.616 ms | - | - |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 0.1900 ms | 0.1948 ms | - | - |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 17.73 ms | 18.20 ms | - | - |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p52: `cargo bench -p chertmem --bench latency -- '^partition_scan/1k-p52$'`
 - 10k-p52: `cargo bench -p chertmem --bench latency -- '^partition_scan/10k-p52$'`
@@ -252,13 +259,13 @@ Recount:
 
 No latency target; measured for scale.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p1 | 34.51 ms | 34.61 ms | - | - |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p1 | Apple M1 Pro | macOS 26.6.2 | 34.51 ms | 34.61 ms | - | - |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p1.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p1: `cargo bench -p chertmem --bench latency -- '^compress/1k-p1$'`
 
@@ -266,12 +273,12 @@ Recount:
 
 No latency target; measured for scale.
 
-| fixture | median | p95 | target | pass |
-| --- | ---: | ---: | ---: | --- |
-| 1k-p1 | 10.92 ms | 11.07 ms | - | - |
+| fixture | machine | os | median | p95 | target | pass |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p1 | Apple M1 Pro | macOS 26.6.2 | 10.92 ms | 11.07 ms | - | - |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p1.
 
-Recount:
+Recount, on the machine to measure:
 
 - 1k-p1: `cargo bench -p chertmem --bench latency -- '^expand/1k-p1$'`

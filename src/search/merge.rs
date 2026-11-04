@@ -39,21 +39,48 @@ const BUDGET: usize = 60;
 /// year of weekly partitions: 52 dealt to 12 keep 5 each, the share.
 const MAX_WORKERS: usize = 12;
 
+/// The rows that pay for a scoring thread (T10).
+const THREAD_ROWS: usize = 1000;
+
 /// The workers' reading stores, kept from query to query so a query
 /// opens no catalog and no partition file again (T6); dropped when the
 /// store's generation moves, as a seal, compaction, drop or repartition
 /// moves it, so no worker reads a file the catalog let go. Each keeps
 /// an equal share of [`BUDGET`] open, the least recently used closed
 /// first, so the pool holds a bounded number of files (V6, T11).
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct Pool {
     generation: u64,
     stores: Vec<Store>,
+    budget: usize,
+}
+
+impl Default for Pool {
+    fn default() -> Self {
+        Self {
+            generation: 0,
+            stores: Vec::new(),
+            budget: BUDGET,
+        }
+    }
 }
 
 impl Pool {
+    /// Keep `budget` connections in total from now on (src/mcp T5).
+    pub(super) fn keep_open(&mut self, budget: usize) {
+        self.budget = budget;
+        self.share();
+    }
+
+    /// Give every store an equal share of the budget.
+    fn share(&mut self) {
+        let share = self.budget.checked_div(self.stores.len());
+        let share = share.unwrap_or(self.budget);
+        self.stores.iter_mut().for_each(|s| s.keep_open(share));
+    }
+
     /// At least `n` stores, every one opened in `job`'s generation and
-    /// keeping its share of [`BUDGET`] open.
+    /// keeping its share of the budget open.
     fn fill(&mut self, job: &Job<'_>, n: usize) -> Result<(), Error> {
         if self.generation != job.generation {
             self.stores.clear();
@@ -66,8 +93,7 @@ impl Pool {
             self.stores
                 .push(Store::open(job.cfg, job.root, Mode::Read)?);
         }
-        let share = BUDGET.checked_div(n).unwrap_or(BUDGET);
-        self.stores.iter_mut().for_each(|s| s.keep_open(share));
+        self.share();
         Ok(())
     }
 }
@@ -80,30 +106,30 @@ pub(super) fn parallel(
 ) -> Result<Vec<Scored>, Error> {
     let groups = split(paths, workers(paths.len()));
     pool.fill(job, groups.len())?;
+    let threads = cores().checked_div(groups.len()).unwrap_or(1);
     let found = thread::scope(|s| {
         let jobs: Vec<_> = (groups.iter().zip(pool.stores.iter_mut()))
-            .map(|(g, store)| s.spawn(move || group(job, store, g)))
+            .map(|(g, store)| s.spawn(move || group((job, threads), store, g)))
             .collect();
         let joined = jobs.into_iter().map(thread::ScopedJoinHandle::join);
         joined
             .map(|r| r.map_err(|_| Error::Thread).and_then(|done| done))
             .collect::<Result<Vec<_>, _>>()
     })?;
-    Ok(rank::top(
-        found.into_iter().flatten().collect(),
-        job.rater.keep,
-    ))
+    let all = found.into_iter().flatten().collect();
+    Ok(rank::top(all, job.rater.keep))
 }
 
 /// 1 worker on its own store: the best of each of its partitions.
 fn group(
-    job: &Job<'_>,
+    (job, threads): (&Job<'_>, usize),
     store: &mut Store,
     paths: &[String],
 ) -> Result<Vec<Scored>, Error> {
     let mut best = Vec::new();
     for path in paths {
-        best.extend(job.rater.best(candidates(store, path, job)?));
+        let rows = candidates(store, path, job)?;
+        best.extend(scored(job.rater, rows, threads)?);
     }
     Ok(best)
 }
@@ -121,10 +147,51 @@ fn candidates(
     Ok(rows.into_iter().map(|t| t.observation).collect())
 }
 
+/// `rows` cut into `n` parts of near equal size, none empty.
+fn deal<T>(mut rows: Vec<T>, n: usize) -> Vec<Vec<T>> {
+    let mut parts = Vec::new();
+    for left in (1..=n).rev() {
+        let size = rows.len().div_ceil(left);
+        let rest = rows.split_off(size);
+        if size > 0 {
+            parts.push(rows);
+        }
+        rows = rest;
+    }
+    parts
+}
+
+/// The best of `rows`, scored on up to `threads` threads when there are
+/// enough to be worth one (T10). Each part keeps its best, the order is
+/// total, so the best of those are the best of all rows (V2).
+fn scored(
+    rater: &Rater,
+    rows: Vec<Observation>,
+    threads: usize,
+) -> Result<Vec<Scored>, Error> {
+    let n = threads.min(rows.len().div_ceil(THREAD_ROWS));
+    if n <= 1 {
+        return Ok(rater.best(rows));
+    }
+    let bests = thread::scope(|s| {
+        let parts = deal(rows, n).into_iter();
+        let jobs: Vec<_> =
+            parts.map(|p| s.spawn(move || rater.best(p))).collect();
+        jobs.into_iter()
+            .map(|j| j.join().map_err(|_| Error::Thread))
+            .collect::<Result<Vec<_>, _>>()
+    })?;
+    Ok(rank::top(bests.into_iter().flatten().collect(), rater.keep))
+}
+
 /// 1 thread per partition, at most 1 per core and [`MAX_WORKERS`].
 fn workers(parts: usize) -> usize {
-    let cores = thread::available_parallelism().map_or(1, NonZeroUsize::get);
-    cores.min(parts).clamp(1, MAX_WORKERS)
+    cores().min(parts).clamp(1, MAX_WORKERS)
+}
+
+/// The cores this process may use.
+fn cores() -> usize {
+    thread::available_parallelism().map_or(1, NonZeroUsize::get)
 }
 
 /// `paths` dealt round-robin into `n` groups; none empty when `n` does

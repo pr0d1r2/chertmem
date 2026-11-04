@@ -56,7 +56,7 @@ impl Scratch {
     }
 }
 
-fn event(ts: u64, body: &str) -> Event {
+pub(super) fn event(ts: u64, body: &str) -> Event {
     Event {
         ts,
         session: "s1".into(),

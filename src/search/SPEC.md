@@ -66,7 +66,7 @@ T6|x|candidate rows via store FTS5 MATCH per partition, ⊥ full scan per query 
 T7|x|query both the plain & the compressed form of each term ∴ a word kept long inside an identifier, inline code, path or compound (`src/middleware.rs`) is found again (R3); semantic re-rank embeds the same text it scores|V5
 T8|x|`embedding.provider` w/o a v1 client (openai) → keyword ranking w/ 1 log warning, ⊥ every search an error (mcp passes `semantic = true`)|V3
 T9|x|warm recent-window search < 10 ms at 100k rows a bucket & 1M rows (benches `recent_warm`): in-memory postings over cached rows ⊥ scoring every row; 136 → 1.5 ms at 100k-p1, 109 → 1.8 ms at 1M, ~400 B a row (R7)|V1,V2
-T10|.|cold recent-window search < 10 ms at 100k rows in 1 bucket (`recent_cold` 100k-p1, 16.0 ms in the first baseline): profile the FTS5 disk path & fix|V1,V2
+T10|~|cold recent-window search < 10 ms at 100k rows in 1 bucket (`recent_cold` 100k-p1, 16.0 ms in the first baseline): profile the FTS5 disk path & fix|V1,V2
 T11|x|bounded open files (B2): engine store 4 + pooled stores 60 = ≤ 64 partition connections in total (LRU close per store, src/store T20), ⊥ 1 per partition per worker; refresh skips partitions whose catalog checksum stands; V6 test counts fds at 520 partitions (2622 → 198), full suite under `ulimit -n 256` (R8)|V6
 
 ## §B BUGS

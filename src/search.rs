@@ -143,6 +143,14 @@ impl Engine {
         })
     }
 
+    /// Keep at most `n` partition connections in total from now on, the
+    /// engine's own store and the pool together, for a process with
+    /// other stores to fit (src/mcp T5); `n` under [`Store::KEEP_OPEN`]
+    /// costs reopens, never a different answer.
+    pub fn keep_open(&mut self, n: usize) {
+        self.pool.keep_open(n.saturating_sub(merge::OWN));
+    }
+
     /// The project id of the root this engine opened.
     #[must_use]
     pub fn project(&self) -> &str {

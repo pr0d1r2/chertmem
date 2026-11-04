@@ -77,11 +77,13 @@ toml = "1.1.8"
 toml_edit = "0.25.17"
 # Observation ids (src/store C): MIT; its rand tree is MIT OR Apache-2.0.
 ulid = "3.0.0"
-# Cold partitions (src/store T6): zstd MIT, zstd-safe and zstd-sys
-# BSD-3-Clause (owner 2026-10-24), jobserver MIT OR Apache-2.0. Default
+# Cold partitions (src/store T6): zstd, zstd-safe and zstd-sys
+# BSD-3-Clause (owner 2026-10-24 for zstd-safe and zstd-sys; zstd moved
+# from MIT to it in 0.13.4), jobserver MIT OR Apache-2.0. At least
+# 0.13.4: earlier ones carry RUSTSEC-2026-0391, -0398 and -0403. Default
 # features off: `legacy` decodes pre-1.0 frames we never write;
 # `zdict_builder` trains the per-partition dictionary.
-zstd = { version = "0.13.3", default-features = false, features = [
+zstd = { version = "0.13.4", default-features = false, features = [
   "zdict_builder",
 ] }
 # Exact o200k token count for injected context (src/hook C, T6), only

@@ -32,7 +32,7 @@ sib|docs|human pages: README, BENCHMARKS, INTEGRATION, CONTRIBUTING, SECURITY, L
 
 - deps minimal & each justified in module node: `rusqlite` (`bundled`), `clap`, `serde`, `serde_json`, `toml`, `zstd`, `ulid`, MCP via `rmcp` | hand-rolled JSON-RPC (decided in `src/mcp`).
 - ⊥ async runtime unless a module node proves need; hooks stay sync.
-- module edges acyclic (as built, wave 5): `grammar` leaf; `config` → grammar (`Grammar::intensity`); `store` → config; `cache` → config, store; `search` → cache, config, store; `hook` → config, grammar, store; `import`, `mine` → config, grammar, hook, store; `mcp` → cache, config, grammar, search, store; `cli` top.
+- module edges acyclic (as built, wave 13): `grammar` leaf; `config` → grammar (`Grammar::intensity`); `store` → config; `cache` → config, store; `search` → cache, config, grammar, store; `hook` → config, grammar, store; `import` → config, grammar, hook, store; `install`, `mine` → config, hook, store; `mcp` → cache, config, grammar, search, store; `cli` top.
 - errors: 1 crate error enum; user-facing message `chert: <what> (<fix>)`; exit codes per `.:§I`.
 
 ## §I INTERFACES
@@ -48,8 +48,8 @@ V2: `main.rs` only calls `cli::run` & maps its result to exit code.
 ## §T TASKS
 
 id|status|task|cites
-T1|.|`Cargo.toml` workspace + crate skeleton, `lib.rs` module list, `main.rs`|V2
-T2|.|module-edge test|V1
+T1|x|`Cargo.toml` workspace + crate skeleton, `lib.rs` module list, `main.rs`|V2
+T2|x|module-edge test|V1
 
 ## §B BUGS
 

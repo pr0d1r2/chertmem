@@ -353,6 +353,18 @@ recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/1k-p52$'"
 
 [[row]]
 suite = "recent_cold"
+fixture = "1k-p52"
+target = "recent-window search"
+median_ms = 0.4327
+p95_ms = 0.4353
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-03"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/1k-p52$'"
+
+[[row]]
+suite = "recent_cold"
 fixture = "10k-p52"
 target = "recent-window search"
 median_ms = 1.506
@@ -377,6 +389,18 @@ recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p1$'"
 
 [[row]]
 suite = "recent_cold"
+fixture = "100k-p1"
+target = "recent-window search"
+median_ms = 7.901
+p95_ms = 8.008
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-03"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p1$'"
+
+[[row]]
+suite = "recent_cold"
 fixture = "100k-p4"
 target = "recent-window search"
 median_ms = 7.439
@@ -385,6 +409,18 @@ tolerance = 0.5
 machine = "Apple M1 Pro"
 os = "macOS 26.6.2"
 date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p4$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "100k-p4"
+target = "recent-window search"
+median_ms = 4.461
+p95_ms = 4.509
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-03"
 recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p4$'"
 
 [[row]]
@@ -401,6 +437,18 @@ recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p52$'"
 
 [[row]]
 suite = "recent_cold"
+fixture = "100k-p52"
+target = "recent-window search"
+median_ms = 0.8640
+p95_ms = 0.8803
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-03"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p52$'"
+
+[[row]]
+suite = "recent_cold"
 fixture = "100k-p520"
 target = "recent-window search"
 median_ms = 8.922
@@ -409,6 +457,18 @@ tolerance = 0.5
 machine = "Apple M1 Pro"
 os = "macOS 26.6.2"
 date = "2026-10-25"
+recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p520$'"
+
+[[row]]
+suite = "recent_cold"
+fixture = "100k-p520"
+target = "recent-window search"
+median_ms = 1.479
+p95_ms = 1.495
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-03"
 recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p520$'"
 
 [[row]]

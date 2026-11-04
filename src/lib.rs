@@ -3,6 +3,9 @@
 //! A stub until the waves (root T8): the module nodes under `src/` land
 //! one per worker, test first.
 
+#[cfg(test)]
+mod tests;
+
 pub mod cache;
 pub mod cli;
 pub mod config;
