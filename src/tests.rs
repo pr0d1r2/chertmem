@@ -69,9 +69,95 @@ fn paths_in(code: &str) -> Vec<String> {
         .collect()
 }
 
-/// `text` with its comments cut out.
+/// `text` with its comments and string literals cut out, each left as
+/// 1 space, so an inline comment inside a group hides no member and a
+/// string names no module.
 fn code(text: &str) -> String {
-    text.to_owned()
+    let mut kept = String::new();
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        let skip = skipped(rest);
+        let step = if skip > 0 { skip } else { c.len_utf8() };
+        kept.push(if skip > 0 { ' ' } else { c });
+        rest = rest.get(step..).unwrap_or_default();
+    }
+    kept
+}
+
+/// The bytes of the comment or literal `rest` opens; 0 when it opens
+/// none. A line comment stops before its newline.
+fn skipped(rest: &str) -> usize {
+    if rest.starts_with("//") {
+        return rest.find('\n').unwrap_or(rest.len());
+    }
+    if rest.starts_with("/*") {
+        return block(rest);
+    }
+    match rest.chars().next() {
+        Some('"') => quoted(rest),
+        Some('\'') => char_literal(rest),
+        Some('r') => raw(rest),
+        _ => 0,
+    }
+}
+
+/// The bytes of the block comment `rest` opens, nested ones included.
+fn block(rest: &str) -> usize {
+    let mut depth = 0_usize;
+    let mut at = 0_usize;
+    while let Some(tail) = rest.get(at..).filter(|t| !t.is_empty()) {
+        let step = match tail.get(..2) {
+            Some("/*") => (depth.saturating_add(1), 2),
+            Some("*/") => (depth.saturating_sub(1), 2),
+            _ => (depth, tail.chars().next().map_or(1, char::len_utf8)),
+        };
+        let closed = depth == 1 && step.0 == 0;
+        (depth, at) = (step.0, at.saturating_add(step.1));
+        if closed {
+            return at;
+        }
+    }
+    rest.len()
+}
+
+/// The bytes of the string literal `rest` opens, escapes skipped.
+fn quoted(rest: &str) -> usize {
+    let mut chars = rest.char_indices().skip(1);
+    while let Some((at, c)) = chars.next() {
+        match c {
+            '\\' => _ = chars.next(),
+            '"' => return at.saturating_add(1),
+            _ => {}
+        }
+    }
+    rest.len()
+}
+
+/// The bytes of the char literal `rest` opens; 0 for a lifetime.
+fn char_literal(rest: &str) -> usize {
+    let mut chars = rest.char_indices().skip(1);
+    let end = match chars.next() {
+        Some((_, '\\')) => chars.skip(1).find(|&(_, c)| c == '\''),
+        Some(_) => chars.next().filter(|&(_, c)| c == '\''),
+        None => None,
+    };
+    end.map_or(0, |(at, _)| at.saturating_add(1))
+}
+
+/// The bytes of the raw string `rest` opens: `r"..."`, `r#"..."#`; 0
+/// when `r` opens none, as in `r#type` or a name.
+fn raw(rest: &str) -> usize {
+    let tail = rest.get(1..).unwrap_or_default();
+    let body = tail.trim_start_matches('#');
+    let hashes = tail.len().saturating_sub(body.len());
+    let Some(inner) = body.strip_prefix('"') else {
+        return 0;
+    };
+    let close = format!("\"{}", "#".repeat(hashes));
+    let open = rest.len().saturating_sub(inner.len());
+    inner.find(&close).map_or(rest.len(), |at| {
+        open.saturating_add(at).saturating_add(close.len())
+    })
 }
 
 /// Every non-test `.rs` of `dir`, deep.
@@ -97,12 +183,7 @@ fn uses(module: &str) -> Result<BTreeSet<String>, Box<dyn Error>> {
     sources(&src().join(module), &mut files)?;
     let mut names = BTreeSet::new();
     for file in files {
-        let text = fs::read_to_string(file)?;
-        let code: Vec<&str> = text
-            .lines()
-            .filter(|l| !l.trim().starts_with("//"))
-            .collect();
-        names.extend(paths_in(&code.join("\n")));
+        names.extend(paths_in(&code(&fs::read_to_string(file)?)));
     }
     names.retain(|n| n != module && MODULES.contains(&n.as_str()));
     Ok(names)
@@ -192,6 +273,11 @@ fn comments_inside_a_group_hide_no_member_and_strings_name_none() {
     assert_eq!(paths_in(&code(block)), ["cache", "mine"]);
     let text = "let s = \"// crate::hook\"; use crate::store; // crate::cli";
     assert_eq!(paths_in(&code(text)), ["store"]);
+    let raw = "let q = '\"'; let r = r#\"a \"crate::hook\" b\"#; crate::mine";
+    assert_eq!(paths_in(&code(raw)), ["mine"]);
+    let nested =
+        "/* a /* crate::cli */ crate::hook */ fn f<'a>() { crate::mcp }";
+    assert_eq!(paths_in(&code(nested)), ["mcp"]);
 }
 
 #[test]
