@@ -46,19 +46,15 @@ fn every_suite_benches_spec_names_is_registered_and_no_other()
 }
 
 #[test]
-fn only_the_hook_write_suite_waits_and_it_says_for_what() {
+fn every_suite_is_ready_hook_write_too() {
+    // benches T3: `chert hook run` exists (src/cli), so no suite waits.
     use super::{ALL, Status};
-    let pending: Vec<(&str, &str)> = ALL
+    let pending: Vec<&str> = ALL
         .iter()
-        .filter_map(|s| match s.status {
-            Status::Pending(why) => Some((s.id, why)),
-            Status::Ready(_) => None,
-        })
+        .filter(|s| matches!(s.status, Status::Pending(_)))
+        .map(|s| s.id)
         .collect();
-    assert_eq!(pending.len(), 1);
-    let (id, why) = pending.first().copied().unwrap_or_default();
-    assert_eq!(id, "hook_write");
-    assert!(why.contains("src/cli") && why.contains("V4"), "{why}");
+    assert!(pending.is_empty(), "{pending:?}");
 }
 
 #[test]
