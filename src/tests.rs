@@ -69,6 +69,11 @@ fn paths_in(code: &str) -> Vec<String> {
         .collect()
 }
 
+/// `text` with its comments cut out.
+fn code(text: &str) -> String {
+    text.to_owned()
+}
+
 /// Every non-test `.rs` of `dir`, deep.
 fn sources(dir: &Path, found: &mut Vec<PathBuf>) -> Test {
     for entry in fs::read_dir(dir)? {
@@ -177,6 +182,16 @@ fn nested_and_multi_line_groups_are_read_whole() {
     assert_eq!(paths_in(code), ["cache", "store"]);
     assert_eq!(paths_in("use crate::{a, b};"), ["a", "b"]);
     assert_eq!(paths_in("let x = crate::grammar::expand(y);"), ["grammar"]);
+}
+
+#[test]
+fn comments_inside_a_group_hide_no_member_and_strings_name_none() {
+    let line = "use crate::{grammar::Grammar, // parser\n    store::Store};";
+    assert_eq!(paths_in(&code(line)), ["grammar", "store"]);
+    let block = "use crate::{/* a, */ cache, /* b */ mine};";
+    assert_eq!(paths_in(&code(block)), ["cache", "mine"]);
+    let text = "let s = \"// crate::hook\"; use crate::store; // crate::cli";
+    assert_eq!(paths_in(&code(text)), ["store"]);
 }
 
 #[test]
