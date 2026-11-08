@@ -38,7 +38,6 @@ is kept:
 Early: 0.1.0 is the first release ([CHANGELOG](CHANGELOG.md)), and the
 interface may still change before 1.0. The one IDE wired in v1 is [Claude Code](https://claude.com/claude-code):
 other IDEs follow once their hook payloads are recorded. Not built yet:
-`chert export --for rekall` (the plain export works) and
 `embedding.provider = "openai"` (search falls back to keywords).
 
 Exit status: 0 ok, 1 a finding, 2 usage or unreadable input. Every

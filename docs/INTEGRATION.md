@@ -219,7 +219,13 @@ is skipped, and a ref that was dropped stays dropped.
 ### rekall
 
 [rekall](https://github.com/pr0d1r2/rekall) mints its own candidates
-from what it reads; chert never writes under `.rekall/`. The plan is for
-rekall to read a `chert export --for rekall` file. That shape is not
-agreed yet, so `--for rekall` exits 2 with "not built yet"; the plain
-export above works today.
+from what it reads; chert never writes under `.rekall/`. `rekall catch`
+recognises a chert export from its first line, which has `kind`, a
+`ref` starting `chert:` and `ts`. It takes only the
+`user-prompt-submit` rows as evidence, since a prompt holds the
+person's own words and a tool body holds the agent's actions.
+
+`chert export <out.jsonl> --for rekall` writes just those rows, in the
+same line format as the plain export. Tool calls and their output stay
+in the store. Bodies go out as stored, compressed at
+`compression.grammar`.
