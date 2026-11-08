@@ -10,6 +10,7 @@ use std::io::Write;
 use serde_json::{Map, Value};
 
 use super::Error;
+use crate::hook::Kind;
 use crate::store::{Filter, Observation, Store};
 
 /// Write every observation `filter` wants to `out`, 1 JSON object per
@@ -23,12 +24,7 @@ pub fn export(
     filter: &Filter,
     out: &mut impl Write,
 ) -> Result<usize, Error> {
-    let rows = store.observations(filter)?;
-    for row in &rows {
-        writeln!(out, "{}", line(row)).map_err(|e| Error::io(&e))?;
-    }
-    out.flush().map_err(|e| Error::io(&e))?;
-    Ok(rows.len())
+    written(&store.observations(filter)?, out)
 }
 
 /// The export rekall's `catch` reads (src/import T3, rekall V52): the
@@ -42,7 +38,18 @@ pub fn rekall(
     filter: &Filter,
     out: &mut impl Write,
 ) -> Result<usize, Error> {
-    export(store, filter, out)
+    let mut rows = store.observations(filter)?;
+    rows.retain(|o| o.kind == Kind::UserPromptSubmit.as_str());
+    written(&rows, out)
+}
+
+/// `rows` to `out`, 1 [`line()`] each; their number.
+fn written(rows: &[Observation], out: &mut impl Write) -> Result<usize, Error> {
+    for row in rows {
+        writeln!(out, "{}", line(row)).map_err(|e| Error::io(&e))?;
+    }
+    out.flush().map_err(|e| Error::io(&e))?;
+    Ok(rows.len())
 }
 
 /// 1 observation as 1 JSON line, keys sorted (a `BTreeMap`), so the same
