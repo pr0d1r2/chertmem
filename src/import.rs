@@ -12,5 +12,5 @@ mod jsonl;
 
 pub use cavemem::{Imported, cavemem};
 pub use error::Error;
-pub use export::export;
+pub use export::{export, rekall};
 pub use jsonl::jsonl;

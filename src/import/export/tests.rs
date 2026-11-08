@@ -161,3 +161,34 @@ fn a_write_only_store_cannot_export() -> Test {
     assert_eq!(got, Err(Error::Store(store::Error::WriteOnly)));
     Ok(())
 }
+
+/// A store of 2 prompts between a tool call and a stop.
+fn mixed(s: &Scratch) -> Res<Store> {
+    let mut store = s.store()?;
+    let kinded = |at, kind: &str, body| {
+        let mut e = event(at, body, None);
+        e.kind = kind.to_owned();
+        e
+    };
+    store.append(&event(1, "cargo test", Some("tool-1")))?;
+    store.append(&kinded(2, "user-prompt-submit", "never push to main"))?;
+    store.append(&kinded(3, "stop", "done"))?;
+    store.append(&kinded(4, "user-prompt-submit", "always run hk"))?;
+    Ok(store)
+}
+
+#[test]
+fn a_rekall_export_is_the_prompt_lines_of_the_export() -> Test {
+    // src/import T3: rekall V52 takes only `user-prompt-submit` as
+    // evidence, so no tool body or output leaves the store for it.
+    let s = Scratch::new("rekall")?;
+    let mut store = mixed(&s)?;
+    let (all, _) = exported(&mut store, &Filter::default())?;
+    let prompt = "\"kind\":\"user-prompt-submit\"";
+    let want: Vec<&str> = all.lines().filter(|l| l.contains(prompt)).collect();
+    let mut out = Vec::new();
+    let n = super::rekall(&mut store, &Filter::default(), &mut out)?;
+    assert_eq!(n, 2);
+    assert_eq!(String::from_utf8(out)?.lines().collect::<Vec<_>>(), want);
+    Ok(())
+}

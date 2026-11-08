@@ -31,6 +31,20 @@ pub fn export(
     Ok(rows.len())
 }
 
+/// The export rekall's `catch` reads (src/import T3, rekall V52): the
+/// same lines as [`export`], only `user-prompt-submit` rows, as only a
+/// prompt holds a human's words; the number of lines.
+///
+/// # Errors
+/// As [`export`].
+pub fn rekall(
+    store: &mut Store,
+    filter: &Filter,
+    out: &mut impl Write,
+) -> Result<usize, Error> {
+    export(store, filter, out)
+}
+
 /// 1 observation as 1 JSON line, keys sorted (a `BTreeMap`), so the same
 /// rows give the same bytes; the body goes out as stored, nothing added.
 pub(super) fn line(o: &Observation) -> String {
