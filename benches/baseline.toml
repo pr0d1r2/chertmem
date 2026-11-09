@@ -547,12 +547,12 @@ recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/10k-p52$'"
 suite = "recent_cold"
 fixture = "100k-p1"
 target = "recent-window search"
-median_ms = 16.03
-p95_ms = 16.24
+median_ms = 10.55
+p95_ms = 11.25
 tolerance = 0.5
 machine = "Apple M1 Pro"
 os = "macOS 26.6.2"
-date = "2026-10-25"
+date = "2026-11-09"
 recount = "cargo bench -p chertmem --bench latency -- '^recent_cold/100k-p1$'"
 
 [[row]]
