@@ -2,3 +2,7 @@
 # Spec files keep one statement per line (microlith V3), so a line cap
 # would force the hard wraps mth fmt removes. Pages stay short by review.
 MD013: false
+# Keep a Changelog repeats `### Added` under each release, so a heading
+# may repeat under another parent, never beside its sibling.
+MD024:
+  siblings_only: true

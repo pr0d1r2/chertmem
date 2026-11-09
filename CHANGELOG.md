@@ -24,6 +24,12 @@ around.
 
 ## [Unreleased]
 
+### Added
+
+- `chert export <out.jsonl> --for rekall` writes only the
+  `user-prompt-submit` rows, in the plain export's line format, which
+  `rekall catch` reads (pr0d1r2/rekall#46, merged as rekall V52).
+
 ## [0.1.0] - 2026-10-26
 
 First release: a Rust rewrite of cavemem 0.2.1 as one binary, `chert`,

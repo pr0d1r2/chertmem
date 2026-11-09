@@ -15,7 +15,7 @@ use clap::{ArgMatches, ValueEnum, value_parser};
 use super::args::{one, option, value, verb};
 use super::{Done, Io, fail, load, open, say};
 use crate::import;
-use crate::store::Filter;
+use crate::store::{Filter, Store};
 
 #[derive(Debug)]
 pub(super) enum Verb {
@@ -65,7 +65,11 @@ pub(super) fn commands() -> Vec<clap::Command> {
     let from = option("from", "FROM", value_parser!(Writer));
     let export = verb("export", EXPORT)
         .arg(value("out", "OUT", value_parser!(PathBuf)))
-        .arg(reader.long("for").help("The reader's shape"));
+        .arg(
+            reader
+                .long("for")
+                .help("The reader's shape: rekall takes the prompts only"),
+        );
     let import = verb("import", IMPORT)
         .arg(value("input", "INPUT", value_parser!(PathBuf)))
         .arg(from.help("What wrote the input"));
@@ -92,12 +96,7 @@ pub(super) fn parse(name: &str, m: &ArgMatches) -> Option<Verb> {
 
 pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
     match verb {
-        Verb::Export {
-            reader: Some(Reader::Rekall),
-            ..
-        } => Err("chert: export --for rekall not built yet (src/import T3)"
-            .to_owned()),
-        Verb::Export { out, reader: None } => export(&out, io),
+        Verb::Export { out, reader } => export(&out, reader, io),
         Verb::Import { input, from: None } => jsonl(&input, io),
         Verb::Import {
             input,
@@ -106,21 +105,33 @@ pub(super) fn run(verb: Verb, io: &mut Io<'_>) -> Done {
     }
 }
 
-/// Write the whole store to `out`.
-fn export(out: &Path, io: &mut Io<'_>) -> Done {
+/// Write the whole store to `out`, or for `reader` only what it reads.
+fn export(out: &Path, reader: Option<Reader>, io: &mut Io<'_>) -> Done {
     let mut store = open(&load(io)?, io)?;
     let bad = |e: std::io::Error| {
         format!("chert: cannot write {}: {e}", out.display())
     };
     let mut file = BufWriter::new(File::create(out).map_err(bad)?);
-    let n = import::export(&mut store, &Filter::default(), &mut file);
+    let (n, what) = written(reader, &mut store, &mut file);
     let n = n.map_err(fail)?;
     file.flush().map_err(bad)?;
-    say(
-        io,
-        &format!("exported {n} observations to {}", out.display()),
-    )?;
+    say(io, &format!("exported {n} {what} to {}", out.display()))?;
     Ok(0)
+}
+
+/// The lines `reader` reads written to `out`, and what they are.
+fn written(
+    reader: Option<Reader>,
+    store: &mut Store,
+    out: &mut impl Write,
+) -> (Result<usize, import::Error>, &'static str) {
+    let all = Filter::default();
+    match reader {
+        None => (import::export(store, &all, out), "observations"),
+        Some(Reader::Rekall) => {
+            (import::rekall(store, &all, out), "prompts for rekall")
+        }
+    }
 }
 
 fn jsonl(input: &Path, io: &mut Io<'_>) -> Done {

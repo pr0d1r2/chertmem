@@ -1,5 +1,5 @@
 //! `chert export` and `chert import`: exit 0, a round trip keeps every
-//! row; `--for rekall` is not built yet and, like an unreadable input,
+//! row; `--for rekall` writes the prompts only; an unreadable input is
 //! exit 2 (V2).
 
 use std::fs;
@@ -40,14 +40,40 @@ fn export_then_import_keeps_every_row() -> Test {
     Ok(())
 }
 
+/// Whether rekall V52 sniffs `line` as a chert export: `kind`, a `ref`
+/// starting `chert:`, and `ts`.
+fn sniffed(line: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    let field = |k: &str| line.get(k).and_then(Value::as_str);
+    field("kind").is_some()
+        && field("ref").is_some_and(|r| r.starts_with("chert:"))
+        && line.get("ts").and_then(Value::as_u64).is_some()
+}
+
+/// Every line of the JSONL file at `path`.
+fn json_lines(
+    path: &std::path::Path,
+) -> Result<Vec<serde_json::Value>, Box<dyn std::error::Error>> {
+    let text = fs::read_to_string(path)?;
+    Ok(text
+        .lines()
+        .map(serde_json::from_str)
+        .collect::<Result<_, _>>()?)
+}
+
 #[test]
-fn export_for_rekall_is_not_built_yet() -> Test {
+fn export_for_rekall_writes_prompts_rekall_sniffs() -> Test {
     let s = Sandbox::new("export-rekall")?;
+    s.hook("post-tool-use")?;
+    s.hook("user-prompt-submit")?;
     let out = s.file("out.jsonl");
     let ran = s.run(&["export", &out.to_string_lossy(), "--for", "rekall"]);
-    assert_eq!(ran.code, 2, "{ran:?}");
-    assert!(ran.err.contains("not built yet"), "{ran:?}");
-    assert!(!out.exists());
+    assert_eq!(ran.code, 0, "{ran:?}");
+    assert!(ran.out.starts_with("exported 1 prompts for rekall to "));
+    let lines = json_lines(&out)?;
+    let prompt = serde_json::Value::from("user-prompt-submit");
+    assert!(lines.iter().all(|l| l.get("kind") == Some(&prompt)));
+    assert!(lines.len() == 1 && lines.iter().all(sniffed), "{lines:?}");
     Ok(())
 }
 

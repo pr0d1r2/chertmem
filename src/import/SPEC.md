@@ -29,7 +29,7 @@ sib|src/mine|behaviour findings & awareness report
 
 ## §I INTERFACES
 
-- cmd: `chert export <out.jsonl> [--for rekall]`; `chert import <in> [--from cavemem]`. fn: `export(store, filter, out) -> usize`; `jsonl(store, reader) -> usize`; `cavemem(cfg, root, db) -> Imported {observations, summaries, no_cwd}`.
+- cmd: `chert export <out.jsonl> [--for rekall]`; `chert import <in> [--from cavemem]`. fn: `export(store, filter, out) -> usize`; `rekall(store, filter, out) -> usize`; `jsonl(store, reader) -> usize`; `cavemem(cfg, root, db) -> Imported {observations, summaries, no_cwd}`.
 
 ## §R RESEARCH
 
@@ -37,6 +37,7 @@ id|topic|finding|src
 R1|rekall candidate, wave 4|candidate = `{id, src, text, at}`; `catch` reads transcript roots, dialect per agent; ⊥ `chert` dialect agreed (`.:T14` ⊥ filed) ∴ `--for rekall` shape unsettled, T3 `.`; plain export only|`.:R3`
 R2|cavemem 0.2.1 mapping, wave 4|obs `session_id` `kind` `ts` + session `ide` → event as is; `content` → `<private>` stripped (hook rules; cavemem `redactSecrets` may be off) then compressed at `compression.grammar` iff `compressed = 0`; identity `cavemem:<session_id>:<id>` ∴ re-import → 1st ref (`src/store:V9`). summaries: `session_id` `scope` `ts` + session `ide`, body as obs; ⊥ identity in store ∴ matched to held summaries equal in every field, each held answers for 1. dropped: `intensity`, obs `metadata`, session `started_at` `ended_at` `metadata`, FTS, `embeddings`. open `file:<path>?mode=ro`, `schema_version` 2 required. wave 5 (T5, owner 2026-10-24): rows split by session `cwd` → `project_id(cwd)` as the hook derives it, 1 reading `Store::open(cfg, cwd)` per cwd; summaries follow their session; `cwd` null, empty or blank → project at given root, counted in `Imported.no_cwd` (obs + summaries). ∴ `cavemem(cfg, root, db)`, grammar from `compression.grammar`|cavemem `dist/chunk-T35V7EPZ.js` `SCHEMA_SQL`, `Storage` inserts
 R3|export line, wave 4|1 JSON object per line, keys sorted: `body` `id` `ide` `identity` (null if ⊥) `kind` `project` `ref` (`chert:<ref>`) `session` `ts`; body = stored bytes ∴ ⊥ redacted text (`.:V8`). wave 5: `jsonl(store, reader)` parses each line by those keys (`ref` via `Ref::parse`, `identity` text or null, `ts` u64) → `Store::restore`; blank lines skipped; any failure → `Error::Line {line, cause}`, line from 1|`src/import/export.rs`
+R4|rekall dialect, wave 13|rekall merged `rekall/V52` (pr0d1r2/rekall#58, closes #46): sniffs FIRST non-empty line: `kind`, `ref` starting `chert:`, `ts`; unknown fields ignored, ⊥ `v` needed. evidence = `user-prompt-submit` only (tool body = agent's action, `stop` & session edges ⊥ human words); ref-less or ts-less row dropped. `src` = `ref`, `at` = `ts`/1000, `text` = `body` ∴ `--for rekall` = plain line shape, prompts only; body as stored (compressed) ∵ `expand` lossy, may add words|rekall `src/catch`, `rekall/V52`, T65
 
 ## §V INVARIANTS
 
@@ -49,7 +50,7 @@ V3: cavemem DB file unchanged after import (checksum before ≡ after).
 id|status|task|cites
 T1|x|JSONL export & import via `Store::restore` (R3)|V1
 T2|x|cavemem 0.2.1 import from fixture DB|V2,V3
-T3|.|`--for rekall` shape, agreed via pr0d1r2/rekall#46 (`.:T14`, R1); waits on its answer|-
+T3|x|`--for rekall`: plain export lines, `user-prompt-submit` only (R4, `rekall/V52`)|-
 T4|x|import cavemem `summaries` (turn & session scope) w/ their sessions|V1,V2
 T5|x|cavemem rows split by session `cwd`: each session → chert project of its own cwd (same id the hook derives); missing cwd → current project, counted in report (owner 2026-10-24)|V2
 
