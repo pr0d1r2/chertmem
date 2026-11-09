@@ -20,13 +20,22 @@ Target: hook write under 5 ms.
 
 | fixture | machine | os | median | p95 | target | pass |
 | --- | --- | --- | ---: | ---: | ---: | --- |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.271 ms | 5.595 ms | 5 ms | no |
 | 1k-p52 | Apple M4 | macOS 26.7.2 | 4.447 ms | 7.584 ms | 5 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.351 ms | 5.584 ms | 5 ms | no |
 | 10k-p52 | Apple M4 | macOS 26.7.2 | 4.078 ms | 4.292 ms | 5 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 5.322 ms | 5.959 ms | 5 ms | no |
 | 100k-p1 | Apple M4 | macOS 26.7.2 | 3.962 ms | 4.224 ms | 5 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 5.212 ms | 5.845 ms | 5 ms | no |
 | 100k-p4 | Apple M4 | macOS 26.7.2 | 3.867 ms | 3.964 ms | 5 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.187 ms | 5.564 ms | 5 ms | no |
 | 100k-p52 | Apple M4 | macOS 26.7.2 | 3.831 ms | 4.063 ms | 5 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 5.282 ms | 5.804 ms | 5 ms | no |
 | 100k-p520 | Apple M4 | macOS 26.7.2 | 3.837 ms | 4.111 ms | 5 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 5.179 ms | 5.712 ms | 5 ms | no |
 | 1M-p52 | Apple M4 | macOS 26.7.2 | 3.697 ms | 5.303 ms | 5 ms | yes |
+
+Measured 2026-11-09 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
 Measured 2026-11-04 on Apple M4, macOS 26.7.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
