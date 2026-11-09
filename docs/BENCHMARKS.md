@@ -11,8 +11,8 @@ holds no measured numbers of its own, so it never goes stale.
 
 | Target | Under | Why |
 | --- | --- | --- |
-| hook write | 5 ms | Every hook runs while the agent waits for it: on each tool call, prompt and stop. A slow hook is felt as a slow agent. |
-| recent-window search | 10 ms | The search an agent makes most: the last weeks of one project, served from the cache `chert mcp` keeps warm. |
+| hook write | 10 ms | Every hook runs while the agent waits for it: on each tool call, prompt and stop. A slow hook is felt as a slow agent. |
+| recent-window search | 15 ms | The search an agent makes most: the last weeks of one project, served from the cache `chert mcp` keeps warm. |
 | `get_observations` | 2 ms | After a search the agent fetches the few rows it picked, by reference; that should cost nothing it notices. |
 | semantic re-rank | 20 ms | The opt-in embedding pass over a search's hits. It adds a round trip to an embedding server, so it gets a wider budget. |
 

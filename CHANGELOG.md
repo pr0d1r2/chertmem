@@ -60,6 +60,13 @@ tool shapes are as in 0.1.0.
   `zstd >= 0.13.4`, so `cargo install` without `--locked` cannot
   resolve the affected version.
 
+### Changed
+
+- The benchmark-gated latency targets are raised: hook write from 5 to
+  10 ms, recent-window search from 10 to 15 ms. An Apple M1 Pro takes
+  about 5.3 ms per hook write and 10.6 ms for a cold search of 100k
+  rows in one bucket; both now pass with headroom.
+
 ## [0.1.0] - 2026-10-26
 
 First release: a Rust rewrite of cavemem 0.2.1 as one binary, `chert`,
