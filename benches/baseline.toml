@@ -4,6 +4,90 @@
 # kept across records, so it is tuned here by hand.
 
 [[row]]
+suite = "hook_write"
+fixture = "1k-p52"
+target = "hook write"
+median_ms = 4.447
+p95_ms = 7.584
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/1k-p52$'"
+
+[[row]]
+suite = "hook_write"
+fixture = "10k-p52"
+target = "hook write"
+median_ms = 4.078
+p95_ms = 4.292
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/10k-p52$'"
+
+[[row]]
+suite = "hook_write"
+fixture = "100k-p1"
+target = "hook write"
+median_ms = 3.962
+p95_ms = 4.224
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/100k-p1$'"
+
+[[row]]
+suite = "hook_write"
+fixture = "100k-p4"
+target = "hook write"
+median_ms = 3.867
+p95_ms = 3.964
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/100k-p4$'"
+
+[[row]]
+suite = "hook_write"
+fixture = "100k-p52"
+target = "hook write"
+median_ms = 3.831
+p95_ms = 4.063
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/100k-p52$'"
+
+[[row]]
+suite = "hook_write"
+fixture = "100k-p520"
+target = "hook write"
+median_ms = 3.837
+p95_ms = 4.111
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/100k-p520$'"
+
+[[row]]
+suite = "hook_write"
+fixture = "1M-p52"
+target = "hook write"
+median_ms = 3.697
+p95_ms = 5.303
+tolerance = 0.5
+machine = "Apple M4"
+os = "macOS 26.7.2"
+date = "2026-11-04"
+recount = "cargo bench -p chertmem --bench latency -- '^hook_write/1M-p52$'"
+
+[[row]]
 suite = "session_start"
 fixture = "1k-p52"
 target = "hook write"

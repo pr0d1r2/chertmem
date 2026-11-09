@@ -28,6 +28,7 @@ Each suite is one criterion group, named as on the performance page.
 
 | Suite | What one call does | Target |
 | --- | --- | --- |
+| `hook_write` | a real `chert hook run post-tool-use` process: start, load the config, open the store, write one event, exit | hook write |
 | `session_start` | the `session-start` hook in process: write the event, then build the injected context | hook write |
 | `prompt_inject` | the `user-prompt-submit` hook with `inject.on_prompt = true`: write, then inject | hook write |
 | `get_observations` | resolve five references from the newest week to their rows | `get_observations` |
@@ -39,11 +40,15 @@ Each suite is one criterion group, named as on the performance page.
 | `partition_scan` | read the newest weekly partition whole | none |
 | `compress`, `expand` | the caveman grammar over the bodies of the smallest store | none |
 
-The hook-write suite proper, which starts a real `chert hook run`
-process so its start-up time counts, is listed by the bench run as
-pending until the command line is wired. The two injecting suites run
-the hook in process: they measure chert's work without the process
-start.
+The hook-write suite starts a real `chert hook run` process for each
+call, so its start-up time counts. It gives that process a scratch
+home whose `chert.toml` points at a copy of the store, and runs it in
+a project folder of its own, since a process needs a real working
+folder. Its clock is the system's, so it writes into this week's
+partition, as a real hook does. A run that exits with an error or
+prints a note fails the bench, because chert notes and exits 0 when it
+cannot store an event. The two injecting suites run the hook in
+process: they measure chert's work without the process start.
 
 The semantic suite never calls a real model. The bench starts a small
 embedding server on the loopback interface and points `OLLAMA_HOST` at

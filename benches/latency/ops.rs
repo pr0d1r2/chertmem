@@ -8,6 +8,7 @@ mod tests;
 pub(crate) mod hook;
 pub(crate) mod read;
 pub(crate) mod search;
+pub(crate) mod spawn;
 pub(crate) mod text;
 
 use std::sync::Arc;

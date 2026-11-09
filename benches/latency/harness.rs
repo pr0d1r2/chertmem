@@ -12,7 +12,7 @@ use criterion::measurement::WallTime;
 use criterion::{BenchmarkGroup, Criterion};
 
 use crate::fixture::{self, Spec};
-use crate::suites::{Make, Op, Status, Suite};
+use crate::suites::{Make, Op, Suite};
 
 /// How long criterion samples 1 bench.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,8 +52,8 @@ pub(crate) fn configured(c: Criterion, t: &Timing) -> Criterion {
         .without_plots()
 }
 
-/// Every ready suite as 1 criterion group over `grid(suite)`, then the
-/// summary; a pending one is named with what it waits for. The exit
+/// Every suite as 1 criterion group over `grid(suite)`, then the
+/// summary. The exit
 /// code, 0: a bench that fails ends the process first ([`fail`]).
 pub(crate) fn run(
     mut c: Criterion,
@@ -61,13 +61,8 @@ pub(crate) fn run(
     grid: fn(&Suite) -> Vec<Spec>,
 ) -> i32 {
     for suite in suites {
-        match suite.status {
-            Status::Pending(why) => eprintln!("{}: pending, {why}", suite.id),
-            Status::Ready(make) => {
-                eprintln!("{}: {}", suite.id, measures(suite));
-                group(&mut c, suite.id, make, &grid(suite));
-            }
-        }
+        eprintln!("{}: {}", suite.id, measures(suite));
+        group(&mut c, suite.id, suite.make, &grid(suite));
     }
     c.final_summary();
     0
@@ -143,12 +138,9 @@ pub(crate) fn criterion_dir() -> PathBuf {
 }
 
 /// The suite index `chertmem-dev bench-record` reads (benches T4): 1
-/// line per ready suite, `<id>\t<root C target>`, `-` for none.
+/// line per suite, `<id>\t<root C target>`, `-` for none.
 pub(crate) fn index(suites: &[Suite]) -> String {
-    let ready = suites
-        .iter()
-        .filter(|s| matches!(s.status, Status::Ready(_)));
-    ready.fold(String::new(), |mut text, s| {
+    suites.iter().fold(String::new(), |mut text, s| {
         let target = s.target.map_or("-", |t| t.name);
         let _ = writeln!(text, "{}\t{target}", s.id);
         text

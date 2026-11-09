@@ -5,19 +5,12 @@
 mod tests;
 
 use crate::fixture::{Fixture, Res, Spec};
-use crate::ops::{hook, read, search, text};
+use crate::ops::{hook, read, search, spawn, text};
 
 /// 1 measured call, its setup done.
 pub(crate) type Op = Box<dyn FnMut() -> Res<()>>;
 /// A suite's setup on a built fixture.
 pub(crate) type Make = fn(&Fixture) -> Res<Op>;
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum Status {
-    Ready(Make),
-    /// Not measurable yet; what it waits for.
-    Pending(&'static str),
-}
 
 /// The fixtures a suite runs on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,7 +54,8 @@ pub(crate) struct Suite {
     pub(crate) spec: &'static str,
     pub(crate) target: Option<Target>,
     pub(crate) grid: Grid,
-    pub(crate) status: Status,
+    /// Its setup on a built fixture.
+    pub(crate) make: Make,
 }
 
 /// Every fixture's seed.
@@ -71,14 +65,14 @@ const fn suite(
     (id, spec): (&'static str, &'static str),
     target: Option<Target>,
     grid: Grid,
-    status: Status,
+    make: Make,
 ) -> Suite {
     Suite {
         id,
         spec,
         target,
         grid,
-        status,
+        make,
     }
 }
 
@@ -87,75 +81,73 @@ pub(crate) const ALL: [Suite; 12] = [
         ("hook_write", "hook write"),
         Some(HOOK_WRITE),
         Grid::Store,
-        Status::Pending(
-            "waits for src/cli: it spawns a real `chert hook run` (V4)",
-        ),
+        spawn::write,
     ),
     suite(
         ("session_start", "injecting session-start"),
         Some(HOOK_WRITE),
         Grid::Store,
-        Status::Ready(hook::session_start),
+        hook::session_start,
     ),
     suite(
         ("prompt_inject", "opt-in injecting user-prompt-submit"),
         Some(HOOK_WRITE),
         Grid::Store,
-        Status::Ready(hook::prompt),
+        hook::prompt,
     ),
     suite(
         ("get_observations", "get_observations"),
         Some(GET),
         Grid::Store,
-        Status::Ready(read::get),
+        read::get,
     ),
     suite(
         ("recent_warm", "recent-window search"),
         Some(RECENT),
         Grid::Store,
-        Status::Ready(search::recent_warm),
+        search::recent_warm,
     ),
     suite(
         ("recent_cold", "recent-window search"),
         Some(RECENT),
         Grid::Store,
-        Status::Ready(search::recent_cold),
+        search::recent_cold,
     ),
     suite(
         ("cross_partition", "cross-partition search"),
         None,
         Grid::Store,
-        Status::Ready(search::cross),
+        search::cross,
     ),
     suite(
         ("semantic_rerank", "semantic re-rank"),
         Some(RERANK),
         Grid::Store,
-        Status::Ready(search::semantic),
+        search::semantic,
     ),
     suite(
         ("cache_warmup", "cache warm-up"),
         None,
         Grid::Store,
-        Status::Ready(read::warm_up),
+        read::warm_up,
     ),
     suite(
         ("partition_scan", "partition scan"),
         None,
         Grid::Store,
-        Status::Ready(read::scan),
+        read::scan,
     ),
     suite(
         ("compress", "compress & expand"),
         None,
         Grid::Text,
-        Status::Ready(text::compress),
+        text::compress,
     ),
     suite(
         ("expand", "compress & expand"),
         None,
         Grid::Text,
-        Status::Ready(text::expand),
+        text::expand,
     ),
 ];
 
