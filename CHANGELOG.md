@@ -24,11 +24,41 @@ around.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-10
+
+What a caller can observe: `chert export` gains `--for rekall`, a
+long-running `chert mcp` stays under a 256 open-file limit, a cold
+search of one big partition uses spare cores, and the zstd advisories
+are cleared. No public Rust API was removed or changed
+(`cargo semver-checks`), and the plain export, the store and the MCP
+tool shapes are as in 0.1.0.
+
 ### Added
 
 - `chert export <out.jsonl> --for rekall` writes only the
   `user-prompt-submit` rows, in the plain export's line format, which
   `rekall catch` reads (pr0d1r2/rekall#46, merged as rekall V52).
+- The flake's `packages.default` is `chert`: `nix build` gives the
+  binary, with no Node in its closure.
+
+### Changed
+
+- A cold search of one big partition scores its candidates on spare
+  cores, at least 1000 rows per thread; the ranked result is unchanged.
+
+### Fixed
+
+- `chert mcp` shares one budget of 64 SQLite connections across its
+  window, get and search paths. The worst case was 192 connections,
+  over a 256 open-file limit; a tight budget costs reopens, never a
+  different answer.
+
+### Security
+
+- zstd 0.13.4 and zstd-safe 7.4.0 clear RUSTSEC-2026-0391,
+  RUSTSEC-2026-0398 and RUSTSEC-2026-0403. The requirement floor is
+  `zstd >= 0.13.4`, so `cargo install` without `--locked` cannot
+  resolve the affected version.
 
 ## [0.1.0] - 2026-10-26
 
@@ -64,5 +94,6 @@ with no Node at run time.
 - Docs: README, CONFIG, INTEGRATION, BENCHMARKS and the generated
   PERFORMANCE page.
 
-[Unreleased]: https://github.com/pr0d1r2/chertmem/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pr0d1r2/chertmem/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/pr0d1r2/chertmem/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pr0d1r2/chertmem/releases/tag/v0.1.0
