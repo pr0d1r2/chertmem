@@ -126,6 +126,10 @@ name = "pr0d1r2/microlith"
 public = "2026-10-25"
 
 [[repo]]
+name = "pr0d1r2/nix-cargo-release"
+public = "2026-11-11"
+
+[[repo]]
 name = "pr0d1r2/nix-hk"
 public = "2026-10-25"
 
