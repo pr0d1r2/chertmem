@@ -81,12 +81,23 @@
       inputs.nixpkgs-lock.follows = "nixpkgs-lock";
       inputs.nix-hk.follows = "nix-hk";
     };
+    # A HOLD, not a guardrail tool: cargo-release 1.1.6. nixos-26.05 ships
+    # 1.1.7, which needs rustc 1.97 while the channel has 1.95.0, so the
+    # channel's `pkgs.cargo-release` does not build. Its overlay makes
+    # `pkgs.cargo-release` the held build, cached on the substituter above.
+    # Drop it once the channel's own cargo-release builds
+    # (`nix-cargo-release/T2`).
+    nix-cargo-release = {
+      url = "github:pr0d1r2/nix-cargo-release";
+      inputs.nixpkgs-lock.follows = "nixpkgs-lock";
+    };
   };
 
   outputs =
     {
       nixpkgs,
       nix-hk,
+      nix-cargo-release,
       microlith,
       itok,
       sherd,
@@ -105,8 +116,16 @@
         "aarch64-linux"
       ];
       # The overlay makes `pkgs.hk` nix-hk's hk rather than nixpkgs'.
+      # nix-cargo-release's does the same for `pkgs.cargo-release`.
       forAll =
-        f: nixpkgs.lib.genAttrs systems (s: f (nixpkgs.legacyPackages.${s}.extend nix-hk.overlays.default));
+        f:
+        nixpkgs.lib.genAttrs systems (
+          s:
+          f (
+            (nixpkgs.legacyPackages.${s}.extend nix-hk.overlays.default).extend
+              nix-cargo-release.overlays.default
+          )
+        );
 
       tools = {
         inherit
@@ -190,7 +209,8 @@
             pkgs.rustfmt
             # Dependency policy gate (deny.toml).
             pkgs.cargo-deny
-            # Releases (T18).
+            # Releases (T18). Held at 1.1.6 by the nix-cargo-release overlay,
+            # dropped when the channel's own builds (`nix-cargo-release/T2`).
             pkgs.cargo-release
             # Test runner.
             pkgs.cargo-nextest
