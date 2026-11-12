@@ -34,7 +34,7 @@ self|.|-
 - many processes at once: hooks, ∀ IDE session's `chert mcp`, worker ∴ store ! multi-process safe (SQLite WAL); single-process stores rejected.
 - config `chert.toml`: user `~/.config/chert/chert.toml` + project `chert.toml`, project overrides key by key. ∀ partition & cache setting configurable (D5, D6, D7).
 - defaults (D19): `partition.by = ["project","time"]`, `time_bucket = "7d"`, `shards = 1`, `cache.window = "28d"`, `cache.max_bytes = "256MiB"`, `on_overflow = "warn"`, `embedding.provider = "off"`. rest as `SPEC-PROMPT.md` config sketch: `compression.grammar = "full"`, `compression.zstd = { level = 3, dictionary = true }`, `search.alpha = 0.5`, `search.default_limit = 10`, `mining.enabled = true`, `mining.min_occurrences = 3`, `inject.max_tokens = 300`, `inject.on_prompt = false` (reconcile 1).
-- latency targets (D20), benchmark-gated: hook write < 5 ms · recent-window search < 10 ms · `get_observations` < 2 ms · semantic re-rank < 20 ms.
+- latency targets (D20, raised R7), benchmark-gated: hook write < 10 ms · recent-window search < 15 ms · `get_observations` < 2 ms · semantic re-rank < 20 ms.
 - context injection (owner 2026-10-24): `session-start` by default; `user-prompt-submit` only w/ opt-in `inject.on_prompt`, documented w/ speed disclaimer. rules in `src/hook`.
 - `<private>…</private>` stripped & `privacy.exclude` paths ⊥ read, before any write.
 - chert ⊥ writes `.rekall/` (D27). mining ⊥ changes anything by itself.
@@ -71,6 +71,7 @@ R3|rekall 3235597|candidate = `{id, src, text, at}` in `.rekall/ledger.toml`; on
 R4|names 2026-10-24|`chertmem` free on crates.io & npm, 0 GitHub repos; `chert` crate = `jesopo/chert` 0.2.1 (2024-02-06); ⊥ Homebrew formula `chert`|`curl https://crates.io/api/v1/crates/<name>`; `gh search repos chertmem`; `brew info --formula chert`
 R5|SQLite limits|`ATTACH` default max 10 dbs (`SQLITE_MAX_ATTACHED`) ∴ 1 connection per partition, ⊥ attach-all. WAL: readers ⊥ block writer, 1 writer at a time, multi-process|`https://sqlite.org/limits.html`; `https://sqlite.org/wal.html`
 R6|CI, actlith 0.1.0, 2026-10-25|gate kind = 1 job, matrix ubuntu-latest · ubuntu-24.04-arm · macos-latest; refuses x86_64-darwin (⊥ hosted runner) & flake ⊥ x86_64-darwin build of 6 fleet tools ∴ that system = pre-push on owner's Intel Mac (`paradigm/V28`). cache = cachix (nix store) only, ⊥ cargo cache. CI ⊥ upstream ∴ `tdd-order` range = `HEAD`, all history holds. `bench-gate`: runner CPU ⊥ baseline row → `no baseline row for <cpu>, <os>; held`, exit 0. cold run (empty `CARGO_HOME`, ⊥ `target/`) of CI command: ∀ 45 steps pass, 243 s, M1 Pro|`actlith gen`, `actlith report`, `actionlint`, `zizmor --offline`; `dev/src/cli/bench.rs`
+R7|latency targets, owner 2026-11-09|D20 had hook write < 5 ms & recent-window search < 10 ms. Apple M1 Pro, macOS 26.6.2: hook write 5.18–5.35 ms median over the 7 fixtures (M4: 3.70–4.45); cold `recent_cold` 100k-p1 10.55 ms (M4: 7.90). owner: raise to hook write < 10 ms & recent-window search < 15 ms and live with it ∴ both pass on both machines, with headroom for an older Mac|`cargo bench -p chertmem --bench latency`, `benches/baseline.toml`
 
 ## §V INVARIANTS
 
@@ -120,3 +121,4 @@ id|date|cause|fix
 B1|2026-10-24|drift round 1: D28 ref = shortest unique ULID prefix at read time; ULID first 10 chars = ms timestamp ∴ rows within ~1 s share 8 chars & later row makes issued ref ambiguous, breaking V5|V15
 B2|2026-10-24|drift round 1: V3 deduped on hash of (session, event, payload) on unmeasured claim that IDEs resend ∴ 2 real identical events collapse & repeat signal undercounts|V16
 B3|2026-10-24|drift round 1: `src/store` replayed spool on every open, hooks incl. ∴ backlog → hook > 5 ms target (§C)|`src/store:V10`
+B4|2026-11-12|CHANGELOG.md `[0.1.1]` had two `### Changed` headings; markdownlint MD024 (siblings_only) failed `gate` on all runners|merged the latency-target entry into the first `### Changed`

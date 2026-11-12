@@ -16,24 +16,24 @@ scale.
 
 ## hook_write
 
-Target: hook write under 5 ms.
+Target: hook write under 10 ms.
 
 | fixture | machine | os | median | p95 | target | pass |
 | --- | --- | --- | ---: | ---: | ---: | --- |
-| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.271 ms | 5.595 ms | 5 ms | no |
-| 1k-p52 | Apple M4 | macOS 26.7.2 | 4.447 ms | 7.584 ms | 5 ms | yes |
-| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.351 ms | 5.584 ms | 5 ms | no |
-| 10k-p52 | Apple M4 | macOS 26.7.2 | 4.078 ms | 4.292 ms | 5 ms | yes |
-| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 5.322 ms | 5.959 ms | 5 ms | no |
-| 100k-p1 | Apple M4 | macOS 26.7.2 | 3.962 ms | 4.224 ms | 5 ms | yes |
-| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 5.212 ms | 5.845 ms | 5 ms | no |
-| 100k-p4 | Apple M4 | macOS 26.7.2 | 3.867 ms | 3.964 ms | 5 ms | yes |
-| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.187 ms | 5.564 ms | 5 ms | no |
-| 100k-p52 | Apple M4 | macOS 26.7.2 | 3.831 ms | 4.063 ms | 5 ms | yes |
-| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 5.282 ms | 5.804 ms | 5 ms | no |
-| 100k-p520 | Apple M4 | macOS 26.7.2 | 3.837 ms | 4.111 ms | 5 ms | yes |
-| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 5.179 ms | 5.712 ms | 5 ms | no |
-| 1M-p52 | Apple M4 | macOS 26.7.2 | 3.697 ms | 5.303 ms | 5 ms | yes |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.271 ms | 5.595 ms | 10 ms | yes |
+| 1k-p52 | Apple M4 | macOS 26.7.2 | 4.447 ms | 7.584 ms | 10 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.351 ms | 5.584 ms | 10 ms | yes |
+| 10k-p52 | Apple M4 | macOS 26.7.2 | 4.078 ms | 4.292 ms | 10 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 5.322 ms | 5.959 ms | 10 ms | yes |
+| 100k-p1 | Apple M4 | macOS 26.7.2 | 3.962 ms | 4.224 ms | 10 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 5.212 ms | 5.845 ms | 10 ms | yes |
+| 100k-p4 | Apple M4 | macOS 26.7.2 | 3.867 ms | 3.964 ms | 10 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 5.187 ms | 5.564 ms | 10 ms | yes |
+| 100k-p52 | Apple M4 | macOS 26.7.2 | 3.831 ms | 4.063 ms | 10 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 5.282 ms | 5.804 ms | 10 ms | yes |
+| 100k-p520 | Apple M4 | macOS 26.7.2 | 3.837 ms | 4.111 ms | 10 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 5.179 ms | 5.712 ms | 10 ms | yes |
+| 1M-p52 | Apple M4 | macOS 26.7.2 | 3.697 ms | 5.303 ms | 10 ms | yes |
 
 Measured 2026-11-09 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
@@ -51,17 +51,17 @@ Recount, on the machine to measure:
 
 ## session_start
 
-Target: hook write under 5 ms.
+Target: hook write under 10 ms.
 
 | fixture | machine | os | median | p95 | target | pass |
 | --- | --- | --- | ---: | ---: | ---: | --- |
-| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.701 ms | 2.842 ms | 5 ms | yes |
-| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.388 ms | 2.441 ms | 5 ms | yes |
-| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.826 ms | 3.972 ms | 5 ms | yes |
-| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 2.762 ms | 2.800 ms | 5 ms | yes |
-| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.449 ms | 2.483 ms | 5 ms | yes |
-| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 2.729 ms | 2.875 ms | 5 ms | yes |
-| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 2.796 ms | 3.034 ms | 5 ms | yes |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.701 ms | 2.842 ms | 10 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.388 ms | 2.441 ms | 10 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.826 ms | 3.972 ms | 10 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 2.762 ms | 2.800 ms | 10 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.449 ms | 2.483 ms | 10 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 2.729 ms | 2.875 ms | 10 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 2.796 ms | 3.034 ms | 10 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
@@ -77,17 +77,17 @@ Recount, on the machine to measure:
 
 ## prompt_inject
 
-Target: hook write under 5 ms.
+Target: hook write under 10 ms.
 
 | fixture | machine | os | median | p95 | target | pass |
 | --- | --- | --- | ---: | ---: | ---: | --- |
-| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.701 ms | 2.857 ms | 5 ms | yes |
-| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.321 ms | 2.427 ms | 5 ms | yes |
-| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.746 ms | 3.814 ms | 5 ms | yes |
-| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 2.752 ms | 2.802 ms | 5 ms | yes |
-| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.436 ms | 2.541 ms | 5 ms | yes |
-| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 2.751 ms | 2.827 ms | 5 ms | yes |
-| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 2.732 ms | 2.786 ms | 5 ms | yes |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.701 ms | 2.857 ms | 10 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.321 ms | 2.427 ms | 10 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 3.746 ms | 3.814 ms | 10 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 2.752 ms | 2.802 ms | 10 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.436 ms | 2.541 ms | 10 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 2.751 ms | 2.827 ms | 10 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 2.732 ms | 2.786 ms | 10 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
@@ -129,17 +129,17 @@ Recount, on the machine to measure:
 
 ## recent_warm
 
-Target: recent-window search under 10 ms.
+Target: recent-window search under 15 ms.
 
 | fixture | machine | os | median | p95 | target | pass |
 | --- | --- | --- | ---: | ---: | ---: | --- |
-| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6277 ms | 0.6329 ms | 10 ms | yes |
-| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6216 ms | 0.6290 ms | 10 ms | yes |
-| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 1.515 ms | 1.549 ms | 10 ms | yes |
-| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 1.546 ms | 1.597 ms | 10 ms | yes |
-| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6782 ms | 0.6853 ms | 10 ms | yes |
-| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 7.429 ms | 9.011 ms | 10 ms | yes |
-| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 1.842 ms | 2.071 ms | 10 ms | yes |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6277 ms | 0.6329 ms | 15 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6216 ms | 0.6290 ms | 15 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 1.515 ms | 1.549 ms | 15 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 1.546 ms | 1.597 ms | 15 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 0.6782 ms | 0.6853 ms | 15 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 7.429 ms | 9.011 ms | 15 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 1.842 ms | 2.071 ms | 15 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p1, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 
@@ -155,22 +155,22 @@ Recount, on the machine to measure:
 
 ## recent_cold
 
-Target: recent-window search under 10 ms.
+Target: recent-window search under 15 ms.
 
 | fixture | machine | os | median | p95 | target | pass |
 | --- | --- | --- | ---: | ---: | ---: | --- |
-| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.421 ms | 1.465 ms | 10 ms | yes |
-| 1k-p52 | Apple M4 | macOS 26.7.2 | 0.4327 ms | 0.4353 ms | 10 ms | yes |
-| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.506 ms | 1.578 ms | 10 ms | yes |
-| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 10.55 ms | 11.25 ms | 10 ms | no |
-| 100k-p1 | Apple M4 | macOS 26.7.2 | 7.901 ms | 8.008 ms | 10 ms | yes |
-| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 7.439 ms | 7.533 ms | 10 ms | yes |
-| 100k-p4 | Apple M4 | macOS 26.7.2 | 4.461 ms | 4.509 ms | 10 ms | yes |
-| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.052 ms | 2.092 ms | 10 ms | yes |
-| 100k-p52 | Apple M4 | macOS 26.7.2 | 0.8640 ms | 0.8803 ms | 10 ms | yes |
-| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 8.922 ms | 9.407 ms | 10 ms | yes |
-| 100k-p520 | Apple M4 | macOS 26.7.2 | 1.479 ms | 1.495 ms | 10 ms | yes |
-| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 6.639 ms | 6.762 ms | 10 ms | yes |
+| 1k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.421 ms | 1.465 ms | 15 ms | yes |
+| 1k-p52 | Apple M4 | macOS 26.7.2 | 0.4327 ms | 0.4353 ms | 15 ms | yes |
+| 10k-p52 | Apple M1 Pro | macOS 26.6.2 | 1.506 ms | 1.578 ms | 15 ms | yes |
+| 100k-p1 | Apple M1 Pro | macOS 26.6.2 | 10.55 ms | 11.25 ms | 15 ms | yes |
+| 100k-p1 | Apple M4 | macOS 26.7.2 | 7.901 ms | 8.008 ms | 15 ms | yes |
+| 100k-p4 | Apple M1 Pro | macOS 26.6.2 | 7.439 ms | 7.533 ms | 15 ms | yes |
+| 100k-p4 | Apple M4 | macOS 26.7.2 | 4.461 ms | 4.509 ms | 15 ms | yes |
+| 100k-p52 | Apple M1 Pro | macOS 26.6.2 | 2.052 ms | 2.092 ms | 15 ms | yes |
+| 100k-p52 | Apple M4 | macOS 26.7.2 | 0.8640 ms | 0.8803 ms | 15 ms | yes |
+| 100k-p520 | Apple M1 Pro | macOS 26.6.2 | 8.922 ms | 9.407 ms | 15 ms | yes |
+| 100k-p520 | Apple M4 | macOS 26.7.2 | 1.479 ms | 1.495 ms | 15 ms | yes |
+| 1M-p52 | Apple M1 Pro | macOS 26.6.2 | 6.639 ms | 6.762 ms | 15 ms | yes |
 
 Measured 2026-10-25 on Apple M1 Pro, macOS 26.6.2: 1k-p52, 10k-p52, 100k-p4, 100k-p52, 100k-p520, 1M-p52.
 

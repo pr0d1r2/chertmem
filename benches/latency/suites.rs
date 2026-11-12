@@ -31,11 +31,11 @@ pub(crate) struct Target {
 
 pub(crate) const HOOK_WRITE: Target = Target {
     name: "hook write",
-    ms: 5,
+    ms: 10,
 };
 pub(crate) const RECENT: Target = Target {
     name: "recent-window search",
-    ms: 10,
+    ms: 15,
 };
 pub(crate) const GET: Target = Target {
     name: "get_observations",
