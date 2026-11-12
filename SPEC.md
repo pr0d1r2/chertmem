@@ -121,3 +121,4 @@ id|date|cause|fix
 B1|2026-10-24|drift round 1: D28 ref = shortest unique ULID prefix at read time; ULID first 10 chars = ms timestamp ∴ rows within ~1 s share 8 chars & later row makes issued ref ambiguous, breaking V5|V15
 B2|2026-10-24|drift round 1: V3 deduped on hash of (session, event, payload) on unmeasured claim that IDEs resend ∴ 2 real identical events collapse & repeat signal undercounts|V16
 B3|2026-10-24|drift round 1: `src/store` replayed spool on every open, hooks incl. ∴ backlog → hook > 5 ms target (§C)|`src/store:V10`
+B4|2026-11-12|CHANGELOG.md `[0.1.1]` had two `### Changed` headings; markdownlint MD024 (siblings_only) failed `gate` on all runners|merged the latency-target entry into the first `### Changed`
